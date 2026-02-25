@@ -1,8 +1,7 @@
-# SleepCube -- Technical Requirements Specification (TRS)
+# SleepCube - Technical Requirements Specification (TRS)
 
-**Document status:** v1.0\
-**Derived from:** SleepCube FRS v1.0\
-**Date generated:** 2026-02-24\
+**Revision:** R00\
+**Derived from:** SleepCube FRS R00\
 **Scope:** Defines technical requirements necessary to fulfill
 functional requirements.\
 **Implementation:** Technology-neutral unless required for verification.

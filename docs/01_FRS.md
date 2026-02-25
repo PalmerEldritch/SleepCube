@@ -1,5 +1,6 @@
 # SleepCube – Functional Requirements Specification (FRS)
-**Document status:** v1.0  
+
+**Revision:** R00\
 **Scope:** Defines what the product shall do. No implementation details.
 
 ---

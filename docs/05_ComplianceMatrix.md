@@ -1,5 +1,7 @@
 # SleepCube Compliance and Traceability Matrix
 
+## Rev 00
+
 | FR ID | FR Summary | TR IDs | Coverage Notes | Status |
 | --- | --- | --- | --- | --- |
 | FR-SC-01 | The device shall be intended for indoor residential bedroom use. | TR-P-02, TR-P-04 | Mapped from TRS Derived From references. | OK |
