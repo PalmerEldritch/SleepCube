@@ -1,0 +1,10 @@
+menu "SleepCube P0 Configuration"
+
+config SC_LOOPBACK_ENABLE
+    bool "Enable I2S loopback monitor"
+    default y
+    help
+        Enable the digital I2S loopback monitor task. This requires jumper wires
+        from TX pins to RX pins as documented in board_pins.h.
+
+endmenu
