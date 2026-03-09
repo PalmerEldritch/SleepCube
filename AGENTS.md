@@ -20,3 +20,12 @@ Documentation is in /docs and is written in Markdown.
 ## Output expectations
 - When asked to create/modify docs, preserve table structure and IDs.
 - When asked for a matrix, ensure all FR IDs are represented and flag missing mappings.
+
+## Conversation triggers
+- Trigger phrase: `promote: <scope>`
+- Meaning: The user signals that functionality is mature enough for functional implementation documentation.
+- Required actions:
+  - Update relevant file(s) in `/docs/implementation/`.
+  - Update `/docs/implementation/DocQueue.md` status and notes.
+  - Update Doxygen comments in public headers if API contracts changed.
+  - Add or update ADR in `/docs/adr/` when architectural decisions are introduced or changed.

@@ -12,6 +12,7 @@
 static const char *TAG = "sc_loopback";
 
 #define SC_LOOPBACK_FRAMES_PER_READ  (256U)
+#define SC_LOOPBACK_SIGNAL_THRESH    (64)
 
 typedef struct {
     uint32_t sample_rate_hz;
@@ -28,6 +29,7 @@ static void sc_loopback_task(void *arg)
     uint32_t mismatch_acc = 0;
     uint32_t crossing_acc = 0;
     int16_t prev_l = 0;
+    bool prev_loud = false;
     bool prev_valid = false;
 
     while (1) {
@@ -42,17 +44,20 @@ static void sc_loopback_task(void *arg)
         for (size_t i = 0; i < frames_read; i++) {
             const int16_t l = rx_buf[(i * 2) + 0];
             const int16_t r = rx_buf[(i * 2) + 1];
+            const bool loud = (((l >= SC_LOOPBACK_SIGNAL_THRESH) || (l <= -SC_LOOPBACK_SIGNAL_THRESH)) ||
+                               ((r >= SC_LOOPBACK_SIGNAL_THRESH) || (r <= -SC_LOOPBACK_SIGNAL_THRESH)));
 
-            if ((l != 0) || (r != 0)) {
+            if (loud) {
                 nonzero_acc++;
             }
             if (l != r) {
                 mismatch_acc++;
             }
-            if (prev_valid && (prev_l <= 0) && (l > 0)) {
+            if (prev_valid && prev_loud && loud && (prev_l <= 0) && (l > 0)) {
                 crossing_acc++;
             }
             prev_l = l;
+            prev_loud = loud;
             prev_valid = true;
         }
 
@@ -61,7 +66,10 @@ static void sc_loopback_task(void *arg)
         if (frames_acc >= sample_rate_hz) {
             const float signal_pct = (frames_acc > 0) ? (100.0f * (float)nonzero_acc / (float)frames_acc) : 0.0f;
             const float mismatch_pct = (frames_acc > 0) ? (100.0f * (float)mismatch_acc / (float)frames_acc) : 0.0f;
-            const float est_freq_hz = (frames_acc > 0) ? ((float)crossing_acc * (float)sample_rate_hz / (float)frames_acc) : 0.0f;
+            float est_freq_hz = 0.0f;
+            if (signal_pct > 5.0f && frames_acc > 0) {
+                est_freq_hz = ((float)crossing_acc * (float)sample_rate_hz / (float)frames_acc);
+            }
 
             ESP_LOGI(TAG, "loopback: signal=%.1f%% stereo_mismatch=%.2f%% est_freq=%.1f Hz",
                      signal_pct, mismatch_pct, est_freq_hz);

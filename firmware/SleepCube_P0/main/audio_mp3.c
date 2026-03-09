@@ -16,7 +16,19 @@ static const char *TAG = "sc_audio_mp3";
 #define SC_MP3_REFILL_THRESHOLD      (1024)
 #define SC_MP3_MAX_OUTPUT_SAMPLES    (1152 * 2)
 
-esp_err_t sc_audio_mp3_play_file(const char *path)
+static int16_t sc_scale_sample(int16_t sample, uint8_t volume_percent)
+{
+    int32_t scaled = ((int32_t)sample * (int32_t)volume_percent) / 100;
+    if (scaled > 32767) {
+        scaled = 32767;
+    }
+    if (scaled < -32768) {
+        scaled = -32768;
+    }
+    return (int16_t)scaled;
+}
+
+esp_err_t sc_audio_mp3_play_file(const char *path, const volatile bool *play_enabled, uint8_t volume_percent)
 {
     esp_err_t ret = ESP_OK;
     FILE *fp = fopen(path, "rb");
@@ -50,6 +62,10 @@ esp_err_t sc_audio_mp3_play_file(const char *path)
     bool warned_rate_mismatch = false;
 
     while (1) {
+        if ((play_enabled != NULL) && !(*play_enabled)) {
+            break;
+        }
+
         if (bytes_left < SC_MP3_REFILL_THRESHOLD) {
             if (bytes_left > 0 && read_ptr != inbuf) {
                 memmove(inbuf, read_ptr, (size_t)bytes_left);
@@ -101,6 +117,10 @@ esp_err_t sc_audio_mp3_play_file(const char *path)
 
         if (frame_info.nChans == 2) {
             size_t frames = (size_t)frame_info.outputSamps / 2U;
+            size_t sample_count = frames * 2U;
+            for (size_t i = 0; i < sample_count; i++) {
+                pcm_buf[i] = (short)sc_scale_sample((int16_t)pcm_buf[i], volume_percent);
+            }
             ret = sc_audio_i2s_write((const int16_t *)pcm_buf, frames, 1000);
             if (ret != ESP_OK) {
                 ESP_LOGE(TAG, "i2s write failed");
@@ -109,8 +129,9 @@ esp_err_t sc_audio_mp3_play_file(const char *path)
         } else if (frame_info.nChans == 1) {
             size_t mono_samples = (size_t)frame_info.outputSamps;
             for (size_t i = 0; i < mono_samples; i++) {
-                stereo_mono_buf[(i * 2) + 0] = (int16_t)pcm_buf[i];
-                stereo_mono_buf[(i * 2) + 1] = (int16_t)pcm_buf[i];
+                const int16_t s = sc_scale_sample((int16_t)pcm_buf[i], volume_percent);
+                stereo_mono_buf[(i * 2) + 0] = s;
+                stereo_mono_buf[(i * 2) + 1] = s;
             }
             ret = sc_audio_i2s_write(stereo_mono_buf, mono_samples, 1000);
             if (ret != ESP_OK) {

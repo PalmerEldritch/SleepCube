@@ -1,10 +1,211 @@
 menu "SleepCube P0 Configuration"
 
-config SC_LOOPBACK_ENABLE
-    bool "Enable I2S loopback monitor"
+choice SC_BOARD_PROFILE
+    prompt "Board profile"
+    default SC_BOARD_DEVKITC_ESP32
+    help
+        Select the hardware profile used for this build.
+
+    config SC_BOARD_DEVKITC_ESP32
+        bool "ESP32 DevKitC (bring-up board)"
+
+    config SC_BOARD_WAVESHARE_ESP32C6
+        bool "Waveshare ESP32-C6 touch display board"
+endchoice
+
+config SC_ENABLE_AUDIO
+    bool "Enable audio service"
+    default y
+
+config SC_ENABLE_LIGHT
+    bool "Enable lighting service"
+    default y
+
+config SC_ENABLE_UI
+    bool "Enable UI service"
+    default y
+
+config SC_TRACE_TIMING
+    bool "Enable runtime timing trace logs"
+    default n
+    help
+        Emits structured timing markers from key tasks (app core, audio, light, UI)
+        that can be post-processed into scheduling diagrams.
+
+config SC_LIGHT_BACKEND_LED_STRIP
+    bool "Enable addressable LED strip backend"
+    depends on SC_ENABLE_LIGHT
+    default y
+
+config SC_LED_STRIP_GPIO
+    int "LED strip data GPIO"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 0 39
+    default 13
+
+config SC_LED_COUNT
+    int "LED count"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 1 300
+    default 28
+
+choice SC_LED_PIXEL_ORDER
+    prompt "LED pixel order"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    default SC_LED_PIXEL_ORDER_GRB
+
+    config SC_LED_PIXEL_ORDER_GRB
+        bool "GRB (common for WS2812)"
+
+    config SC_LED_PIXEL_ORDER_RGB
+        bool "RGB"
+endchoice
+
+config SC_LED_MAX_BRIGHTNESS_PCT
+    int "Maximum LED brightness percent"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 1 100
+    default 60
+
+config SC_LIGHT_DEFAULT_BRIGHTNESS_PCT
+    int "Default light brightness percent"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 1 100
+    default 30
+
+config SC_LIGHT_UPDATE_HZ
+    int "Light update rate (Hz)"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 5 200
+    default 50
+
+config SC_LIGHT_RAMP_STEP_PCT
+    int "Light ramp step percent per tick"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 1 20
+    default 2
+
+config SC_LIGHT_STARTUP_RAMP_MS
+    int "Startup ramp duration (ms)"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 200 10000
+    default 3000
+
+config SC_LIGHT_STARTUP_OVERSHOOT_PCT
+    int "Startup overshoot amount (percent)"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 0 20
+    default 6
+
+config SC_LIGHT_FLUCT_ENABLE
+    bool "Enable gentle ambient fluctuation"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    default y
+
+config SC_LIGHT_FLUCT_BRIGHTNESS_PCT
+    int "Ambient fluctuation brightness amplitude (percent)"
+    depends on SC_LIGHT_FLUCT_ENABLE
+    range 0 20
+    default 6
+
+config SC_LIGHT_FLUCT_WARMTH_PCT
+    int "Ambient fluctuation warmth amplitude (percent)"
+    depends on SC_LIGHT_FLUCT_ENABLE
+    range 0 30
+    default 10
+
+config SC_LIGHT_AUDIO_SWAY_ENABLE
+    bool "Enable audio on/off light sway"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    default y
+
+config SC_LIGHT_AUDIO_SWAY_PCT
+    int "Audio sway amplitude (percent)"
+    depends on SC_LIGHT_AUDIO_SWAY_ENABLE
+    range 0 100
+    default 8
+
+config SC_LIGHT_AUDIO_SWAY_MS
+    int "Audio sway duration (ms)"
+    depends on SC_LIGHT_AUDIO_SWAY_ENABLE
+    range 100 4000
+    default 1400
+
+config SC_LIGHT_WARM_R
+    int "Warm white R component"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 0 255
+    default 255
+
+config SC_LIGHT_WARM_G
+    int "Warm white G component"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 0 255
+    default 170
+
+config SC_LIGHT_WARM_B
+    int "Warm white B component"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 0 255
+    default 90
+
+config SC_UI_BACKEND_LCD_TOUCH
+    bool "Enable LCD + touch backend"
+    depends on SC_ENABLE_UI && SC_BOARD_WAVESHARE_ESP32C6
     default y
     help
-        Enable the digital I2S loopback monitor task. This requires jumper wires
+        This backend is tied to the Waveshare ESP32-C6 board. It is hidden
+        on other board profiles to avoid conflicting hardware assumptions.
+
+config SC_UI_INPUT_BUTTONS
+    bool "Enable GPIO button input backend"
+    depends on SC_ENABLE_UI
+    default y if SC_BOARD_DEVKITC_ESP32
+    default n if SC_BOARD_WAVESHARE_ESP32C6
+
+config SC_BTN_AUDIO_GPIO
+    int "Audio button GPIO (single press toggle)"
+    depends on SC_UI_INPUT_BUTTONS
+    range 0 39
+    default 0
+
+config SC_BTN_LIGHT_GPIO
+    int "Light button GPIO (toggle)"
+    depends on SC_UI_INPUT_BUTTONS
+    range 0 39
+    default 32
+
+config SC_BTN_VOL_UP_GPIO
+    int "Volume up button GPIO"
+    depends on SC_UI_INPUT_BUTTONS
+    range 0 39
+    default 33
+
+config SC_BTN_VOL_DOWN_GPIO
+    int "Volume down button GPIO"
+    depends on SC_UI_INPUT_BUTTONS
+    range 0 39
+    default 21
+
+config SC_BTN_LIGHT_UP_GPIO
+    int "Brightness up button GPIO"
+    depends on SC_UI_INPUT_BUTTONS
+    range 0 39
+    default 19
+
+config SC_BTN_LIGHT_DOWN_GPIO
+    int "Brightness down button GPIO"
+    depends on SC_UI_INPUT_BUTTONS
+    range 0 39
+    default 18
+
+config SC_LOOPBACK_ENABLE
+    bool "Enable I2S loopback monitor"
+    depends on SC_ENABLE_AUDIO
+    default y if SC_BOARD_DEVKITC_ESP32
+    default n if SC_BOARD_WAVESHARE_ESP32C6
+    help
+        Enable digital I2S loopback monitoring for bring-up with jumper wires
         from TX pins to RX pins as documented in board_pins.h.
 
 endmenu
