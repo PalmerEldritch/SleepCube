@@ -11,7 +11,7 @@
  * 1) Mount SPIFFS.
  * 2) Optionally start loopback monitor depending on `CONFIG_SC_LOOPBACK_ENABLE`.
  * 3) Initialize I2S TX.
- * 4) Start playback task that loops `/spiffs/test.mp3`.
+ * 4) Start playback task for `/spiffs/test.mp3`.
  *
  * @return
  * - ESP_OK on success

@@ -13,8 +13,16 @@ dependencies:
     source:
       type: idf
     version: 5.5.3
+  lvgl/lvgl:
+    dependencies: []
+    source:
+      path: /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/components/lvgl__lvgl
+      type: local
+    version: 8.3.11
 direct_dependencies:
 - chmorgan/esp-libhelix-mp3
-manifest_hash: d09809a6fa8f19ae60d74e174263743e10e23d8e6d665c4e9dacd72fa946e67a
-target: esp32
+- idf
+- lvgl/lvgl
+manifest_hash: a2b6d357ffdeef6b9a9bddebec94fc7eb9d7cf51ea744e723fbecd8cca22887e
+target: esp32c6
 version: 2.0.0

@@ -11,6 +11,8 @@
  * (mono frames are duplicated to both channels).
  *
  * @param path Absolute VFS path to MP3 file (for example `/spiffs/test.mp3`).
+ * @param play_enabled Optional flag checked during playback to allow stop requests.
+ * @param volume_percent Linear software volume scaling from 0 to 100.
  * @return
  * - ESP_OK when file playback finishes successfully
  * - ESP_ERR_NOT_FOUND if the file cannot be opened

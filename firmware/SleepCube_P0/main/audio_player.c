@@ -10,6 +10,7 @@
 #include "audio_i2s.h"
 #include "audio_loopback.h"
 #include "audio_mp3.h"
+#include "audio_tone.h"
 #include "sc_trace.h"
 
 static const char *TAG = "sc_audio_player";
@@ -17,30 +18,60 @@ static const char *TAG = "sc_audio_player";
 #define SC_SAMPLE_RATE_HZ  (44100U)
 #define SC_MP3_PATH        ("/spiffs/test.mp3")
 #define SC_PLAYER_TASK_STACK_WORDS (8192)
+#define SC_AUDIO_TONE_DIAGNOSTIC (0)
+#define SC_TONE_FREQUENCY_HZ (440.0f)
+#define SC_TONE_AMPLITUDE    (0.18f)
+#define SC_TONE_FRAMES       (1024U)
+#define SC_I2S_WRITE_TIMEOUT_MS (200U)
 
 static volatile bool s_play_enabled = false;
-static volatile uint8_t s_volume_percent = 70;
+static volatile uint8_t s_volume_percent = 40;
 
 static void sc_audio_player_task(void *arg)
 {
     (void)arg;
     bool was_playing = false;
-    static int16_t silence[256 * 2] = {0};
+#if SC_AUDIO_TONE_DIAGNOSTIC
+    static int16_t tone_buf[SC_TONE_FRAMES * 2];
+    sc_tone_state_t tone;
+    sc_tone_init(&tone, SC_SAMPLE_RATE_HZ, SC_TONE_FREQUENCY_HZ, SC_TONE_AMPLITUDE);
+#endif
 
     while (1) {
         if (!s_play_enabled) {
-            (void)sc_audio_i2s_write(silence, 256, 100);
             if (was_playing) {
+                ESP_ERROR_CHECK_WITHOUT_ABORT(sc_audio_i2s_set_tx_enabled(false));
                 ESP_LOGI(TAG, "playback stopped, output muted");
                 SC_TRACE_MARK("audio", "state_muted", 0);
                 was_playing = false;
             }
+            vTaskDelay(pdMS_TO_TICKS(20));
             continue;
         }
 
         SC_TRACE_MARK("audio", "play_start", s_volume_percent);
+        ESP_ERROR_CHECK_WITHOUT_ABORT(sc_audio_i2s_set_tx_enabled(true));
         was_playing = true;
+#if SC_AUDIO_TONE_DIAGNOSTIC
+        ESP_LOGI(TAG, "tone diagnostic active: %.0f Hz amp=%.2f volume=%u%% format=msb-32",
+                 (double)SC_TONE_FREQUENCY_HZ, (double)SC_TONE_AMPLITUDE, (unsigned)s_volume_percent);
+        esp_err_t err = ESP_OK;
+        while (s_play_enabled) {
+            for (size_t i = 0; i < SC_TONE_FRAMES; i++) {
+                int16_t s = sc_tone_next_sample(&tone);
+                s = (int16_t)(((int32_t)s * (int32_t)s_volume_percent) / 100);
+                tone_buf[(i * 2U) + 0U] = s;
+                tone_buf[(i * 2U) + 1U] = s;
+            }
+            err = sc_audio_i2s_write(tone_buf, SC_TONE_FRAMES, SC_I2S_WRITE_TIMEOUT_MS);
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "tone i2s write failed: %s", esp_err_to_name(err));
+                break;
+            }
+        }
+#else
         esp_err_t err = sc_audio_mp3_play_file(SC_MP3_PATH, &s_play_enabled, s_volume_percent);
+#endif
         SC_TRACE_MARK("audio", "play_end", err);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "playback failed: %s", esp_err_to_name(err));

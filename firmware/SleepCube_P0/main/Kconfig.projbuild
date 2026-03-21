@@ -114,6 +114,44 @@ config SC_LIGHT_FLUCT_WARMTH_PCT
     range 0 30
     default 10
 
+config SC_LIGHT_AMBIENT_SPEED_PCT
+    int "Ambient fluctuation speed (percent)"
+    depends on SC_LIGHT_FLUCT_ENABLE
+    range 10 300
+    default 100
+    help
+        Scales time evolution of global ambient fluctuation.
+        Lower values produce slower changes.
+
+config SC_LIGHT_SPATIAL_UNDULATION_ENABLE
+    bool "Enable spatial undulation along LED strip"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    default y
+    help
+        Adds a smooth position-dependent modulation so adjacent LEDs vary together
+        with interpolation between moving control points.
+
+config SC_LIGHT_SPATIAL_UNDULATION_PCT
+    int "Spatial undulation amplitude (percent)"
+    depends on SC_LIGHT_SPATIAL_UNDULATION_ENABLE
+    range 0 40
+    default 12
+
+config SC_LIGHT_SPATIAL_KNOTS
+    int "Spatial undulation control points"
+    depends on SC_LIGHT_SPATIAL_UNDULATION_ENABLE
+    range 2 8
+    default 4
+
+config SC_LIGHT_SPATIAL_SPEED_PCT
+    int "Spatial undulation speed (percent)"
+    depends on SC_LIGHT_SPATIAL_UNDULATION_ENABLE
+    range 10 300
+    default 70
+    help
+        Scales time evolution of spatial knot movement.
+        Lower values produce slower and calmer strip movement.
+
 config SC_LIGHT_AUDIO_SWAY_ENABLE
     bool "Enable audio on/off light sway"
     depends on SC_LIGHT_BACKEND_LED_STRIP

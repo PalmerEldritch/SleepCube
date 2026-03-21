@@ -22,7 +22,7 @@ esp_err_t sc_audio_service_start(void)
     ESP_LOGI(TAG, "starting audio playback service");
     ESP_RETURN_ON_ERROR(sc_audio_player_start(), TAG, "audio player start failed");
     sc_audio_player_set_enabled(false);
-    sc_audio_player_set_volume_percent(70);
+    sc_audio_player_set_volume_percent(40);
     ESP_LOGI(TAG, "audio control ready: enabled=%d volume=%u%%",
              sc_audio_player_get_enabled(), (unsigned)sc_audio_player_get_volume_percent());
     return ESP_OK;
@@ -37,7 +37,10 @@ esp_err_t sc_audio_service_set_playback(bool enable)
     }
 
     sc_audio_player_set_enabled(enable);
-    ESP_ERROR_CHECK_WITHOUT_ABORT(sc_light_service_audio_sway(enable));
+    esp_err_t sway_err = sc_light_service_audio_sway(enable);
+    if (sway_err != ESP_OK && sway_err != ESP_ERR_NOT_SUPPORTED) {
+        ESP_LOGW(TAG, "light audio sway failed: %s", esp_err_to_name(sway_err));
+    }
     ESP_LOGI(TAG, "playback %s", enable ? "enabled" : "disabled");
     return ESP_OK;
 }

@@ -1,13 +1,20 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include "esp_err.h"
 
 /**
  * @brief Initialize I2S TX channel for audio playback.
  *
- * Configures standard mode, 16-bit stereo slot format, and board-specific TX pins.
+ * Configures standard mode, board-specific TX pins, and the validated playback format.
+ *
+ * Current working transmit format:
+ * - 44.1 kHz sample rate
+ * - 16-bit PCM data width
+ * - 32-bit slot width
+ * - MSB framing
  *
  * @param sample_rate_hz I2S sample rate in Hz.
  * @return
@@ -17,6 +24,16 @@
  * @note @docready
  */
 esp_err_t sc_audio_i2s_init(uint32_t sample_rate_hz);
+
+/**
+ * @brief Enable or disable the TX channel without changing configuration.
+ *
+ * @param enable True to enable TX, false to disable TX.
+ * @return
+ * - ESP_OK on success
+ * - Error code from I2S driver control functions on failure
+ */
+esp_err_t sc_audio_i2s_set_tx_enabled(bool enable);
 
 /**
  * @brief Initialize I2S RX channel for digital loopback monitoring.
@@ -37,7 +54,7 @@ esp_err_t sc_audio_i2s_init_rx(uint32_t sample_rate_hz);
  *
  * @param stereo_pcm Pointer to interleaved PCM frame data (L,R,L,R...).
  * @param frame_count Number of stereo frames to write.
- * @param timeout_ms Timeout in milliseconds.
+ * @param timeout_ms Timeout in milliseconds passed directly to the I2S driver.
  * @return
  * - ESP_OK if all requested frames were written
  * - ESP_ERR_TIMEOUT if a partial write occurred

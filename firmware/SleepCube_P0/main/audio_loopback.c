@@ -84,7 +84,12 @@ static void sc_loopback_task(void *arg)
 
 esp_err_t sc_audio_loopback_start(uint32_t sample_rate_hz)
 {
-    ESP_RETURN_ON_ERROR(sc_audio_i2s_init_rx(sample_rate_hz), TAG, "I2S RX init failed");
+    esp_err_t err = sc_audio_i2s_init_rx(sample_rate_hz);
+    if (err == ESP_ERR_NOT_SUPPORTED) {
+        ESP_LOGW(TAG, "loopback monitor not supported on current target/board profile");
+        return err;
+    }
+    ESP_RETURN_ON_ERROR(err, TAG, "I2S RX init failed");
 
     static sc_loopback_task_arg_t cfg;
     cfg.sample_rate_hz = sample_rate_hz;

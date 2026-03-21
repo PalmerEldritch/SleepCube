@@ -9,12 +9,17 @@
 #include "freertos/task.h"
 #include "esp_check.h"
 #include "esp_log.h"
+
+#if CONFIG_SC_ENABLE_LIGHT
 #include "esp_random.h"
 #include "led_strip_if.h"
 #include "light_engine.h"
 #include "sc_trace.h"
+#endif
 
 static const char *TAG = "sc_light_service";
+
+#if CONFIG_SC_ENABLE_LIGHT
 
 #ifdef CONFIG_SC_LIGHT_DEFAULT_BRIGHTNESS_PCT
 #define SC_LIGHT_DEFAULT_BRIGHTNESS_PCT CONFIG_SC_LIGHT_DEFAULT_BRIGHTNESS_PCT
@@ -64,6 +69,12 @@ static const char *TAG = "sc_light_service";
 #define SC_LIGHT_FLUCT_WARMTH_PCT 0
 #endif
 
+#ifdef CONFIG_SC_LIGHT_AMBIENT_SPEED_PCT
+#define SC_LIGHT_AMBIENT_SPEED_PCT CONFIG_SC_LIGHT_AMBIENT_SPEED_PCT
+#else
+#define SC_LIGHT_AMBIENT_SPEED_PCT 100
+#endif
+
 #ifdef CONFIG_SC_LIGHT_AUDIO_SWAY_ENABLE
 #define SC_LIGHT_AUDIO_SWAY_ENABLE 1
 #else
@@ -86,6 +97,7 @@ static bool s_light_enabled = true;
 static int s_brightness_target_pct = SC_LIGHT_DEFAULT_BRIGHTNESS_PCT;
 static float s_brightness_current_pct = 0.0f;
 static uint16_t s_render_frame_index = 0;
+static float s_light_time_s = 0.0f;
 static uint8_t *s_rgb_buf;
 static bool s_startup_anim_active = true;
 static float s_startup_anim_elapsed_s = 0.0f;
@@ -164,15 +176,17 @@ static void sc_fluctuation_step(float dt_s, float *brightness_pct, float *warmth
     *brightness_pct = 0.0f;
     *warmth_pct = 0.0f;
 #if SC_LIGHT_FLUCT_ENABLE
-    s_fluct_speed_a = sc_clampf(s_fluct_speed_a + 0.002f * sc_random_symm(), 0.15f, 0.30f);
-    s_fluct_speed_b = sc_clampf(s_fluct_speed_b + 0.001f * sc_random_symm(), 0.06f, 0.18f);
-    s_fluct_speed_c = sc_clampf(s_fluct_speed_c + 0.0015f * sc_random_symm(), 0.10f, 0.24f);
-    s_fluct_speed_d = sc_clampf(s_fluct_speed_d + 0.001f * sc_random_symm(), 0.05f, 0.14f);
+    const float speed_scale = (float)SC_LIGHT_AMBIENT_SPEED_PCT / 100.0f;
+    const float drift_scale = dt_s * speed_scale;
+    s_fluct_speed_a = sc_clampf(s_fluct_speed_a + 0.10f * drift_scale * sc_random_symm(), 0.12f, 0.28f);
+    s_fluct_speed_b = sc_clampf(s_fluct_speed_b + 0.07f * drift_scale * sc_random_symm(), 0.05f, 0.16f);
+    s_fluct_speed_c = sc_clampf(s_fluct_speed_c + 0.09f * drift_scale * sc_random_symm(), 0.08f, 0.22f);
+    s_fluct_speed_d = sc_clampf(s_fluct_speed_d + 0.06f * drift_scale * sc_random_symm(), 0.04f, 0.12f);
 
-    s_fluct_phase_a += s_fluct_speed_a * dt_s;
-    s_fluct_phase_b += s_fluct_speed_b * dt_s;
-    s_fluct_phase_c += s_fluct_speed_c * dt_s;
-    s_fluct_phase_d += s_fluct_speed_d * dt_s;
+    s_fluct_phase_a += s_fluct_speed_a * drift_scale;
+    s_fluct_phase_b += s_fluct_speed_b * drift_scale;
+    s_fluct_phase_c += s_fluct_speed_c * drift_scale;
+    s_fluct_phase_d += s_fluct_speed_d * drift_scale;
 
     *brightness_pct = (float)SC_LIGHT_FLUCT_BRIGHTNESS_PCT *
                       (0.62f * sinf(s_fluct_phase_a) + 0.38f * sinf(s_fluct_phase_b));
@@ -198,6 +212,7 @@ static void sc_light_service_task(void *arg)
              SC_LIGHT_UPDATE_HZ, (double)effective_hz, (unsigned)period_ms, (unsigned)tick, (double)dt_s);
 
     while (1) {
+        s_light_time_s += dt_s;
         const bool trace_this_cycle = ((trace_ctr++ % SC_LIGHT_TRACE_DECIMATION) == 0U);
         if (trace_this_cycle) {
             SC_TRACE_MARK("light", "work_start", (int32_t)s_brightness_current_pct);
@@ -232,7 +247,8 @@ static void sc_light_service_task(void *arg)
             effective_brightness = sc_clampf(effective_brightness, 0.0f, 100.0f);
             int warmth_shift = (int)sc_clampf(fluct_warmth_pct, -100.0f, 100.0f);
 
-            sc_light_engine_render_warm(effective_brightness, (int8_t)warmth_shift, s_render_frame_index++,
+            sc_light_engine_render_warm(effective_brightness, (int8_t)warmth_shift,
+                                        s_light_time_s, s_render_frame_index++,
                                         s_rgb_buf, (size_t)CONFIG_SC_LED_COUNT);
             (void)sc_led_strip_if_write_rgb(s_rgb_buf, (size_t)CONFIG_SC_LED_COUNT);
         }
@@ -266,6 +282,7 @@ esp_err_t sc_light_service_start(void)
     s_brightness_target_pct = SC_LIGHT_DEFAULT_BRIGHTNESS_PCT;
     s_brightness_current_pct = 0.0f;
     s_render_frame_index = 0;
+    s_light_time_s = 0.0f;
     s_startup_anim_active = true;
     s_startup_anim_elapsed_s = 0.0f;
     s_audio_sway_active = false;
@@ -326,3 +343,39 @@ esp_err_t sc_light_service_audio_sway(bool audio_enabled)
 #endif
     return ESP_OK;
 }
+
+#else
+
+esp_err_t sc_light_service_start(void)
+{
+    ESP_LOGI(TAG, "light service disabled by config");
+    return ESP_OK;
+}
+
+esp_err_t sc_light_service_set_enabled(bool enable)
+{
+    (void)enable;
+    ESP_LOGW(TAG, "set enabled ignored: light service disabled");
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_toggle(void)
+{
+    ESP_LOGW(TAG, "toggle ignored: light service disabled");
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_change_brightness(int delta_steps)
+{
+    (void)delta_steps;
+    ESP_LOGW(TAG, "change brightness ignored: light service disabled");
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_audio_sway(bool audio_enabled)
+{
+    (void)audio_enabled;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+#endif

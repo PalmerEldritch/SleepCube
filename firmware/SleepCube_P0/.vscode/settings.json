@@ -5,9 +5,14 @@
   ], */
   "idf.currentSetup": "/home/jeppe/.espressif/v5.5.3/esp-idf",
   "idf.customExtraVars": {
-    "IDF_TARGET": "esp32"
+    "OPENOCD_SCRIPTS": "C:\\.espressif\\tools\\openocd-esp32\\v0.11.0-esp32-20221026/openocd-esp32/share/openocd/scripts",
+    "IDF_CCACHE_ENABLE": "1",
+    "IDF_TARGET": "esp32c6"
   },
   "idf.flashType": "UART",
   "terminal.integrated.defaultProfile.linux": "bash",
-  "idf.port": "/dev/ttyUSB0"
+  "idf.port": "/dev/ttyACM0",
+  "idf.openOcdConfigs": [
+    "board/esp32c6-builtin.cfg"
+  ]
 }
