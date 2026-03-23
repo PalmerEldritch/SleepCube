@@ -65,6 +65,11 @@ esp_err_t sc_audio_service_change_volume(int delta_steps)
     return ESP_OK;
 }
 
+bool sc_audio_service_get_playback_enabled(void)
+{
+    return sc_audio_player_get_enabled();
+}
+
 #else
 
 esp_err_t sc_audio_service_start(void)
@@ -91,6 +96,11 @@ esp_err_t sc_audio_service_change_volume(int delta_steps)
     (void)delta_steps;
     ESP_LOGW(TAG, "change volume ignored: audio service disabled");
     return ESP_ERR_NOT_SUPPORTED;
+}
+
+bool sc_audio_service_get_playback_enabled(void)
+{
+    return false;
 }
 
 #endif

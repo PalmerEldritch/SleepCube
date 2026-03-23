@@ -99,4 +99,7 @@
 #define SC_TOUCH_INT_GPIO                  GPIO_NUM_21
 #define SC_LCD_H_RES                       172
 #define SC_LCD_V_RES                       320
+#define SC_SD_CS_GPIO                      GPIO_NUM_4
+#else
+#define SC_SD_CS_GPIO                      GPIO_NUM_NC
 #endif

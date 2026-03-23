@@ -32,6 +32,14 @@ static float s_dither_err_r;
 static float s_dither_err_g;
 static float s_dither_err_b;
 
+static void sc_lvgl_set_static_playback_screen(void)
+{
+    const lv_color_t base = lv_color_hex(0xF1ECE4);
+    lv_obj_set_style_bg_color(lv_scr_act(), base, 0);
+    lv_obj_set_style_bg_grad_color(lv_scr_act(), base, 0);
+    lv_obj_set_style_bg_grad_dir(lv_scr_act(), LV_GRAD_DIR_NONE, 0);
+}
+
 static void sc_lvgl_touch_poll_cb(lv_timer_t *timer)
 {
     (void)timer;
@@ -94,6 +102,10 @@ static void sc_ambient_anim_cb(lv_timer_t *timer)
         return;
     }
 
+    if (sc_audio_service_get_playback_enabled()) {
+        return;
+    }
+
     s_ambient_phase += (2.0f * (float)M_PI * ((float)SC_AMBIENT_TIMER_MS / 1000.0f) / SC_AMBIENT_PULSE_PERIOD_S);
 
     const float phase_a = s_ambient_phase;
@@ -134,7 +146,24 @@ static void sc_root_tap_cb(lv_event_t *e)
         return;
     }
 
+    const bool was_enabled = sc_audio_service_get_playback_enabled();
+
+    if (!was_enabled) {
+        if (s_ambient_timer != NULL) {
+            lv_timer_pause(s_ambient_timer);
+        }
+        if (s_tap_pulse != NULL) {
+            lv_obj_add_flag(s_tap_pulse, LV_OBJ_FLAG_HIDDEN);
+        }
+        sc_lvgl_set_static_playback_screen();
+    }
+
     ESP_ERROR_CHECK_WITHOUT_ABORT(sc_audio_service_toggle_playback());
+
+    if (was_enabled && s_ambient_timer != NULL) {
+        lv_timer_resume(s_ambient_timer);
+        sc_ambient_anim_cb(NULL);
+    }
 
     lv_indev_t *indev = lv_indev_get_act();
     lv_point_t point = {
@@ -148,10 +177,12 @@ static void sc_root_tap_cb(lv_event_t *e)
         point.y = s_touch_y;
     }
 
-    lv_obj_set_size(s_tap_pulse, 26, 26);
-    lv_obj_set_pos(s_tap_pulse, point.x - 13, point.y - 13);
-    lv_obj_set_style_border_opa(s_tap_pulse, LV_OPA_80, 0);
-    lv_obj_clear_flag(s_tap_pulse, LV_OBJ_FLAG_HIDDEN);
+    if (was_enabled) {
+        lv_obj_set_size(s_tap_pulse, 26, 26);
+        lv_obj_set_pos(s_tap_pulse, point.x - 13, point.y - 13);
+        lv_obj_set_style_border_opa(s_tap_pulse, LV_OPA_80, 0);
+        lv_obj_clear_flag(s_tap_pulse, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 esp_err_t sc_lvgl_display_init(void)

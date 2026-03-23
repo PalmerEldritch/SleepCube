@@ -46,7 +46,7 @@ if(CONFIG_SC_ENABLE_UI AND CONFIG_SC_UI_BACKEND_LCD_TOUCH)
 endif()
 
 set(SC_REQUIRES driver)
-set(SC_PRIV_REQUIRES esp_driver_i2s spiffs esp_timer)
+set(SC_PRIV_REQUIRES esp_driver_i2s spiffs esp_timer fatfs sdmmc esp_driver_spi)
 if(CONFIG_SC_ENABLE_LIGHT AND CONFIG_SC_LIGHT_BACKEND_LED_STRIP)
     list(APPEND SC_PRIV_REQUIRES esp_driver_rmt)
 endif()

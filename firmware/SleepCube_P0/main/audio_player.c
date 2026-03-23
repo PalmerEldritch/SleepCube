@@ -16,7 +16,6 @@
 static const char *TAG = "sc_audio_player";
 
 #define SC_SAMPLE_RATE_HZ  (44100U)
-#define SC_MP3_PATH        ("/spiffs/test.mp3")
 #define SC_PLAYER_TASK_STACK_WORDS (8192)
 #define SC_AUDIO_TONE_DIAGNOSTIC (0)
 #define SC_TONE_FREQUENCY_HZ (440.0f)
@@ -70,7 +69,8 @@ static void sc_audio_player_task(void *arg)
             }
         }
 #else
-        esp_err_t err = sc_audio_mp3_play_file(SC_MP3_PATH, &s_play_enabled, s_volume_percent);
+        const char *mp3_path = sc_audio_fs_get_default_mp3_path();
+        esp_err_t err = sc_audio_mp3_play_file(mp3_path, &s_play_enabled, s_volume_percent);
 #endif
         SC_TRACE_MARK("audio", "play_end", err);
         if (err != ESP_OK) {
@@ -107,8 +107,8 @@ esp_err_t sc_audio_player_start(void)
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "mp3 playback task started (%s), initial enabled=%d volume=%u%%",
-             SC_MP3_PATH, s_play_enabled, (unsigned)s_volume_percent);
+    ESP_LOGI(TAG, "mp3 playback task started (preferred path=%s), initial enabled=%d volume=%u%%",
+             sc_audio_fs_get_default_mp3_path(), s_play_enabled, (unsigned)s_volume_percent);
     return ESP_OK;
 }
 
