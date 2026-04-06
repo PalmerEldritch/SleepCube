@@ -17,6 +17,7 @@ and LCD synchronization inputs used in the P0 firmware.
   - audio sway impulse on audio state transitions
   - gamma mapping + temporal dithering for smoother fades
   - LCD ambient renderer consumption of current brightness/audio state
+  - LCD backlight-driven breathing and pulse rendering used by the touch display UI
   - non-blocking LED TX queueing with TX-done callback
 - Excluded:
   - multi-scene storage
@@ -34,7 +35,8 @@ and LCD synchronization inputs used in the P0 firmware.
    - applies optional audio sway envelope
    - renders warm RGB frame via light engine
    - queues frame for non-blocking RMT transmit
-4. The LCD ambient layer reads current brightness and audio state from services to stay visually aligned with the dedicated light output.
+4. The LCD ambient layer reads target brightness and audio state from services to stay visually aligned with the dedicated light output.
+5. The LCD ambient layer keeps a stable warm-white pixel field and modulates panel backlight PWM for breathing and audio-toggle pulse response.
 
 ## Rendering Model
 
@@ -57,6 +59,7 @@ and LCD synchronization inputs used in the P0 firmware.
 | `sc_light_service_audio_sway(audio_enabled)` | bool | `esp_err_t` | Injects positive/negative sway envelope |
 | `sc_light_service_get_current_brightness_percent()` | none | `uint8_t` | Exposes current brightness for LCD sync |
 | `sc_light_service_get_target_brightness_percent()` | none | `uint8_t` | Exposes target brightness |
+| `sc_lcd_panel_if_set_backlight_level(level)` | 0-1023 duty | `esp_err_t` | Used by LCD ambient renderer for smooth PWM-driven breathing and pulse output |
 | `sc_led_strip_if_write_rgb(buf, count)` | RGB bytes | `esp_err_t` | Non-blocking TX submit |
 | `sc_light_engine_render_warm(...)` | brightness/warmth/frame | none | Fills RGB frame buffer |
 
@@ -104,6 +107,7 @@ and LCD synchronization inputs used in the P0 firmware.
 
 - LCD and strip are not yet driven by a single shared animation-state object.
 - Display synchronization currently uses shared service state rather than per-frame strip data.
+- LCD ambient brightness changes are expressed primarily through backlight PWM because repeated full-screen RGB565 brightness updates on the SPI panel produced visible stepping.
 - No per-frame retry queue exists in light service; skipped frames are allowed by design.
 
 ## Verification Notes
@@ -115,6 +119,7 @@ and LCD synchronization inputs used in the P0 firmware.
   - spatial movement remains calm rather than attention-grabbing
   - audio on/off triggers a short brightness sway
   - LCD ambience tracks brightness/audio state changes
+  - LCD breathing remains visually smooth and audio-toggle pulses remain visible across the practical brightness range
 
 ## Open Items
 

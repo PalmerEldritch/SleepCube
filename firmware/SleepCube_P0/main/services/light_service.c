@@ -339,6 +339,23 @@ esp_err_t sc_light_service_change_brightness(int delta_steps)
     if (next > 100) {
         next = 100;
     }
+    return sc_light_service_set_brightness_percent((uint8_t)next);
+}
+
+esp_err_t sc_light_service_set_brightness_percent(uint8_t percent)
+{
+    int next = (int)percent;
+    if (next < SC_LIGHT_BRIGHTNESS_MIN_PCT) {
+        next = SC_LIGHT_BRIGHTNESS_MIN_PCT;
+    }
+    if (next > 100) {
+        next = 100;
+    }
+
+    if (s_brightness_target_pct == next) {
+        return ESP_OK;
+    }
+
     s_brightness_target_pct = next;
     s_light_enabled = true;
     esp_err_t save_err = sc_settings_store_save_u8(SC_LIGHT_SETTINGS_KEY_BRIGHTNESS, (uint8_t)next);
@@ -401,6 +418,13 @@ esp_err_t sc_light_service_change_brightness(int delta_steps)
 {
     (void)delta_steps;
     ESP_LOGW(TAG, "change brightness ignored: light service disabled");
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_set_brightness_percent(uint8_t percent)
+{
+    (void)percent;
+    ESP_LOGW(TAG, "set brightness ignored: light service disabled");
     return ESP_ERR_NOT_SUPPORTED;
 }
 

@@ -27,6 +27,7 @@ static esp_lcd_panel_handle_t s_panel_handle;
 static esp_lcd_touch_handle_t s_touch_handle;
 static i2c_master_bus_handle_t s_i2c_bus_handle;
 static bool s_started;
+static uint16_t s_backlight_level = SC_LCD_BACKLIGHT_MAX_DUTY - 1U;
 
 static esp_err_t sc_lcd_backlight_init(void)
 {
@@ -58,10 +59,29 @@ static esp_err_t sc_lcd_backlight_set_percent(uint8_t brightness)
     }
 
     const uint32_t duty = (brightness * (SC_LCD_BACKLIGHT_MAX_DUTY - 1U)) / 100U;
+    s_backlight_level = (uint16_t)duty;
     ESP_RETURN_ON_ERROR(ledc_set_duty(SC_LCD_BACKLIGHT_MODE, SC_LCD_BACKLIGHT_CHANNEL, duty),
                         TAG,
                         "backlight duty set failed");
     return ledc_update_duty(SC_LCD_BACKLIGHT_MODE, SC_LCD_BACKLIGHT_CHANNEL);
+}
+
+esp_err_t sc_lcd_panel_if_set_backlight_level(uint16_t level)
+{
+    if (level >= SC_LCD_BACKLIGHT_MAX_DUTY) {
+        level = SC_LCD_BACKLIGHT_MAX_DUTY - 1U;
+    }
+
+    s_backlight_level = level;
+    ESP_RETURN_ON_ERROR(ledc_set_duty(SC_LCD_BACKLIGHT_MODE, SC_LCD_BACKLIGHT_CHANNEL, level),
+                        TAG,
+                        "backlight duty set failed");
+    return ledc_update_duty(SC_LCD_BACKLIGHT_MODE, SC_LCD_BACKLIGHT_CHANNEL);
+}
+
+uint16_t sc_lcd_panel_if_get_backlight_level(void)
+{
+    return s_backlight_level;
 }
 
 static esp_err_t sc_i2c_bus_init(void)
@@ -220,6 +240,17 @@ esp_lcd_panel_handle_t sc_lcd_panel_if_get_panel_handle(void)
 esp_lcd_touch_handle_t sc_lcd_panel_if_get_touch_handle(void)
 {
     return NULL;
+}
+
+esp_err_t sc_lcd_panel_if_set_backlight_level(uint16_t level)
+{
+    (void)level;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+uint16_t sc_lcd_panel_if_get_backlight_level(void)
+{
+    return 0;
 }
 
 #endif

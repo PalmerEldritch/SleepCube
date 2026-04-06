@@ -78,12 +78,26 @@ esp_err_t sc_audio_service_change_volume(int delta_steps)
     if (next > 100) {
         next = 100;
     }
-    sc_audio_player_set_volume_percent((uint8_t)next);
-    esp_err_t save_err = sc_settings_store_save_u8(SC_AUDIO_SETTINGS_KEY_VOLUME, (uint8_t)next);
+    return sc_audio_service_set_volume_percent((uint8_t)next);
+}
+
+esp_err_t sc_audio_service_set_volume_percent(uint8_t percent)
+{
+    uint8_t next = percent;
+    if (next > 100U) {
+        next = 100U;
+    }
+
+    if (sc_audio_player_get_volume_percent() == next) {
+        return ESP_OK;
+    }
+
+    sc_audio_player_set_volume_percent(next);
+    esp_err_t save_err = sc_settings_store_save_u8(SC_AUDIO_SETTINGS_KEY_VOLUME, next);
     if (save_err != ESP_OK) {
         ESP_LOGW(TAG, "volume save failed: %s", esp_err_to_name(save_err));
     }
-    ESP_LOGI(TAG, "volume=%d%%", next);
+    ESP_LOGI(TAG, "volume=%u%%", (unsigned)next);
     return ESP_OK;
 }
 
@@ -122,6 +136,13 @@ esp_err_t sc_audio_service_change_volume(int delta_steps)
 {
     (void)delta_steps;
     ESP_LOGW(TAG, "change volume ignored: audio service disabled");
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_audio_service_set_volume_percent(uint8_t percent)
+{
+    (void)percent;
+    ESP_LOGW(TAG, "set volume ignored: audio service disabled");
     return ESP_ERR_NOT_SUPPORTED;
 }
 
