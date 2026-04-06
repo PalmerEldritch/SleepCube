@@ -24,6 +24,15 @@ typedef struct {
 void sc_tone_init(sc_tone_state_t *state, uint32_t sample_rate_hz, float frequency_hz, float amplitude);
 
 /**
+ * @brief Update tone frequency while preserving oscillator phase.
+ *
+ * @param state Pointer to tone state.
+ * @param sample_rate_hz Sample rate in Hz.
+ * @param frequency_hz New sine frequency in Hz.
+ */
+void sc_tone_set_frequency(sc_tone_state_t *state, uint32_t sample_rate_hz, float frequency_hz);
+
+/**
  * @brief Generate next 16-bit PCM sample from tone state.
  *
  * @param state Pointer to tone state.

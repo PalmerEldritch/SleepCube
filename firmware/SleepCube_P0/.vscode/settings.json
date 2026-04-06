@@ -3,7 +3,7 @@
 /*   "idf.openOcdConfigs": [
     "board/esp32-wrover-kit-3.3v.cfg"
   ], */
-  "idf.currentSetup": "/home/jeppe/.espressif/v5.5.3/esp-idf",
+  "idf.currentSetup": "/home/jeppe/esp/v6.0/esp-idf",
   "idf.customExtraVars": {
     "OPENOCD_SCRIPTS": "C:\\.espressif\\tools\\openocd-esp32\\v0.11.0-esp32-20221026/openocd-esp32/share/openocd/scripts",
     "IDF_CCACHE_ENABLE": "1",

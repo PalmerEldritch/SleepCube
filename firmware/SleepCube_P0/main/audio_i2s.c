@@ -10,21 +10,32 @@
 
 static const char *TAG = "sc_audio_i2s";
 static i2s_chan_handle_t s_tx_chan;
+#if (SOC_I2S_NUM > 1)
 static i2s_chan_handle_t s_rx_chan;
+#endif
 static bool s_tx_enabled;
+
+static uint64_t sc_gpio_pin_mask(gpio_num_t gpio_num)
+{
+    if ((gpio_num < 0) || (gpio_num >= 64)) {
+        return 0;
+    }
+    return 1ULL << (uint32_t)gpio_num;
+}
 
 static esp_err_t sc_audio_i2s_init_tx(uint32_t sample_rate_hz)
 {
     if (SC_AUDIO_AMP_SD_GPIO != GPIO_NUM_NC) {
+        const gpio_num_t amp_sd_gpio = SC_AUDIO_AMP_SD_GPIO;
         const gpio_config_t amp_sd_cfg = {
-            .pin_bit_mask = (1ULL << (uint32_t)SC_AUDIO_AMP_SD_GPIO),
+            .pin_bit_mask = sc_gpio_pin_mask(amp_sd_gpio),
             .mode = GPIO_MODE_OUTPUT,
             .pull_up_en = GPIO_PULLUP_DISABLE,
             .pull_down_en = GPIO_PULLDOWN_DISABLE,
             .intr_type = GPIO_INTR_DISABLE,
         };
         ESP_RETURN_ON_ERROR(gpio_config(&amp_sd_cfg), TAG, "amp sd gpio config failed");
-        ESP_RETURN_ON_ERROR(gpio_set_level(SC_AUDIO_AMP_SD_GPIO, 1), TAG, "amp sd gpio set failed");
+        ESP_RETURN_ON_ERROR(gpio_set_level(amp_sd_gpio, 1), TAG, "amp sd gpio set failed");
     }
 
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);

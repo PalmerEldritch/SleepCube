@@ -2,27 +2,30 @@
 
 ## Purpose
 
-Document the current warm-light rendering pipeline, animation layers, and RMT LED
-streaming behavior for ESP32 DevKitC bring-up.
+Document the current dedicated-light rendering pipeline, ambient animation layers,
+and LCD synchronization inputs used in the P0 firmware.
 
 ## Scope
 
 - Included:
-  - Addressable LED strip backend (RMT TX + custom WS2812 encoder)
-  - Light service state model (enabled flag, target brightness, ramping)
-  - Startup ramp with easing and overshoot
-  - Ambient fluctuation (brightness + warmth)
-  - Audio sway impulse on audio state transitions
-  - Gamma mapping + temporal dithering for smoother fades
-  - Non-blocking LED TX queueing with TX-done callback
+  - addressable LED strip backend (RMT TX + custom WS2812 encoder)
+  - light service state model (enabled flag, target brightness, ramping)
+  - persisted brightness restore at startup
+  - startup ramp with easing and overshoot
+  - global ambient fluctuation (brightness + warmth)
+  - spatial undulation across the LED strip
+  - audio sway impulse on audio state transitions
+  - gamma mapping + temporal dithering for smoother fades
+  - LCD ambient renderer consumption of current brightness/audio state
+  - non-blocking LED TX queueing with TX-done callback
 - Excluded:
-  - Multi-zone/per-pixel effect patterns
-  - Color presets and user scene storage
-  - DMA-backed LED streaming (not available on current classic ESP32 RMT path)
+  - multi-scene storage
+  - final shared animation engine between LCD and strip
+  - DMA-backed LED streaming
 
 ## Runtime Behavior
 
-1. `sc_light_service_start()` initializes LED backend and starts `sc_light` task.
+1. `sc_light_service_start()` restores persisted brightness, initializes LED backend, and starts `sc_light` task.
 2. Task computes effective loop period from `SC_LIGHT_UPDATE_HZ` and RTOS tick.
 3. Each loop:
    - ramps `current` brightness toward `target`
@@ -31,27 +34,29 @@ streaming behavior for ESP32 DevKitC bring-up.
    - applies optional audio sway envelope
    - renders warm RGB frame via light engine
    - queues frame for non-blocking RMT transmit
-4. When disabled, service clears strip (subject to non-blocking TX availability).
+4. The LCD ambient layer reads current brightness and audio state from services to stay visually aligned with the dedicated light output.
 
 ## Rendering Model
 
-`target_brightness` -> `current_brightness` (ramp) -> `startup_scale` ->
-`+ fluctuation` -> `+ audio_sway` -> clamp [0..100] -> light engine:
+`target_brightness` -> `current_brightness` -> `startup_scale` -> `+ fluctuation` -> `+ audio_sway` -> clamp [0..100] -> light engine:
 
 - perceptual brightness (`gamma 2.2`)
 - max brightness cap (`CONFIG_SC_LED_MAX_BRIGHTNESS_PCT`)
 - warmth shift blend
+- spatial undulation along the strip
 - temporal dithering to reduce visible 8-bit stepping
 
 ## Interfaces
 
 | API | Input | Output | Notes |
 | --- | --- | --- | --- |
-| `sc_light_service_start()` | none | `esp_err_t` | Initializes backend and task |
-| `sc_light_service_set_enabled(enable)` | bool | `esp_err_t` | On/off state |
-| `sc_light_service_toggle()` | none | `esp_err_t` | Toggle wrapper |
-| `sc_light_service_change_brightness(step)` | signed step | `esp_err_t` | 5% step, min clamp at 5% |
+| `sc_light_service_start()` | none | `esp_err_t` | Restores brightness, initializes backend, starts task |
+| `sc_light_service_set_enabled(enable)` | bool | `esp_err_t` | Internal/service-level on/off state |
+| `sc_light_service_toggle()` | none | `esp_err_t` | Legacy wrapper, not part of primary UI |
+| `sc_light_service_change_brightness(step)` | signed step | `esp_err_t` | 5 percent step, min clamp at 5 percent |
 | `sc_light_service_audio_sway(audio_enabled)` | bool | `esp_err_t` | Injects positive/negative sway envelope |
+| `sc_light_service_get_current_brightness_percent()` | none | `uint8_t` | Exposes current brightness for LCD sync |
+| `sc_light_service_get_target_brightness_percent()` | none | `uint8_t` | Exposes target brightness |
 | `sc_led_strip_if_write_rgb(buf, count)` | RGB bytes | `esp_err_t` | Non-blocking TX submit |
 | `sc_light_engine_render_warm(...)` | brightness/warmth/frame | none | Fills RGB frame buffer |
 
@@ -64,7 +69,7 @@ streaming behavior for ESP32 DevKitC bring-up.
 | `CONFIG_SC_LED_COUNT` | `28` | Number of LEDs |
 | `CONFIG_SC_LED_PIXEL_ORDER_*` | `GRB` | Channel order for strip |
 | `CONFIG_SC_LED_MAX_BRIGHTNESS_PCT` | `60` | Global cap |
-| `CONFIG_SC_LIGHT_DEFAULT_BRIGHTNESS_PCT` | `30` | Startup target |
+| `CONFIG_SC_LIGHT_DEFAULT_BRIGHTNESS_PCT` | `30` | Fallback startup target |
 | `CONFIG_SC_LIGHT_UPDATE_HZ` | `50` | Requested loop rate |
 | `CONFIG_SC_LIGHT_RAMP_STEP_PCT` | `2` | Per-loop brightness ramp |
 | `CONFIG_SC_LIGHT_STARTUP_RAMP_MS` | `3000` | Startup fade duration |
@@ -72,36 +77,34 @@ streaming behavior for ESP32 DevKitC bring-up.
 | `CONFIG_SC_LIGHT_FLUCT_ENABLE` | `y` | Ambient fluctuation switch |
 | `CONFIG_SC_LIGHT_FLUCT_BRIGHTNESS_PCT` | `6` | Fluctuation amplitude (brightness) |
 | `CONFIG_SC_LIGHT_FLUCT_WARMTH_PCT` | `10` | Fluctuation amplitude (warmth) |
+| `CONFIG_SC_LIGHT_SPATIAL_UNDULATION_ENABLE` | `y` | Enables strip-wide spatial movement |
+| `CONFIG_SC_LIGHT_SPATIAL_UNDULATION_PCT` | `12` | Spatial amplitude |
+| `CONFIG_SC_LIGHT_SPATIAL_KNOTS` | `4` | Spatial control points |
+| `CONFIG_SC_LIGHT_SPATIAL_SPEED_PCT` | `70` | Spatial motion speed |
 | `CONFIG_SC_LIGHT_AUDIO_SWAY_ENABLE` | `y` | Audio sway switch |
 | `CONFIG_SC_LIGHT_AUDIO_SWAY_PCT` | `8` | Audio sway amplitude |
 | `CONFIG_SC_LIGHT_AUDIO_SWAY_MS` | `1400` | Audio sway duration |
 | `CONFIG_SC_LIGHT_WARM_R/G/B` | `255/170/90` | Warm base color |
 
-## Timing Notes
-
-- Effective update rate is quantized by `CONFIG_FREERTOS_HZ`.
-- Example: with `CONFIG_FREERTOS_HZ=100`, one tick is 10 ms, so practical loop rate
-  is near 100 Hz max when using `vTaskDelayUntil()`.
-- Light service clamps delay to at least one tick to avoid zero-tick assert.
-
 ## LED TX Strategy
 
-- RMT configured with non-blocking queue mode.
+- RMT is configured with non-blocking queue mode.
 - One shared TX buffer is reused.
-- `s_tx_busy` is set on submit and cleared from RMT TX-done callback.
-- New frames are skipped while TX is busy (`ESP_ERR_TIMEOUT`) to avoid buffer overwrite.
+- `s_tx_busy` is set on submit and cleared from the RMT TX-done callback.
+- New frames are skipped while TX is busy to avoid buffer overwrite.
 
 ## Error Handling
 
-- Init fails if RMT channel/encoder allocation fails.
-- Frame writes return `ESP_ERR_INVALID_STATE` if backend not initialized.
-- Frame writes/clear can return `ESP_ERR_TIMEOUT` when a previous transfer is still active.
+- Init fails if RMT channel or encoder allocation fails.
+- Frame writes return `ESP_ERR_INVALID_STATE` if backend is not initialized.
+- Frame writes and clear can return `ESP_ERR_TIMEOUT` when a previous transfer is still active.
+- Brightness persistence falls back to default if settings load fails.
 
 ## Constraints and Assumptions
 
-- Current implementation renders a single uniform color for all LEDs.
-- No per-frame retry queue in light service; skipped frames are allowed by design.
-- Classic ESP32 RMT path here is non-DMA.
+- LCD and strip are not yet driven by a single shared animation-state object.
+- Display synchronization currently uses shared service state rather than per-frame strip data.
+- No per-frame retry queue exists in light service; skipped frames are allowed by design.
 
 ## Verification Notes
 
@@ -109,11 +112,12 @@ streaming behavior for ESP32 DevKitC bring-up.
 - Visual checks:
   - startup ramp duration follows `SC_LIGHT_STARTUP_RAMP_MS`
   - fluctuation is gentle and continuous
+  - spatial movement remains calm rather than attention-grabbing
   - audio on/off triggers a short brightness sway
-  - fades appear smoother due to gamma + dithering
+  - LCD ambience tracks brightness/audio state changes
 
 ## Open Items
 
-- Move from step-based ramp to time-based slew (percent/second) for config-invariant feel.
-- Add optional per-pixel gradients/pattern layers.
+- Move from step-based ramp to time-based slew for config-invariant feel.
+- Replace loose LCD-state coupling with a shared visual-state model.
 - Add instrumentation counters for dropped LED frames.

@@ -8,7 +8,6 @@ typedef enum {
     SC_APP_EVT_UI_AUDIO_STOP,
     SC_APP_EVT_UI_VOLUME_STEP,
     SC_APP_EVT_UI_LIGHT_STEP,
-    SC_APP_EVT_UI_LIGHT_TOGGLE,
 } sc_app_event_type_t;
 
 typedef struct {

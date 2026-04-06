@@ -2,7 +2,7 @@ menu "SleepCube P0 Configuration"
 
 choice SC_BOARD_PROFILE
     prompt "Board profile"
-    default SC_BOARD_DEVKITC_ESP32
+    default SC_BOARD_WAVESHARE_ESP32C6
     help
         Select the hardware profile used for this build.
 
@@ -16,6 +16,94 @@ endchoice
 config SC_ENABLE_AUDIO
     bool "Enable audio service"
     default y
+
+config SC_AUDIO_HPF_CUTOFF_HZ
+    int "Audio high-pass filter cutoff (Hz)"
+    depends on SC_ENABLE_AUDIO
+    range 0 2000
+    default 150
+    help
+        Software high-pass filter cutoff applied to decoded PCM before I2S
+        playback. Set to 0 to disable the filter.
+
+config SC_AUDIO_HPF_STAGES
+    int "Audio high-pass filter stages"
+    depends on SC_ENABLE_AUDIO
+    range 1 4
+    default 2
+    help
+        Number of cascaded first-order high-pass stages. Higher values produce
+        a steeper low-frequency roll-off and make the filter effect more
+        noticeable on small speakers.
+
+choice SC_AUDIO_SOURCE_MODE
+    prompt "Audio source mode"
+    depends on SC_ENABLE_AUDIO
+    default SC_AUDIO_SOURCE_MP3
+
+    config SC_AUDIO_SOURCE_MP3
+        bool "MP3 file playback"
+
+    config SC_AUDIO_SOURCE_DIAGNOSTIC
+        bool "Diagnostic tone generator"
+endchoice
+
+choice SC_AUDIO_DIAG_SIGNAL
+    prompt "Diagnostic signal"
+    depends on SC_ENABLE_AUDIO && SC_AUDIO_SOURCE_DIAGNOSTIC
+    default SC_AUDIO_DIAG_SIGNAL_500HZ
+
+    config SC_AUDIO_DIAG_SIGNAL_100HZ
+        bool "100 Hz sine"
+
+    config SC_AUDIO_DIAG_SIGNAL_200HZ
+        bool "200 Hz sine"
+
+    config SC_AUDIO_DIAG_SIGNAL_500HZ
+        bool "500 Hz sine"
+
+    config SC_AUDIO_DIAG_SIGNAL_1000HZ
+        bool "1 kHz sine"
+
+    config SC_AUDIO_DIAG_SIGNAL_SWEEP
+        bool "Slow frequency sweep"
+endchoice
+
+config SC_AUDIO_DIAG_AMPLITUDE_PCT
+    int "Diagnostic signal amplitude percent"
+    depends on SC_ENABLE_AUDIO && SC_AUDIO_SOURCE_DIAGNOSTIC
+    range 1 100
+    default 18
+    help
+        Raw generated signal amplitude before normal volume and fade control
+        are applied.
+
+config SC_AUDIO_DIAG_SWEEP_START_HZ
+    int "Sweep start frequency (Hz)"
+    depends on SC_ENABLE_AUDIO && SC_AUDIO_SOURCE_DIAGNOSTIC && SC_AUDIO_DIAG_SIGNAL_SWEEP
+    range 20 5000
+    default 80
+
+config SC_AUDIO_DIAG_SWEEP_END_HZ
+    int "Sweep end frequency (Hz)"
+    depends on SC_ENABLE_AUDIO && SC_AUDIO_SOURCE_DIAGNOSTIC && SC_AUDIO_DIAG_SIGNAL_SWEEP
+    range 20 8000
+    default 1500
+
+config SC_AUDIO_DIAG_SWEEP_PERIOD_MS
+    int "Sweep period (ms)"
+    depends on SC_ENABLE_AUDIO && SC_AUDIO_SOURCE_DIAGNOSTIC && SC_AUDIO_DIAG_SIGNAL_SWEEP
+    range 500 20000
+    default 5000
+
+config SC_AUDIO_DIAG_SERIAL_CONSOLE
+    bool "Enable audio diagnostic serial console"
+    depends on SC_ENABLE_AUDIO
+    default y
+    help
+        Enables a development-only serial command task for live tuning of audio
+        diagnostics and playback parameters. This is intended for bring-up and
+        will be removed from the final product.
 
 config SC_ENABLE_LIGHT
     bool "Enable lighting service"
@@ -208,7 +296,7 @@ config SC_BTN_AUDIO_GPIO
     default 0
 
 config SC_BTN_LIGHT_GPIO
-    int "Light button GPIO (toggle)"
+    int "Legacy light button GPIO"
     depends on SC_UI_INPUT_BUTTONS
     range 0 39
     default 32

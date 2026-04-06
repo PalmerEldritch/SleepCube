@@ -9,6 +9,7 @@
 #include "freertos/task.h"
 #include "esp_check.h"
 #include "esp_log.h"
+#include "settings_store.h"
 
 #if CONFIG_SC_ENABLE_LIGHT
 #include "esp_random.h"
@@ -117,6 +118,7 @@ static float s_fluct_speed_d = 0.07f;
 #define SC_LIGHT_BRIGHTNESS_MIN_PCT  (5)
 #define SC_LIGHT_PI                 (3.14159265359f)
 #define SC_LIGHT_TRACE_DECIMATION   (5U)
+#define SC_LIGHT_SETTINGS_KEY_BRIGHTNESS "light_pct"
 
 static float sc_clampf(float v, float lo, float hi)
 {
@@ -263,6 +265,15 @@ static void sc_light_service_task(void *arg)
 esp_err_t sc_light_service_start(void)
 {
 #if CONFIG_SC_LIGHT_BACKEND_LED_STRIP
+    uint8_t persisted_brightness = SC_LIGHT_DEFAULT_BRIGHTNESS_PCT;
+    esp_err_t load_err = sc_settings_store_load_u8(SC_LIGHT_SETTINGS_KEY_BRIGHTNESS,
+                                                   (uint8_t)SC_LIGHT_DEFAULT_BRIGHTNESS_PCT,
+                                                   &persisted_brightness);
+    if (load_err != ESP_OK) {
+        ESP_LOGW(TAG, "brightness load failed, using default: %s", esp_err_to_name(load_err));
+        persisted_brightness = (uint8_t)SC_LIGHT_DEFAULT_BRIGHTNESS_PCT;
+    }
+
     s_rgb_buf = (uint8_t *)malloc((size_t)CONFIG_SC_LED_COUNT * 3U);
     if (s_rgb_buf == NULL) {
         ESP_LOGE(TAG, "failed to allocate LED buffer");
@@ -279,7 +290,9 @@ esp_err_t sc_light_service_start(void)
                         TAG, "led strip init failed");
 
     s_light_enabled = true;
-    s_brightness_target_pct = SC_LIGHT_DEFAULT_BRIGHTNESS_PCT;
+    s_brightness_target_pct = (int)sc_clampf((float)persisted_brightness,
+                                             (float)SC_LIGHT_BRIGHTNESS_MIN_PCT,
+                                             100.0f);
     s_brightness_current_pct = 0.0f;
     s_render_frame_index = 0;
     s_light_time_s = 0.0f;
@@ -328,6 +341,10 @@ esp_err_t sc_light_service_change_brightness(int delta_steps)
     }
     s_brightness_target_pct = next;
     s_light_enabled = true;
+    esp_err_t save_err = sc_settings_store_save_u8(SC_LIGHT_SETTINGS_KEY_BRIGHTNESS, (uint8_t)next);
+    if (save_err != ESP_OK) {
+        ESP_LOGW(TAG, "brightness save failed: %s", esp_err_to_name(save_err));
+    }
     ESP_LOGI(TAG, "brightness target=%d%% light=%d", s_brightness_target_pct, s_light_enabled);
     return ESP_OK;
 }
@@ -342,6 +359,21 @@ esp_err_t sc_light_service_audio_sway(bool audio_enabled)
     (void)audio_enabled;
 #endif
     return ESP_OK;
+}
+
+bool sc_light_service_get_enabled(void)
+{
+    return s_light_enabled;
+}
+
+uint8_t sc_light_service_get_current_brightness_percent(void)
+{
+    return (uint8_t)sc_clampf(s_brightness_current_pct, 0.0f, 100.0f);
+}
+
+uint8_t sc_light_service_get_target_brightness_percent(void)
+{
+    return (uint8_t)sc_clampf((float)s_brightness_target_pct, 0.0f, 100.0f);
 }
 
 #else
@@ -376,6 +408,21 @@ esp_err_t sc_light_service_audio_sway(bool audio_enabled)
 {
     (void)audio_enabled;
     return ESP_ERR_NOT_SUPPORTED;
+}
+
+bool sc_light_service_get_enabled(void)
+{
+    return false;
+}
+
+uint8_t sc_light_service_get_current_brightness_percent(void)
+{
+    return 0;
+}
+
+uint8_t sc_light_service_get_target_brightness_percent(void)
+{
+    return 0;
 }
 
 #endif

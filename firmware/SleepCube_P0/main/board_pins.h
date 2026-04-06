@@ -61,7 +61,7 @@
  * These values mirror the defaults in menuconfig (`Kconfig.projbuild`):
  * - LED data: GPIO13
  * - Audio toggle button: GPIO0
- * - Light toggle button: GPIO32
+ * - Legacy light button: GPIO32 (currently unused in the primary UI model)
  * - Volume up/down buttons: GPIO33 / GPIO21
  * - Brightness up/down buttons: GPIO19 / GPIO18
  *

@@ -12,7 +12,6 @@
  *
  * @param path Absolute VFS path to MP3 file (for example `/spiffs/test.mp3`).
  * @param play_enabled Optional flag checked during playback to allow stop requests.
- * @param volume_percent Linear software volume scaling from 0 to 100.
  * @return
  * - ESP_OK when file playback finishes successfully
  * - ESP_ERR_NOT_FOUND if the file cannot be opened
@@ -20,6 +19,8 @@
  * - Other error code if I2S write fails
  *
  * @note Playback I2S rate is currently fixed at 44.1 kHz.
+ * @note A first-order software high-pass filter may be applied according to
+ *       `CONFIG_SC_AUDIO_HPF_CUTOFF_HZ`.
  * @note @docready
  */
-esp_err_t sc_audio_mp3_play_file(const char *path, const volatile bool *play_enabled, uint8_t volume_percent);
+esp_err_t sc_audio_mp3_play_file(const char *path, const volatile bool *play_enabled);

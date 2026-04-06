@@ -1,77 +1,73 @@
 # SleepCube Compliance and Traceability Matrix
 
-## Rev 00
+## Rev 01
 
-| FR ID | FR Summary | TR IDs | Coverage Notes | Status |
+| FR ID | FR Summary | TR IDs | Status | Coverage Notes |
 | --- | --- | --- | --- | --- |
-| FR-SC-01 | The device shall be intended for indoor residential bedroom use. | TR-P-02, TR-P-04 | Mapped from TRS Derived From references. | OK |
-| FR-SC-02 | The device shall operate on a stable flat surface such as a bedside table. | TR-M-04 | Mapped from TRS Derived From references. | OK |
-| FR-SC-03 | The device shall be suitable for operation in low ambient light conditions. | TR-P-02 | Mapped from TRS Derived From references. | OK |
-| FR-A-01 | The device shall be capable of playing preloaded audio content. | TR-SC-01 | Mapped from TRS Derived From references. | OK |
-| FR-A-02 | The device shall automatically loop its available audio content. | TR-A-10 | Mapped from TRS Derived From references. | OK |
-| FR-A-03 | The device shall not require user track selection. | TR-A-11 | Mapped from TRS Derived From references. | OK |
-| FR-A-04 | Playback shall occur without audible glitches, interruptions, or unintended artifacts. | TR-A-12 | Mapped from TRS Derived From references. | OK |
-| FR-A-05 | The user shall be able to start audio playback using a physical control. | TR-UI-01 | Mapped from TRS Derived From references. | OK |
-| FR-A-06 | The user shall be able to stop audio playback using a physical control. | TR-UI-01 | Mapped from TRS Derived From references. | OK |
-| FR-A-07 | Audio playback shall start without audible transients. | TR-A-05 | Mapped from TRS Derived From references. | OK |
-| FR-A-08 | Audio playback shall stop without audible transients. | TR-A-05 | Mapped from TRS Derived From references. | OK |
-| FR-A-09 | Audio level shall ramp smoothly when starting or stopping playback. | TR-A-06 | Mapped from TRS Derived From references. | OK |
-| FR-A-10 | The device shall allow the user to increase playback volume. | TR-A-13 | Mapped from TRS Derived From references. | OK |
-| FR-A-11 | The device shall allow the user to decrease playback volume. | TR-A-13 | Mapped from TRS Derived From references. | OK |
-| FR-A-12 | The minimum volume level shall be barely audible in a quiet bedroom environment. | TR-A-02 | Mapped from TRS Derived From references. | OK |
-| FR-A-13 | Volume changes shall occur smoothly without abrupt steps. | TR-A-14 | Mapped from TRS Derived From references. | OK |
-| FR-A-14 | The device shall retain the last used volume level across normal power cycles. | TR-DS-04, TR-DS-05 | Mapped from TRS Derived From references. | OK |
-| FR-A-15 | The maximum volume level shall be limited to a level suitable for sleep use. | TR-A-01, TR-P-04 | Mapped from TRS Derived From references. | OK |
-| FR-A-16 | Audio playback shall always operate with an active sleep timer. | TR-A-15 | Mapped from TRS Derived From references. | OK |
-| FR-A-17 | The sleep timer duration shall be predefined. | TR-A-07, TR-A-08 | Mapped from TRS Derived From references. | OK |
-| FR-A-18 | The user shall not be able to disable the sleep timer for continuous playback. | TR-A-16 | Mapped from TRS Derived From references. | OK |
-| FR-A-19 | When the sleep timer expires, audio playback shall stop automatically. | TR-A-08, TR-A-09 | Mapped from TRS Derived From references. | OK |
-| FR-A-20 | Audio fade-out at timer expiration shall occur gradually and without audible artifacts. | TR-A-06, TR-A-09 | Mapped from TRS Derived From references. | OK |
-| FR-A-21 | The sleep timer function shall not affect the lighting function. | TR-SC-02 | Mapped from TRS Derived From references. | OK |
-| FR-L-01 | The device shall provide warm white illumination suitable for nighttime use. | TR-L-01, TR-SC-01 | Mapped from TRS Derived From references. | OK |
-| FR-L-02 | The light output shall be visually comfortable in dark environments. | TR-L-02, TR-L-03, TR-L-04 | Mapped from TRS Derived From references. | OK |
-| FR-L-03 | The user shall be able to turn the light on and off independently of audio playback. | TR-SC-02 | Mapped from TRS Derived From references. | OK |
-| FR-L-04 | The device shall allow the user to adjust brightness. | TR-L-06 | Mapped from TRS Derived From references. | OK |
-| FR-L-05 | Brightness changes shall appear smooth to the user. | TR-L-05 | Mapped from TRS Derived From references. | OK |
-| FR-L-06 | The device shall support a very low brightness setting suitable for sleep environments. | TR-L-03 | Mapped from TRS Derived From references. | OK |
-| FR-L-07 | The device shall retain the last used brightness level across normal power cycles. | TR-DS-04, TR-DS-05 | Mapped from TRS Derived From references. | OK |
-| FR-L-08 | The maximum brightness level shall be limited to a level suitable for sleep use. | TR-L-02 | Mapped from TRS Derived From references. | OK |
-| FR-L-09 | Light transitions (on/off and brightness changes) shall avoid abrupt visual disturbances. | TR-L-04, TR-L-05 | Mapped from TRS Derived From references. | OK |
-| FR-L-10 | Light fade-in and fade-out behavior shall be gradual. | TR-L-05 | Mapped from TRS Derived From references. | OK |
-| FR-UI-01 | The device shall use physical buttons for user interaction. | TR-SC-01 | Mapped from TRS Derived From references. | OK |
-| FR-UI-02 | The number of user-facing controls shall be minimal. | TR-UI-02 | Mapped from TRS Derived From references. | OK |
-| FR-UI-03 | The device shall provide controls for: | TR-UI-03 | Mapped from TRS Derived From references. | OK |
-| FR-UI-04 | The sleep timer shall activate automatically when audio playback starts. | TR-A-17 | Mapped from TRS Derived From references. | OK |
-| FR-UI-05 | The device shall not require a display. | TR-UI-04 | Mapped from TRS Derived From references. | OK |
-| FR-UI-06 | The device shall not require wireless connectivity. | TR-SC-03 | Mapped from TRS Derived From references. | OK |
-| FR-UI-07 | The device shall not require a mobile application. | TR-SC-03 | Mapped from TRS Derived From references. | OK |
-| FR-UI-08 | Control behavior shall be consistent and predictable. | TR-SC-03 | Mapped from TRS Derived From references. | OK |
-| FR-P-01 | The device shall operate from an external low-voltage DC power source. | TR-P-01, TR-SC-01 | Mapped from TRS Derived From references. | OK |
-| FR-P-02 | The device shall power on in a defined default state. | TR-P-03, TR-SC-03 | Mapped from TRS Derived From references. | OK |
-| FR-P-03 | The defined default startup state shall be: | TR-P-03 | Mapped from TRS Derived From references. | OK |
-| FR-P-04 | After an uncontrolled power interruption, the device shall start in the defined default state. | TR-SC-03 | Mapped from TRS Derived From references. | OK |
-| FR-P-05 | The device shall not produce unintended sound or light during power-up. | TR-P-05 | Mapped from TRS Derived From references. | OK |
-| FR-P-06 | Audio and lighting functions shall operate independently. | TR-SC-01, TR-SC-02 | Mapped from TRS Derived From references. | OK |
-| FR-M-01 | The device shall have a cubic form factor. | TR-M-05 | Mapped from TRS Derived From references. | OK |
-| FR-M-02 | Each side length shall be within approximately 50–100 mm. | TR-M-06 | Mapped from TRS Derived From references. | OK |
-| FR-M-03 | The enclosure shall diffuse light to avoid direct glare. | TR-M-07 | Mapped from TRS Derived From references. | OK |
-| FR-M-04 | The device shall be stable when placed on a flat surface. | TR-M-04 | Mapped from TRS Derived From references. | OK |
-| FR-M-05 | The device shall not include bright status indicators visible during sleep use. | TR-UI-05 | Mapped from TRS Derived From references. | OK |
-| FR-M-06 | The device surface temperature shall remain safe and comfortable to touch during normal operation. | TR-M-01, TR-M-02 | Mapped from TRS Derived From references. | OK |
-| FR-Q-01 | The audio output shall be free from audible hiss at typical sleep-use volume. | TR-A-03 | Mapped from TRS Derived From references. | OK |
-| FR-Q-02 | The audio output shall be free from noticeable distortion at maximum intended sleep volume. | TR-A-04 | Mapped from TRS Derived From references. | OK |
-| FR-Q-03 | The device shall not generate audible mechanical or electrical noise during operation. | TR-M-03 | Mapped from TRS Derived From references. | OK |
+| FR-SC-01 | Indoor residential bedroom use | TR-P-02 | Implemented | Product assumptions and power budget remain aligned. |
+| FR-SC-02 | Stable operation on a flat surface | TR-M-04 | Implemented | Mechanical requirement unchanged from Rev 00. |
+| FR-SC-03 | Suitable for low ambient light conditions | TR-P-02 | Partial | Product direction aligns; final dark-room tuning still needs verification on target hardware. |
+| FR-A-01 | Preloaded audio playback | TR-SC-01 | Implemented | MP3 playback from SD with SPIFFS fallback is present. |
+| FR-A-02 | Automatic looping | TR-A-10 | Implemented | Playback task reopens the preferred file while playback remains enabled. |
+| FR-A-03 | No track selection required | TR-A-11 | Implemented | No track-selection UI is exposed. |
+| FR-A-04 | No audible glitches or artifacts | TR-A-12 | Partial | Basic playback works, but resampling and long-run verification remain open. |
+| FR-A-05 | Start audio from touch UI | TR-UI-01 | Implemented | Touch ambient screen now emits audio-toggle actions. |
+| FR-A-06 | Stop audio from touch UI | TR-UI-01 | Implemented | Touch audio toggle requests playback stop with fade-out. |
+| FR-A-07 | Start without audible transients | TR-A-05 | Partial | TX enable path is validated, but explicit fade-in is still limited. |
+| FR-A-08 | Stop without audible transients | TR-A-05 | Implemented | Manual stop now uses fade-out before mute. |
+| FR-A-09 | Smooth start/stop level ramp | TR-A-06 | Partial | Stop fade is implemented; start ramp still needs a dedicated fade-in path. |
+| FR-A-10 | Increase volume | TR-A-13 | Implemented | Touch and service paths support positive volume steps. |
+| FR-A-11 | Decrease volume | TR-A-13 | Implemented | Touch and service paths support negative volume steps. |
+| FR-A-12 | Barely audible minimum volume | TR-A-02 | Partial | Step control exists; acoustic verification remains open. |
+| FR-A-13 | Smooth volume changes | TR-A-14 | Partial | Live volume updates are now applied during playback; smoothing remains coarse. |
+| FR-A-14 | Retain last volume across normal power cycles | TR-DS-04, TR-DS-05 | Implemented | Volume is persisted in NVS. |
+| FR-A-15 | Sleep-suitable maximum volume | TR-A-01, TR-P-04 | Partial | Max bound exists in software scale; final acoustic validation remains open. |
+| FR-A-16 | Playback always uses sleep timer | TR-A-15 | Implemented | Playback enable starts a mandatory timer. |
+| FR-A-17 | Predefined sleep timer duration | TR-A-07, TR-A-08 | Implemented | Current firmware uses a fixed 30-minute timer target. |
+| FR-A-18 | No continuous playback mode | TR-A-16 | Implemented | No UI or control path bypasses the timer. |
+| FR-A-19 | Stop automatically at timer expiry | TR-A-08, TR-A-09 | Implemented | Timer expiry initiates fade-out and disables playback. |
+| FR-A-20 | Gradual fade-out at timer expiry | TR-A-06, TR-A-09 | Implemented | Timer expiry uses a long fade-out path. |
+| FR-A-21 | Timer does not affect lighting | TR-SC-02 | Implemented | Timer expiry only affects audio state. |
+| FR-L-01 | Warm ambient illumination through dedicated light | TR-L-01, TR-SC-01 | Implemented | LED strip lighting engine provides warm RGB ambient output. |
+| FR-L-02 | Combined ambient presentation comfortable in dark rooms | TR-L-02, TR-L-03, TR-L-04 | Partial | Dedicated light and LCD ambient visuals exist; final comfort tuning remains open. |
+| FR-L-03 | Coordinated ambient style between display and dedicated light | TR-L-07 | Partial | LCD now reacts to audio/brightness state, but full shared animation model remains future work. |
+| FR-L-04 | Adjust ambient brightness | TR-L-06 | Implemented | Touch UI and service API adjust brightness. |
+| FR-L-05 | Smooth brightness changes | TR-L-05 | Implemented | Light service ramps brightness over time. |
+| FR-L-06 | Very low brightness setting | TR-L-03 | Implemented | Minimum brightness clamp exists and low-light path is available. |
+| FR-L-07 | Retain last brightness across normal power cycles | TR-DS-04, TR-DS-05 | Implemented | Brightness is persisted in NVS. |
+| FR-L-08 | Sleep-suitable maximum brightness | TR-L-02 | Implemented | LED engine uses a configurable brightness cap. |
+| FR-L-09 | Avoid abrupt visual disturbances | TR-L-04, TR-L-05 | Partial | Lighting transitions are smooth; LCD transition polish still needs refinement. |
+| FR-L-10 | Gradual ambient fade behavior | TR-L-05 | Implemented | Lighting path uses ramping and easing. |
+| FR-UI-01 | Integrated touch display interface | TR-SC-01, TR-UI-01, TR-UI-04 | Implemented | Waveshare LCD/touch backend is active on the primary board profile. |
+| FR-UI-02 | Minimal user-facing controls | TR-UI-02 | Implemented | Primary UI exposes only audio toggle, volume, and brightness. |
+| FR-UI-03 | Controls for audio toggle, volume, brightness | TR-UI-03 | Implemented | Ambient screen now maps those control functions. |
+| FR-UI-04 | Sleep timer starts with audio playback | TR-A-17 | Implemented | Timer starts when playback is enabled. |
+| FR-UI-05 | Display contributes ambience while staying dark-room safe | TR-L-07, TR-UI-04, TR-UI-05 | Partial | Ambient LCD behavior exists; dark-room luminance verification remains open. |
+| FR-UI-06 | No wireless required | TR-SC-03 | Implemented | No wireless dependency exists in runtime behavior. |
+| FR-UI-07 | No mobile application required | TR-SC-03 | Implemented | No paired-app dependency exists. |
+| FR-UI-08 | Consistent and predictable control behavior | TR-SC-03, TR-UI-03 | Partial | Event flow is deterministic; final UX semantics still need refinement. |
+| FR-UI-09 | No separate light on/off control required | TR-UI-06 | Implemented | Primary touch UI and app-core event model no longer expose light toggle. |
+| FR-P-01 | External low-voltage DC power source | TR-P-01, TR-SC-01 | Implemented | Unchanged from Rev 00. |
+| FR-P-02 | Defined default state on power-up | TR-P-03, TR-SC-03 | Partial | Startup behavior is deterministic, but final ambient-default verification on target hardware remains open. |
+| FR-P-03 | Default startup state: ambient on, audio off | TR-P-03 | Implemented | Light service starts enabled while audio starts disabled. |
+| FR-P-04 | Same default after uncontrolled interruption | TR-SC-03 | Partial | Logic is deterministic; power-interruption recovery is not yet fully verified. |
+| FR-P-05 | No unintended sound or abrupt visual output at power-up | TR-P-05 | Partial | Audio mute path is present; full startup-flash suppression on display + LED path remains to be verified. |
+| FR-P-06 | Audio and lighting operate independently | TR-SC-01, TR-SC-02 | Implemented | Audio timer/stop does not disable ambient lighting. |
+| FR-M-01 | Cubic form factor | TR-M-05 | Planned | Product-level mechanical target remains open beyond firmware scope. |
+| FR-M-02 | Side length approximately 50-100 mm | TR-M-06 | Planned | Mechanical implementation remains future hardware work. |
+| FR-M-03 | Enclosure diffuses light | TR-M-07 | Planned | Mechanical implementation remains future hardware work. |
+| FR-M-04 | Stable on flat surface | TR-M-04 | Planned | Mechanical implementation remains future hardware work. |
+| FR-M-05 | No bright status indicators during sleep use | TR-UI-05 | Partial | Primary UI is ambient-first, but final indicator policy still needs validation. |
+| FR-M-06 | Safe surface temperature | TR-M-01, TR-M-02 | Planned | Requires hardware validation. |
+| FR-Q-01 | No audible hiss at typical sleep volume | TR-A-03 | Partial | Pipeline is validated functionally; acoustic quality verification remains open. |
+| FR-Q-02 | No noticeable distortion at intended max volume | TR-A-04 | Partial | Pipeline is validated functionally; acoustic quality verification remains open. |
+| FR-Q-03 | No audible mechanical or electrical noise during operation | TR-M-03 | Planned | Requires integrated hardware validation. |
 
-## Gaps and follow-ups
+## Gaps and Follow-Ups
 
-### FRs with no TR mapping
-- None.
-
-### TRs referencing unknown FR IDs
-- None detected.
-
-### Duplicate/malformed IDs detected
-- Duplicate FR IDs: none
-- Duplicate TR IDs: none
-- Malformed FR IDs: none
-- Malformed TR IDs: none
+| Category | Item |
+| --- | --- |
+| Partial Implementation | Explicit audio fade-in remains less mature than stop/timer fade-out. |
+| Partial Implementation | LCD and LED strip are only partially synchronized; a shared animation-state model is still needed. |
+| Verification | Acoustic, dark-room luminance, thermal, and startup-flash behavior still need target-hardware verification. |
+| Future Work | Mechanical requirements remain product targets outside current firmware scope. |

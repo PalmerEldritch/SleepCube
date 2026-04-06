@@ -4,7 +4,9 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 
+#if CONFIG_SC_TRACE_TIMING
 static const char *TAG = "sc_trace";
+#endif
 
 void sc_trace_mark(const char *task_name, const char *event_name, int32_t value)
 {

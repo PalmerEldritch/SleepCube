@@ -30,7 +30,7 @@ static void sc_ui_service_task(void *arg)
         return;
     }
 
-    sc_lvgl_display_create_test_screen();
+    sc_lvgl_display_create_ambient_screen();
     vTaskDelete(NULL);
 }
 #endif

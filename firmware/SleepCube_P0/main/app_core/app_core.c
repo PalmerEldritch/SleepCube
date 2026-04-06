@@ -56,9 +56,6 @@ static void sc_app_core_task(void *arg)
             case SC_APP_EVT_UI_LIGHT_STEP:
                 ESP_ERROR_CHECK_WITHOUT_ABORT(sc_light_service_change_brightness((int)event.value));
                 break;
-            case SC_APP_EVT_UI_LIGHT_TOGGLE:
-                ESP_ERROR_CHECK_WITHOUT_ABORT(sc_light_service_toggle());
-                break;
             default:
                 break;
         }

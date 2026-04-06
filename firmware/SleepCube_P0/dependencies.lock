@@ -12,11 +12,11 @@ dependencies:
   idf:
     source:
       type: idf
-    version: 5.5.3
+    version: 6.0.0
   lvgl/lvgl:
     dependencies: []
     source:
-      path: /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/components/lvgl__lvgl
+      path: components/lvgl__lvgl
       type: local
     version: 8.3.11
 direct_dependencies:
@@ -25,4 +25,4 @@ direct_dependencies:
 - lvgl/lvgl
 manifest_hash: a2b6d357ffdeef6b9a9bddebec94fc7eb9d7cf51ea744e723fbecd8cca22887e
 target: esp32c6
-version: 2.0.0
+version: 3.0.0
