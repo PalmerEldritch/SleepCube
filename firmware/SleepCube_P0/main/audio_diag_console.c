@@ -9,6 +9,7 @@
 #include "esp_check.h"
 #include "esp_log.h"
 #include "audio_player.h"
+#include "light_service.h"
 
 static const char *TAG = "sc_audio_diag_cli";
 
@@ -37,6 +38,15 @@ static bool sc_audio_diag_parse_u8(const char *text, uint8_t *value)
     }
     *value = (uint8_t)parsed;
     return true;
+}
+
+static void sc_audio_diag_print_light_pulse_status(void)
+{
+    ESP_LOGI(TAG, "lightpulse: attack=%ums release=%ums peak_up=%u%% peak_down=%u%%",
+             (unsigned)sc_light_service_get_pulse_attack_ms(),
+             (unsigned)sc_light_service_get_pulse_release_ms(),
+             (unsigned)sc_light_service_get_pulse_peak_up_pct(),
+             (unsigned)sc_light_service_get_pulse_peak_down_pct());
 }
 
 static void sc_audio_diag_list_tracks(void)
@@ -82,11 +92,15 @@ static bool sc_audio_diag_select_track(const char *selector)
 static void sc_audio_diag_print_help(void)
 {
     ESP_LOGI(TAG, "commands: help, status, source <mp3|tone|sweep>, tone <hz>, amp <pct>,");
-    ESP_LOGI(TAG, "          sweep <start_hz> <end_hz> <period_ms>, hpf <cutoff_hz> [stages],");
+    ESP_LOGI(TAG, "          sweep <start_hz> <end_hz> <period_ms>, hpf <cutoff_hz> [stages], lpf <cutoff_hz> [stages],");
     ESP_LOGI(TAG, "          stages <count>, vol <pct>, play <on|off|toggle|stop>,");
     ESP_LOGI(TAG, "          mp3src <auto|spiffs|sd>, mp3mix <stereo|mono|left|right>, mp3gain <db>,");
     ESP_LOGI(TAG, "          mp3limit <on|off> [threshold_pct], mp3eq <off|lpf|presence> [hz] [depth],");
     ESP_LOGI(TAG, "          mp3stats <show|reset>,");
+    ESP_LOGI(TAG, "          lightpulse status");
+    ESP_LOGI(TAG, "          lightpulse set <attack_ms> <release_ms> <peak_up_pct> <peak_down_pct>");
+    ESP_LOGI(TAG, "          lightpulse attack <ms> | release <ms> | peakup <pct> | peakdown <pct>");
+    ESP_LOGI(TAG, "          lightpulse fire <on|off>");
     ESP_LOGI(TAG, "          sdremount, tracks,");
     ESP_LOGI(TAG, "          track <index|filename|/sdcard/file.mp3>");
 }
@@ -96,7 +110,7 @@ static void sc_audio_diag_print_status(void)
     sc_audio_runtime_config_t cfg = { 0 };
     sc_audio_player_get_runtime_config(&cfg);
     ESP_LOGI(TAG,
-             "status: play=%s source=%s mp3src=%s mp3mix=%s mp3gain=-%udB mp3limit=%s@%u%% mp3eq=%s/%uHz/%u%% vol=%u%% tone=%uHz amp=%u%% sweep=%u-%uHz/%ums hpf=%uHz x%u mp3(dec=%lu sync=%lu rate=%lu)",
+             "status: play=%s source=%s mp3src=%s mp3mix=%s mp3gain=-%udB mp3limit=%s@%u%% mp3eq=%s/%uHz/%u%% vol=%u%% tone=%uHz amp=%u%% sweep=%u-%uHz/%ums hpf=%uHz x%u lpf=%uHz x%u mp3(dec=%lu sync=%lu rate=%lu)",
              cfg.playback_enabled ? "on" : "off",
              (cfg.source_mode == SC_AUDIO_SOURCE_MODE_MP3) ? "mp3" :
              (cfg.source_mode == SC_AUDIO_SOURCE_MODE_SWEEP) ? "sweep" : "tone",
@@ -120,6 +134,8 @@ static void sc_audio_diag_print_status(void)
              (unsigned)cfg.sweep_period_ms,
              (unsigned)cfg.hpf_cutoff_hz,
              (unsigned)cfg.hpf_stages,
+             (unsigned)cfg.lpf_cutoff_hz,
+             (unsigned)cfg.lpf_stages,
              (unsigned long)cfg.mp3_decode_error_count,
              (unsigned long)cfg.mp3_sync_miss_count,
              (unsigned long)cfg.mp3_rate_mismatch_count);
@@ -128,14 +144,15 @@ static void sc_audio_diag_print_status(void)
              sc_audio_fs_mp3_source_available(SC_AUDIO_MP3_SOURCE_SPIFFS) ? "ok" : "missing",
              sc_audio_fs_mp3_source_available(SC_AUDIO_MP3_SOURCE_SD) ? "ok" : "missing",
              cfg.mp3_path);
+    sc_audio_diag_print_light_pulse_status();
 }
 
 static void sc_audio_diag_handle_line(char *line)
 {
-    char *argv[5] = { 0 };
+    char *argv[8] = { 0 };
     int argc = 0;
     char *token = strtok(line, " \t\r\n");
-    while ((token != NULL) && (argc < 5)) {
+    while ((token != NULL) && (argc < 8)) {
         argv[argc++] = token;
         token = strtok(NULL, " \t\r\n");
     }
@@ -165,6 +182,96 @@ static void sc_audio_diag_handle_line(char *line)
             ESP_LOGW(TAG, "sdremount failed: %s", esp_err_to_name(err));
         }
         sc_audio_diag_print_status();
+        return;
+    }
+
+    if (strcmp(argv[0], "lightpulse") == 0) {
+        if ((argc == 1) || (strcmp(argv[1], "status") == 0)) {
+            sc_audio_diag_print_light_pulse_status();
+            return;
+        }
+
+        if ((strcmp(argv[1], "set") == 0) && (argc >= 6)) {
+            uint16_t attack_ms = 0;
+            uint16_t release_ms = 0;
+            uint8_t peak_up_pct = 0;
+            uint8_t peak_down_pct = 0;
+            if (!sc_audio_diag_parse_u16(argv[2], &attack_ms) ||
+                !sc_audio_diag_parse_u16(argv[3], &release_ms) ||
+                !sc_audio_diag_parse_u8(argv[4], &peak_up_pct) ||
+                !sc_audio_diag_parse_u8(argv[5], &peak_down_pct) ||
+                (peak_up_pct > 100U) || (peak_down_pct > 100U)) {
+                ESP_LOGW(TAG, "usage: lightpulse set <attack_ms> <release_ms> <peak_up_pct> <peak_down_pct>");
+                return;
+            }
+            (void)sc_light_service_set_pulse_attack_ms(attack_ms);
+            (void)sc_light_service_set_pulse_release_ms(release_ms);
+            (void)sc_light_service_set_pulse_peak_up_pct(peak_up_pct);
+            (void)sc_light_service_set_pulse_peak_down_pct(peak_down_pct);
+            sc_audio_diag_print_light_pulse_status();
+            return;
+        }
+
+        if ((strcmp(argv[1], "attack") == 0) && (argc >= 3)) {
+            uint16_t attack_ms = 0;
+            if (!sc_audio_diag_parse_u16(argv[2], &attack_ms)) {
+                ESP_LOGW(TAG, "usage: lightpulse attack <ms>");
+                return;
+            }
+            (void)sc_light_service_set_pulse_attack_ms(attack_ms);
+            sc_audio_diag_print_light_pulse_status();
+            return;
+        }
+
+        if ((strcmp(argv[1], "release") == 0) && (argc >= 3)) {
+            uint16_t release_ms = 0;
+            if (!sc_audio_diag_parse_u16(argv[2], &release_ms)) {
+                ESP_LOGW(TAG, "usage: lightpulse release <ms>");
+                return;
+            }
+            (void)sc_light_service_set_pulse_release_ms(release_ms);
+            sc_audio_diag_print_light_pulse_status();
+            return;
+        }
+
+        if ((strcmp(argv[1], "peakup") == 0) && (argc >= 3)) {
+            uint8_t peak_up_pct = 0;
+            if (!sc_audio_diag_parse_u8(argv[2], &peak_up_pct) || (peak_up_pct > 100U)) {
+                ESP_LOGW(TAG, "usage: lightpulse peakup <pct>");
+                return;
+            }
+            (void)sc_light_service_set_pulse_peak_up_pct(peak_up_pct);
+            sc_audio_diag_print_light_pulse_status();
+            return;
+        }
+
+        if ((strcmp(argv[1], "peakdown") == 0) && (argc >= 3)) {
+            uint8_t peak_down_pct = 0;
+            if (!sc_audio_diag_parse_u8(argv[2], &peak_down_pct) || (peak_down_pct > 100U)) {
+                ESP_LOGW(TAG, "usage: lightpulse peakdown <pct>");
+                return;
+            }
+            (void)sc_light_service_set_pulse_peak_down_pct(peak_down_pct);
+            sc_audio_diag_print_light_pulse_status();
+            return;
+        }
+
+        if ((strcmp(argv[1], "fire") == 0) && (argc >= 3)) {
+            if (strcmp(argv[2], "on") == 0) {
+                (void)sc_light_service_audio_sway(true);
+                sc_audio_diag_print_light_pulse_status();
+                return;
+            }
+            if (strcmp(argv[2], "off") == 0) {
+                (void)sc_light_service_audio_sway(false);
+                sc_audio_diag_print_light_pulse_status();
+                return;
+            }
+            ESP_LOGW(TAG, "usage: lightpulse fire <on|off>");
+            return;
+        }
+
+        ESP_LOGW(TAG, "usage: lightpulse <status|set|attack|release|peakup|peakdown|fire>");
         return;
     }
 
@@ -237,6 +344,24 @@ static void sc_audio_diag_handle_line(char *line)
             }
         }
         sc_audio_player_set_hpf(cutoff_hz, stages);
+        sc_audio_diag_print_status();
+        return;
+    }
+
+    if ((strcmp(argv[0], "lpf") == 0) && (argc >= 2)) {
+        uint16_t cutoff_hz = 0;
+        uint8_t stages = sc_audio_player_get_lpf_stages();
+        if (!sc_audio_diag_parse_u16(argv[1], &cutoff_hz)) {
+            ESP_LOGW(TAG, "usage: lpf <cutoff_hz> [stages]");
+            return;
+        }
+        if (argc >= 3) {
+            if (!sc_audio_diag_parse_u8(argv[2], &stages)) {
+                ESP_LOGW(TAG, "usage: lpf <cutoff_hz> [stages]");
+                return;
+            }
+        }
+        sc_audio_player_set_lpf(cutoff_hz, stages);
         sc_audio_diag_print_status();
         return;
     }

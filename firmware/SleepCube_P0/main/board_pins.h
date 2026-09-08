@@ -77,6 +77,7 @@
 #define SC_BTN_LIGHT_UP_GPIO_DEFAULT       GPIO_NUM_19
 #define SC_BTN_LIGHT_DOWN_GPIO_DEFAULT     GPIO_NUM_18
 #endif
+
 /**
  * @brief Waveshare ESP32-C6 touch display pin map.
  *
@@ -84,6 +85,7 @@
  * `docs/ESP32-C6-Touch-LCD-1.47-Demo/03_lvgl_example/components/esp_bsp/`.
  */
 #if CONFIG_SC_BOARD_WAVESHARE_ESP32C6
+#define SC_LED_STRIP_DATA_GPIO_DEFAULT     GPIO_NUM_8
 #define SC_LCD_SPI_HOST                    SPI2_HOST
 #define SC_LCD_DIN_GPIO                    GPIO_NUM_2
 #define SC_LCD_MISO_GPIO                   GPIO_NUM_3

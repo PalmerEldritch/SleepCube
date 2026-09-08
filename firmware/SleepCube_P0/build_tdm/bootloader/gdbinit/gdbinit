@@ -1,0 +1,2 @@
+source /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build_tdm/bootloader/gdbinit/symbols
+source /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build_tdm/bootloader/gdbinit/connect

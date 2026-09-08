@@ -17,6 +17,39 @@ config SC_ENABLE_AUDIO
     bool "Enable audio service"
     default y
 
+choice SC_AUDIO_I2S_MODE
+    prompt "Audio TX bus mode"
+    depends on SC_ENABLE_AUDIO
+    default SC_AUDIO_I2S_MODE_STD
+    help
+        Select the digital audio bus mode used by the amplifier TX path.
+        Standard I2S sends two stereo slots per frame. 8-slot TDM sends
+        eight slots per frame for amplifiers configured for TDM input.
+
+    config SC_AUDIO_I2S_MODE_STD
+        bool "Standard I2S stereo"
+
+    config SC_AUDIO_I2S_MODE_TDM8
+        bool "8-slot TDM"
+        depends on SOC_I2S_SUPPORTS_TDM
+endchoice
+
+choice SC_AUDIO_I2S_FRAMING
+    prompt "Audio I2S framing"
+    depends on SC_ENABLE_AUDIO
+    default SC_AUDIO_I2S_FRAMING_MSB
+    help
+        Select the framing used for audio TX. Philips I2S shifts sample data
+        one bit after the word-select edge, while MSB starts sample data at
+        the word-select edge.
+
+    config SC_AUDIO_I2S_FRAMING_PHILIPS
+        bool "Philips I2S"
+
+    config SC_AUDIO_I2S_FRAMING_MSB
+        bool "MSB / left-justified"
+endchoice
+
 config SC_AUDIO_HPF_CUTOFF_HZ
     int "Audio high-pass filter cutoff (Hz)"
     depends on SC_ENABLE_AUDIO
@@ -129,6 +162,7 @@ config SC_LED_STRIP_GPIO
     int "LED strip data GPIO"
     depends on SC_LIGHT_BACKEND_LED_STRIP
     range 0 39
+    default 8 if SC_BOARD_WAVESHARE_ESP32C6
     default 13
 
 config SC_LED_COUNT

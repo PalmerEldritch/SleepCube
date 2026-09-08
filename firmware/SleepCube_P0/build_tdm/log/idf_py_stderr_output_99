@@ -1,0 +1,54 @@
+Command: cmake -G Ninja -B /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build_tdm -DPYTHON_DEPS_CHECKED=1 -DPYTHON=/home/jeppe/.espressif/python_env/idf6.0_py3.14_env/bin/python -DESP_PLATFORM=1 -DSDKCONFIG=/tmp/sleepcube_sdkconfig_tdm -DCCACHE_ENABLE=False /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0
+Configuration Report                                                            
+ ────────────────────────────────────────────────────────────────────────────── 
+   Parser Version: 1                                                            
+   Verbosity: default                                                           
+   Defaults policy: sdkconfig                                                   
+   Status: Finished with notifications                                          
+                                                                                
+  Default Value Mismatch                                                        
+   ──────────────────────────────────────────────────────────────────────────   
+    Using sdkconfig default values                                              
+    Choice symbols with different default selection between sdkconfig and       
+    Kconfig                                                                     
+    SC_AUDIO_I2S_MODE: Kconfig default selection: SC_AUDIO_I2S_MODE_STD,        
+    sdkconfig default selection: SC_AUDIO_I2S_MODE_TDM8                         
+   ──────────────────────────────────────────────────────────────────────────   
+  Multiple Assignments                                                          
+   ────────────────────────────────────────────────                             
+    Choice SC_AUDIO_I2S_MODE:                                                   
+        SC_AUDIO_I2S_MODE_STD (default selection)                               
+        SC_AUDIO_I2S_MODE_TDM8 (default selection)                              
+        -> using SC_AUDIO_I2S_MODE_TDM8                                         
+   ────────────────────────────────────────────────                             
+  Disabled Symbols/Choices With User-Set Value                                  
+   ──────────────────────────────────────────────────────────────────────────   
+    * SC_LED_STRIP_GPIO (defined at                                             
+    /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/…    
+    with user-set value 8 from /tmp/kconfgen_tmpgs8p_3la                        
+    * ESP_INTR_IN_IRAM (defined at                                              
+    /home/jeppe/esp/v6.0/esp-idf/components/esp_hw_support/Kconfig:326) with    
+    user-set value y from /tmp/kconfgen_tmpta_5f3hq                             
+    * LIBC_MISC_IN_IRAM (defined at                                             
+    /home/jeppe/esp/v6.0/esp-idf/components/esp_libc/Kconfig:45) with           
+    user-set value y from /tmp/kconfgen_tmpta_5f3hq                             
+    * ESP_ROM_PRINT_IN_IRAM (defined at                                         
+    /home/jeppe/esp/v6.0/esp-idf/components/esp_rom/Kconfig:3) with user-set    
+    value y from /tmp/kconfgen_tmpta_5f3hq                                      
+    * ESP_SYSTEM_IN_IRAM (defined at                                            
+    /home/jeppe/esp/v6.0/esp-idf/components/esp_system/Kconfig:12) with         
+    user-set value y from /tmp/kconfgen_tmpta_5f3hq                             
+    * ESP_TIMER_IN_IRAM (defined at                                             
+    /home/jeppe/esp/v6.0/esp-idf/components/esp_timer/Kconfig:3) with           
+    user-set value y from /tmp/kconfgen_tmpta_5f3hq                             
+    * LOG_IN_IRAM (defined at                                                   
+    /home/jeppe/esp/v6.0/esp-idf/components/log/Kconfig:55) with user-set       
+    value y from /tmp/kconfgen_tmpta_5f3hq                                      
+    * SPI_FLASH_PLACE_FUNCTIONS_IN_IRAM (defined at                             
+    /home/jeppe/esp/v6.0/esp-idf/components/spi_flash/Kconfig:179) with         
+    user-set value y from /tmp/kconfgen_tmpta_5f3hq                             
+    * LV_COLOR_DEPTH (defined at                                                
+    /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/…    
+    with user-set value 16 from /tmp/kconfgen_tmpgs8p_3la                       
+   ──────────────────────────────────────────────────────────────────────────   
+ ────────────────────────────────────────────────────────────────────────────── 

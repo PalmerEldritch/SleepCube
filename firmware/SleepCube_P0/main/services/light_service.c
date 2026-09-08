@@ -103,8 +103,12 @@ static uint8_t *s_rgb_buf;
 static bool s_startup_anim_active = true;
 static float s_startup_anim_elapsed_s = 0.0f;
 static float s_audio_sway_elapsed_s = 0.0f;
-static float s_audio_sway_amp_pct = 0.0f;
+static float s_audio_sway_peak_pct = 0.0f;
 static bool s_audio_sway_active = false;
+static uint16_t s_pulse_attack_ms = 260U;
+static uint16_t s_pulse_release_ms = 900U;
+static uint8_t s_pulse_peak_up_pct = 19U;
+static uint8_t s_pulse_peak_down_pct = 16U;
 static float s_fluct_phase_a = 0.0f;
 static float s_fluct_phase_b = 2.1f;
 static float s_fluct_phase_c = 1.3f;
@@ -119,6 +123,17 @@ static float s_fluct_speed_d = 0.07f;
 #define SC_LIGHT_PI                 (3.14159265359f)
 #define SC_LIGHT_TRACE_DECIMATION   (5U)
 #define SC_LIGHT_SETTINGS_KEY_BRIGHTNESS "light_pct"
+#define SC_LIGHT_BRIGHTNESS_RESPONSE_S   (0.22f)
+#define SC_LIGHT_STARTUP_BLOOM_SCALE     (0.35f)
+#define SC_LIGHT_AMBIENT_BRIGHTNESS_SCALE (1.45f)
+#define SC_LIGHT_AMBIENT_WARMTH_SCALE    (0.60f)
+#define SC_LIGHT_AMBIENT_SPEED_SCALE     (1.15f)
+#define SC_LIGHT_AUDIO_PULSE_ON_SCALE    (2.35f)
+#define SC_LIGHT_AUDIO_PULSE_OFF_SCALE   (2.05f)
+#define SC_LIGHT_PULSE_ATTACK_MIN_MS     (20U)
+#define SC_LIGHT_PULSE_ATTACK_MAX_MS     (5000U)
+#define SC_LIGHT_PULSE_RELEASE_MIN_MS    (20U)
+#define SC_LIGHT_PULSE_RELEASE_MAX_MS    (8000U)
 
 static float sc_clampf(float v, float lo, float hi)
 {
@@ -136,6 +151,34 @@ static float sc_random_symm(void)
     return (((float)(esp_random() & 0xFFFFU) / 65535.0f) * 2.0f) - 1.0f;
 }
 
+static uint16_t sc_clamp_u16(uint16_t v, uint16_t lo, uint16_t hi)
+{
+    if (v < lo) {
+        return lo;
+    }
+    if (v > hi) {
+        return hi;
+    }
+    return v;
+}
+
+static uint8_t sc_clamp_u8(uint8_t v, uint8_t lo, uint8_t hi)
+{
+    if (v < lo) {
+        return lo;
+    }
+    if (v > hi) {
+        return hi;
+    }
+    return v;
+}
+
+static float sc_smoothstep01(float t)
+{
+    t = sc_clampf(t, 0.0f, 1.0f);
+    return t * t * (3.0f - (2.0f * t));
+}
+
 static float sc_startup_envelope(float dt_s)
 {
     if (!s_startup_anim_active) {
@@ -151,8 +194,8 @@ static float sc_startup_envelope(float dt_s)
     }
 
     const float ease = u * u * (3.0f - 2.0f * u);
-    const float over_amp = (float)SC_LIGHT_STARTUP_OVERSHOOT_PCT / 100.0f;
-    const float overshoot = over_amp * expf(-6.0f * (1.0f - u)) * sinf(12.0f * u);
+    const float over_amp = ((float)SC_LIGHT_STARTUP_OVERSHOOT_PCT / 100.0f) * SC_LIGHT_STARTUP_BLOOM_SCALE;
+    const float overshoot = over_amp * expf(-5.5f * (1.0f - u)) * sinf(10.0f * u);
     return sc_clampf(ease + overshoot, 0.0f, 1.2f);
 }
 
@@ -161,16 +204,30 @@ static float sc_audio_sway_envelope(float dt_s)
     if (!s_audio_sway_active) {
         return 0.0f;
     }
+
     s_audio_sway_elapsed_s += dt_s;
-    const float dur_s = (float)SC_LIGHT_AUDIO_SWAY_MS / 1000.0f;
-    float u = s_audio_sway_elapsed_s / dur_s;
-    if (u >= 1.0f) {
+    const float attack_s = (float)s_pulse_attack_ms / 1000.0f;
+    const float release_s = (float)s_pulse_release_ms / 1000.0f;
+    const float total_s = attack_s + release_s;
+    if (total_s <= 0.0f) {
         s_audio_sway_active = false;
         return 0.0f;
     }
 
-    const float shape = sinf(SC_LIGHT_PI * u) * expf(-2.2f * u);
-    return s_audio_sway_amp_pct * shape;
+    if (s_audio_sway_elapsed_s >= total_s) {
+        s_audio_sway_active = false;
+        return 0.0f;
+    }
+
+    float env = 0.0f;
+    if ((attack_s > 0.0f) && (s_audio_sway_elapsed_s < attack_s)) {
+        env = sc_smoothstep01(s_audio_sway_elapsed_s / attack_s);
+    } else if (release_s > 0.0f) {
+        const float release_elapsed_s = s_audio_sway_elapsed_s - attack_s;
+        env = 1.0f - sc_smoothstep01(release_elapsed_s / release_s);
+    }
+
+    return s_audio_sway_peak_pct * env;
 }
 
 static void sc_fluctuation_step(float dt_s, float *brightness_pct, float *warmth_pct)
@@ -178,21 +235,21 @@ static void sc_fluctuation_step(float dt_s, float *brightness_pct, float *warmth
     *brightness_pct = 0.0f;
     *warmth_pct = 0.0f;
 #if SC_LIGHT_FLUCT_ENABLE
-    const float speed_scale = (float)SC_LIGHT_AMBIENT_SPEED_PCT / 100.0f;
+    const float speed_scale = ((float)SC_LIGHT_AMBIENT_SPEED_PCT / 100.0f) * SC_LIGHT_AMBIENT_SPEED_SCALE;
     const float drift_scale = dt_s * speed_scale;
-    s_fluct_speed_a = sc_clampf(s_fluct_speed_a + 0.10f * drift_scale * sc_random_symm(), 0.12f, 0.28f);
-    s_fluct_speed_b = sc_clampf(s_fluct_speed_b + 0.07f * drift_scale * sc_random_symm(), 0.05f, 0.16f);
-    s_fluct_speed_c = sc_clampf(s_fluct_speed_c + 0.09f * drift_scale * sc_random_symm(), 0.08f, 0.22f);
-    s_fluct_speed_d = sc_clampf(s_fluct_speed_d + 0.06f * drift_scale * sc_random_symm(), 0.04f, 0.12f);
+    s_fluct_speed_a = sc_clampf(s_fluct_speed_a + 0.08f * drift_scale * sc_random_symm(), 0.08f, 0.18f);
+    s_fluct_speed_b = sc_clampf(s_fluct_speed_b + 0.05f * drift_scale * sc_random_symm(), 0.03f, 0.11f);
+    s_fluct_speed_c = sc_clampf(s_fluct_speed_c + 0.06f * drift_scale * sc_random_symm(), 0.05f, 0.14f);
+    s_fluct_speed_d = sc_clampf(s_fluct_speed_d + 0.04f * drift_scale * sc_random_symm(), 0.02f, 0.08f);
 
     s_fluct_phase_a += s_fluct_speed_a * drift_scale;
     s_fluct_phase_b += s_fluct_speed_b * drift_scale;
     s_fluct_phase_c += s_fluct_speed_c * drift_scale;
     s_fluct_phase_d += s_fluct_speed_d * drift_scale;
 
-    *brightness_pct = (float)SC_LIGHT_FLUCT_BRIGHTNESS_PCT *
+    *brightness_pct = ((float)SC_LIGHT_FLUCT_BRIGHTNESS_PCT * SC_LIGHT_AMBIENT_BRIGHTNESS_SCALE) *
                       (0.62f * sinf(s_fluct_phase_a) + 0.38f * sinf(s_fluct_phase_b));
-    *warmth_pct = (float)SC_LIGHT_FLUCT_WARMTH_PCT *
+    *warmth_pct = ((float)SC_LIGHT_FLUCT_WARMTH_PCT * SC_LIGHT_AMBIENT_WARMTH_SCALE) *
                   (0.70f * sinf(s_fluct_phase_c) + 0.30f * sinf(s_fluct_phase_d));
 #endif
 }
@@ -224,16 +281,11 @@ static void sc_light_service_task(void *arg)
             target = 0;
         }
 
-        if (s_brightness_current_pct < (float)target) {
-            s_brightness_current_pct += (float)SC_LIGHT_RAMP_STEP_PCT;
-            if (s_brightness_current_pct > target) {
-                s_brightness_current_pct = (float)target;
-            }
-        } else if (s_brightness_current_pct > (float)target) {
-            s_brightness_current_pct -= (float)SC_LIGHT_RAMP_STEP_PCT;
-            if (s_brightness_current_pct < target) {
-                s_brightness_current_pct = (float)target;
-            }
+        if (fabsf(s_brightness_current_pct - (float)target) < 0.05f) {
+            s_brightness_current_pct = (float)target;
+        } else {
+            const float alpha = 1.0f - expf(-dt_s / SC_LIGHT_BRIGHTNESS_RESPONSE_S);
+            s_brightness_current_pct += ((float)target - s_brightness_current_pct) * alpha;
         }
 
         if (s_brightness_current_pct <= 0.0f) {
@@ -300,7 +352,7 @@ esp_err_t sc_light_service_start(void)
     s_startup_anim_elapsed_s = 0.0f;
     s_audio_sway_active = false;
     s_audio_sway_elapsed_s = 0.0f;
-    s_audio_sway_amp_pct = 0.0f;
+    s_audio_sway_peak_pct = 0.0f;
 
     BaseType_t ok = xTaskCreate(sc_light_service_task, "sc_light", 3072, NULL, 4, NULL);
     if (ok != pdPASS) {
@@ -371,11 +423,57 @@ esp_err_t sc_light_service_audio_sway(bool audio_enabled)
 #if SC_LIGHT_AUDIO_SWAY_ENABLE
     s_audio_sway_active = true;
     s_audio_sway_elapsed_s = 0.0f;
-    s_audio_sway_amp_pct = audio_enabled ? (float)SC_LIGHT_AUDIO_SWAY_PCT : -(float)SC_LIGHT_AUDIO_SWAY_PCT;
+    s_audio_sway_peak_pct = audio_enabled
+                                ? (float)s_pulse_peak_up_pct
+                                : -(float)s_pulse_peak_down_pct;
 #else
     (void)audio_enabled;
 #endif
     return ESP_OK;
+}
+
+esp_err_t sc_light_service_set_pulse_attack_ms(uint16_t attack_ms)
+{
+    s_pulse_attack_ms = sc_clamp_u16(attack_ms, SC_LIGHT_PULSE_ATTACK_MIN_MS, SC_LIGHT_PULSE_ATTACK_MAX_MS);
+    return ESP_OK;
+}
+
+esp_err_t sc_light_service_set_pulse_release_ms(uint16_t release_ms)
+{
+    s_pulse_release_ms = sc_clamp_u16(release_ms, SC_LIGHT_PULSE_RELEASE_MIN_MS, SC_LIGHT_PULSE_RELEASE_MAX_MS);
+    return ESP_OK;
+}
+
+esp_err_t sc_light_service_set_pulse_peak_up_pct(uint8_t peak_up_pct)
+{
+    s_pulse_peak_up_pct = sc_clamp_u8(peak_up_pct, 0U, 100U);
+    return ESP_OK;
+}
+
+esp_err_t sc_light_service_set_pulse_peak_down_pct(uint8_t peak_down_pct)
+{
+    s_pulse_peak_down_pct = sc_clamp_u8(peak_down_pct, 0U, 100U);
+    return ESP_OK;
+}
+
+uint16_t sc_light_service_get_pulse_attack_ms(void)
+{
+    return s_pulse_attack_ms;
+}
+
+uint16_t sc_light_service_get_pulse_release_ms(void)
+{
+    return s_pulse_release_ms;
+}
+
+uint8_t sc_light_service_get_pulse_peak_up_pct(void)
+{
+    return s_pulse_peak_up_pct;
+}
+
+uint8_t sc_light_service_get_pulse_peak_down_pct(void)
+{
+    return s_pulse_peak_down_pct;
 }
 
 bool sc_light_service_get_enabled(void)
@@ -432,6 +530,50 @@ esp_err_t sc_light_service_audio_sway(bool audio_enabled)
 {
     (void)audio_enabled;
     return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_set_pulse_attack_ms(uint16_t attack_ms)
+{
+    (void)attack_ms;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_set_pulse_release_ms(uint16_t release_ms)
+{
+    (void)release_ms;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_set_pulse_peak_up_pct(uint8_t peak_up_pct)
+{
+    (void)peak_up_pct;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_set_pulse_peak_down_pct(uint8_t peak_down_pct)
+{
+    (void)peak_down_pct;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+uint16_t sc_light_service_get_pulse_attack_ms(void)
+{
+    return 0U;
+}
+
+uint16_t sc_light_service_get_pulse_release_ms(void)
+{
+    return 0U;
+}
+
+uint8_t sc_light_service_get_pulse_peak_up_pct(void)
+{
+    return 0U;
+}
+
+uint8_t sc_light_service_get_pulse_peak_down_pct(void)
+{
+    return 0U;
 }
 
 bool sc_light_service_get_enabled(void)

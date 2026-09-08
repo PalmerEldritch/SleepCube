@@ -91,6 +91,8 @@ static uint16_t s_sweep_end_hz = SC_AUDIO_DEFAULT_SWEEP_END_HZ;
 static uint16_t s_sweep_period_ms = SC_AUDIO_DEFAULT_SWEEP_PERIOD_MS;
 static uint16_t s_hpf_cutoff_hz = CONFIG_SC_AUDIO_HPF_CUTOFF_HZ;
 static uint8_t s_hpf_stages = CONFIG_SC_AUDIO_HPF_STAGES;
+static uint16_t s_lpf_cutoff_hz = 0U;
+static uint8_t s_lpf_stages = 1U;
 static sc_audio_mp3_source_t s_mp3_source = SC_AUDIO_MP3_SOURCE_AUTO;
 static sc_audio_mp3_mix_mode_t s_mp3_mix_mode = SC_AUDIO_MP3_MIX_STEREO;
 static sc_audio_mp3_eq_mode_t s_mp3_eq_mode = SC_AUDIO_MP3_EQ_OFF;
@@ -168,7 +170,9 @@ static void sc_audio_player_get_diag_config(sc_audio_source_mode_t *source_mode,
                                             uint16_t *sweep_end_hz,
                                             uint16_t *sweep_period_ms,
                                             uint16_t *hpf_cutoff_hz,
-                                            uint8_t *hpf_stages)
+                                            uint8_t *hpf_stages,
+                                            uint16_t *lpf_cutoff_hz,
+                                            uint8_t *lpf_stages)
 {
     taskENTER_CRITICAL(&s_audio_cfg_lock);
     if (source_mode != NULL) {
@@ -194,6 +198,12 @@ static void sc_audio_player_get_diag_config(sc_audio_source_mode_t *source_mode,
     }
     if (hpf_stages != NULL) {
         *hpf_stages = s_hpf_stages;
+    }
+    if (lpf_cutoff_hz != NULL) {
+        *lpf_cutoff_hz = s_lpf_cutoff_hz;
+    }
+    if (lpf_stages != NULL) {
+        *lpf_stages = s_lpf_stages;
     }
     taskEXIT_CRITICAL(&s_audio_cfg_lock);
 }
@@ -252,6 +262,7 @@ static void sc_audio_player_task(void *arg)
     static int16_t tone_buf[SC_TONE_FRAMES * 2];
     sc_tone_state_t tone;
     sc_hpf_chain_t tone_left_hpf = { 0 };
+    sc_lpf_chain_t tone_left_lpf = { 0 };
     sc_audio_source_mode_t source_mode = SC_AUDIO_DEFAULT_SOURCE_MODE;
     uint16_t tone_hz = SC_AUDIO_DEFAULT_TONE_HZ;
     uint8_t amplitude_percent = SC_AUDIO_DEFAULT_TONE_AMPLITUDE_PCT;
@@ -260,6 +271,8 @@ static void sc_audio_player_task(void *arg)
     uint16_t sweep_period_ms = SC_AUDIO_DEFAULT_SWEEP_PERIOD_MS;
     uint16_t hpf_cutoff_hz = CONFIG_SC_AUDIO_HPF_CUTOFF_HZ;
     uint8_t hpf_stages = CONFIG_SC_AUDIO_HPF_STAGES;
+    uint16_t lpf_cutoff_hz = 0U;
+    uint8_t lpf_stages = 1U;
     sc_tone_init(&tone, SC_SAMPLE_RATE_HZ, (float)tone_hz, (float)amplitude_percent / 100.0f);
 
     while (1) {
@@ -270,6 +283,7 @@ static void sc_audio_player_task(void *arg)
                 SC_TRACE_MARK("audio", "state_muted", 0);
                 was_playing = false;
                 sc_audio_hpf_reset(&tone_left_hpf);
+                sc_audio_lpf_chain_reset(&tone_left_lpf);
             }
             vTaskDelay(pdMS_TO_TICKS(20));
             continue;
@@ -278,34 +292,41 @@ static void sc_audio_player_task(void *arg)
         sc_audio_player_refresh_state();
         sc_audio_player_get_diag_config(&source_mode, &tone_hz, &amplitude_percent,
                                         &sweep_start_hz, &sweep_end_hz, &sweep_period_ms,
-                                        &hpf_cutoff_hz, &hpf_stages);
+                                        &hpf_cutoff_hz, &hpf_stages,
+                                        &lpf_cutoff_hz, &lpf_stages);
         SC_TRACE_MARK("audio", "play_start", s_effective_volume_percent);
         ESP_ERROR_CHECK_WITHOUT_ABORT(sc_audio_i2s_set_tx_enabled(true));
         was_playing = true;
         if (source_mode != SC_AUDIO_SOURCE_MODE_MP3) {
-            ESP_LOGI(TAG, "audio diagnostic active: signal=%s amp=%u%% volume=%u%% format=msb-32",
+            ESP_LOGI(TAG, "audio diagnostic active: signal=%s amp=%u%% volume=%u%%",
                      sc_audio_diag_signal_name(source_mode),
                      (unsigned)amplitude_percent,
                      (unsigned)s_volume_percent);
             esp_err_t err = ESP_OK;
             while (s_play_enabled) {
                 float freq_hz = 0.0f;
-                float hpf_alpha = 0.0f;
+                uint16_t hpf_alpha_q15 = 0U;
+                uint16_t lpf_alpha_q15 = 0U;
                 sc_audio_player_refresh_state();
                 sc_audio_player_get_diag_config(&source_mode, &tone_hz, &amplitude_percent,
                                                 &sweep_start_hz, &sweep_end_hz, &sweep_period_ms,
-                                                &hpf_cutoff_hz, &hpf_stages);
+                                                &hpf_cutoff_hz, &hpf_stages,
+                                                &lpf_cutoff_hz, &lpf_stages);
                 tone.amplitude = (float)amplitude_percent / 100.0f;
                 freq_hz = sc_audio_diag_frequency_hz(source_mode, tone_hz, sweep_start_hz,
                                                      sweep_end_hz, sweep_period_ms,
                                                      sc_audio_player_now_us());
                 sc_tone_set_frequency(&tone, SC_SAMPLE_RATE_HZ, freq_hz);
-                hpf_alpha = sc_audio_hpf_alpha(SC_SAMPLE_RATE_HZ, hpf_cutoff_hz);
+                hpf_alpha_q15 = sc_audio_hpf_alpha_q15(SC_SAMPLE_RATE_HZ, hpf_cutoff_hz);
+                lpf_alpha_q15 = sc_audio_lpf_alpha_q15(SC_SAMPLE_RATE_HZ, lpf_cutoff_hz);
 
                 for (size_t i = 0; i < SC_TONE_FRAMES; i++) {
                     int16_t s = sc_tone_next_sample(&tone);
                     if (sc_audio_hpf_enabled(hpf_cutoff_hz, hpf_stages)) {
-                        s = sc_audio_hpf_process(&tone_left_hpf, s, hpf_alpha, hpf_stages);
+                        s = sc_audio_hpf_process_q15(&tone_left_hpf, s, hpf_alpha_q15, hpf_stages);
+                    }
+                    if (sc_audio_lpf_enabled(lpf_cutoff_hz, lpf_stages)) {
+                        s = sc_audio_lpf_chain_process_q15(&tone_left_lpf, s, lpf_alpha_q15, lpf_stages);
                     }
                     s = (int16_t)(((int32_t)s * (int32_t)s_effective_volume_percent) / 100);
                     tone_buf[(i * 2U) + 0U] = s;
@@ -318,6 +339,7 @@ static void sc_audio_player_task(void *arg)
                 }
             }
             sc_audio_hpf_reset(&tone_left_hpf);
+            sc_audio_lpf_chain_reset(&tone_left_lpf);
             SC_TRACE_MARK("audio", "play_end", err);
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "playback failed: %s", esp_err_to_name(err));
@@ -564,6 +586,17 @@ void sc_audio_player_set_hpf(uint16_t cutoff_hz, uint8_t stages)
     taskEXIT_CRITICAL(&s_audio_cfg_lock);
 }
 
+void sc_audio_player_set_lpf(uint16_t cutoff_hz, uint8_t stages)
+{
+    if (stages > SC_AUDIO_LPF_MAX_STAGES) {
+        stages = SC_AUDIO_LPF_MAX_STAGES;
+    }
+    taskENTER_CRITICAL(&s_audio_cfg_lock);
+    s_lpf_cutoff_hz = cutoff_hz;
+    s_lpf_stages = stages;
+    taskEXIT_CRITICAL(&s_audio_cfg_lock);
+}
+
 uint16_t sc_audio_player_get_hpf_cutoff_hz(void)
 {
     uint16_t cutoff_hz;
@@ -578,6 +611,24 @@ uint8_t sc_audio_player_get_hpf_stages(void)
     uint8_t stages;
     taskENTER_CRITICAL(&s_audio_cfg_lock);
     stages = s_hpf_stages;
+    taskEXIT_CRITICAL(&s_audio_cfg_lock);
+    return stages;
+}
+
+uint16_t sc_audio_player_get_lpf_cutoff_hz(void)
+{
+    uint16_t cutoff_hz;
+    taskENTER_CRITICAL(&s_audio_cfg_lock);
+    cutoff_hz = s_lpf_cutoff_hz;
+    taskEXIT_CRITICAL(&s_audio_cfg_lock);
+    return cutoff_hz;
+}
+
+uint8_t sc_audio_player_get_lpf_stages(void)
+{
+    uint8_t stages;
+    taskENTER_CRITICAL(&s_audio_cfg_lock);
+    stages = s_lpf_stages;
     taskEXIT_CRITICAL(&s_audio_cfg_lock);
     return stages;
 }
@@ -796,6 +847,8 @@ void sc_audio_player_get_runtime_config(sc_audio_runtime_config_t *config)
     config->sweep_period_ms = s_sweep_period_ms;
     config->hpf_cutoff_hz = s_hpf_cutoff_hz;
     config->hpf_stages = s_hpf_stages;
+    config->lpf_cutoff_hz = s_lpf_cutoff_hz;
+    config->lpf_stages = s_lpf_stages;
     config->mp3_decode_error_count = s_mp3_decode_error_count;
     config->mp3_sync_miss_count = s_mp3_sync_miss_count;
     config->mp3_rate_mismatch_count = s_mp3_rate_mismatch_count;

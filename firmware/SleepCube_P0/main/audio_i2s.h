@@ -8,13 +8,15 @@
 /**
  * @brief Initialize I2S TX channel for audio playback.
  *
- * Configures standard mode, board-specific TX pins, and the validated playback format.
+ * Configures the menuconfig-selected TX bus mode, framing, board-specific TX
+ * pins, and playback sample format.
  *
- * Current working transmit format:
+ * Supported transmit formats:
  * - 44.1 kHz sample rate
  * - 16-bit PCM data width
  * - 32-bit slot width
- * - MSB framing
+ * - Standard I2S stereo or 8-slot TDM
+ * - Philips I2S or MSB framing
  *
  * @param sample_rate_hz I2S sample rate in Hz.
  * @return

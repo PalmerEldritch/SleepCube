@@ -171,6 +171,10 @@ esp_err_t sc_audio_mp3_play_file(const char *path, const volatile bool *play_ena
     sc_hpf_chain_t left_hpf = { 0 };
     sc_hpf_chain_t right_hpf = { 0 };
     sc_hpf_chain_t mono_hpf = { 0 };
+    bool logged_lpf = false;
+    sc_lpf_chain_t left_lpf_global = { 0 };
+    sc_lpf_chain_t right_lpf_global = { 0 };
+    sc_lpf_chain_t mono_lpf_global = { 0 };
     sc_lpf_state_t left_lpf = { 0 };
     sc_lpf_state_t right_lpf = { 0 };
     sc_lpf_state_t mono_lpf = { 0 };
@@ -246,6 +250,11 @@ esp_err_t sc_audio_mp3_play_file(const char *path, const volatile bool *play_ena
         const uint16_t hpf_cutoff_hz = sc_audio_player_get_hpf_cutoff_hz();
         const uint8_t hpf_stages = sc_audio_player_get_hpf_stages();
         const float hpf_alpha = sc_audio_hpf_alpha((uint32_t)frame_info.samprate, hpf_cutoff_hz);
+        const uint16_t hpf_alpha_q15 = sc_audio_hpf_alpha_q15((uint32_t)frame_info.samprate, hpf_cutoff_hz);
+        const uint16_t lpf_cutoff_hz = sc_audio_player_get_lpf_cutoff_hz();
+        const uint8_t lpf_stages = sc_audio_player_get_lpf_stages();
+        const float lpf_alpha_global = sc_audio_lpf_alpha((uint32_t)frame_info.samprate, lpf_cutoff_hz);
+        const uint16_t lpf_alpha_q15 = sc_audio_lpf_alpha_q15((uint32_t)frame_info.samprate, lpf_cutoff_hz);
         const sc_audio_mp3_eq_mode_t eq_mode = sc_audio_player_get_mp3_eq_mode();
         const uint16_t eq_cutoff_hz = sc_audio_player_get_mp3_eq_cutoff_hz();
         const uint8_t eq_depth_pct = sc_audio_player_get_mp3_eq_depth_pct();
@@ -259,6 +268,15 @@ esp_err_t sc_audio_mp3_play_file(const char *path, const volatile bool *play_ena
                 ESP_LOGI(TAG, "software HPF disabled");
             }
             logged_hpf = true;
+        }
+        if (!logged_lpf) {
+            if (sc_audio_lpf_enabled(lpf_cutoff_hz, lpf_stages)) {
+                ESP_LOGI(TAG, "software LPF enabled: cutoff=%u Hz stages=%u alpha=%.5f",
+                         (unsigned)lpf_cutoff_hz, (unsigned)lpf_stages, (double)lpf_alpha_global);
+            } else {
+                ESP_LOGI(TAG, "software LPF disabled");
+            }
+            logged_lpf = true;
         }
 
         if (frame_info.nChans == 2) {
@@ -297,8 +315,12 @@ esp_err_t sc_audio_mp3_play_file(const char *path, const volatile bool *play_ena
                 }
 
                 if (sc_audio_hpf_enabled(hpf_cutoff_hz, hpf_stages)) {
-                    out_left = sc_audio_hpf_process(&left_hpf, out_left, hpf_alpha, hpf_stages);
-                    out_right = sc_audio_hpf_process(&right_hpf, out_right, hpf_alpha, hpf_stages);
+                    out_left = sc_audio_hpf_process_q15(&left_hpf, out_left, hpf_alpha_q15, hpf_stages);
+                    out_right = sc_audio_hpf_process_q15(&right_hpf, out_right, hpf_alpha_q15, hpf_stages);
+                }
+                if (sc_audio_lpf_enabled(lpf_cutoff_hz, lpf_stages)) {
+                    out_left = sc_audio_lpf_chain_process_q15(&left_lpf_global, out_left, lpf_alpha_q15, lpf_stages);
+                    out_right = sc_audio_lpf_chain_process_q15(&right_lpf_global, out_right, lpf_alpha_q15, lpf_stages);
                 }
 
                 out_left = sc_apply_mp3_eq_sample(out_left, eq_mode, &left_lpf, lpf_alpha, eq_depth_pct);
@@ -329,7 +351,10 @@ esp_err_t sc_audio_mp3_play_file(const char *path, const volatile bool *play_ena
             for (size_t i = 0; i < mono_samples; i++) {
                 int16_t s = (int16_t)pcm_buf[i];
                 if (sc_audio_hpf_enabled(hpf_cutoff_hz, hpf_stages)) {
-                    s = sc_audio_hpf_process(&mono_hpf, s, hpf_alpha, hpf_stages);
+                    s = sc_audio_hpf_process_q15(&mono_hpf, s, hpf_alpha_q15, hpf_stages);
+                }
+                if (sc_audio_lpf_enabled(lpf_cutoff_hz, lpf_stages)) {
+                    s = sc_audio_lpf_chain_process_q15(&mono_lpf_global, s, lpf_alpha_q15, lpf_stages);
                 }
                 s = sc_apply_mp3_eq_sample(s, eq_mode, &mono_lpf, lpf_alpha, eq_depth_pct);
                 s = sc_apply_pre_gain_scale(s, pre_gain_scale_q15);

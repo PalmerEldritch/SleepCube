@@ -4,6 +4,7 @@ set(SC_SRCS
     "services/audio_service.c"
     "services/light_service.c"
     "services/ui_service.c"
+    "drivers/lvgl_display_if.c"
     "hal/hw_profile.c"
     "hal/settings_store.c"
     "trace/sc_trace.c"
@@ -45,7 +46,6 @@ endif()
 if(CONFIG_SC_ENABLE_UI AND CONFIG_SC_UI_BACKEND_LCD_TOUCH)
     list(APPEND SC_SRCS
         "drivers/lcd_panel_if.c"
-        "drivers/lvgl_display_if.c"
     )
 endif()
 
@@ -53,6 +53,8 @@ set(SC_REQUIRES driver esp_lcd espressif__esp_lcd_touch espressif__esp_lvgl_port
 set(SC_PRIV_REQUIRES
     esp_driver_i2s
     esp_driver_ledc
+    esp_driver_rmt
+    esp_hal_rmt
     esp_lcd_jd9853
     esp_lcd_touch_axs5106
     spiffs
@@ -62,9 +64,6 @@ set(SC_PRIV_REQUIRES
     esp_driver_spi
     nvs_flash
 )
-if(CONFIG_SC_ENABLE_LIGHT AND CONFIG_SC_LIGHT_BACKEND_LED_STRIP)
-    list(APPEND SC_PRIV_REQUIRES esp_driver_rmt)
-endif()
 if(CONFIG_SC_ENABLE_UI AND CONFIG_SC_UI_BACKEND_LCD_TOUCH)
     list(APPEND SC_PRIV_REQUIRES
         esp_driver_spi

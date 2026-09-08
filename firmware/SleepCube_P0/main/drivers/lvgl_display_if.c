@@ -13,15 +13,15 @@
 #include "lcd_panel_if.h"
 #include "light_service.h"
 
+#if CONFIG_SC_BOARD_WAVESHARE_ESP32C6 && CONFIG_SC_UI_BACKEND_LCD_TOUCH
+
 static const char *TAG = "sc_lvgl_if";
 
 LV_FONT_DECLARE(lv_font_montserrat_28);
 
-#if CONFIG_SC_BOARD_WAVESHARE_ESP32C6 && CONFIG_SC_UI_BACKEND_LCD_TOUCH
-
 #define SC_LCD_DRAW_BUFFER_HEIGHT      50
-#define SC_AMBIENT_TIMER_MS            8
-#define SC_AMBIENT_PULSE_PERIOD_S      4.2f
+#define SC_AMBIENT_TIMER_MS            24
+#define SC_AMBIENT_PULSE_PERIOD_S      6.8f
 #define SC_REST_LONG_PRESS_MS          1000U
 #define SC_REST_MOVE_CANCEL_PX         12
 #define SC_SLIDER_TIMEOUT_MS           3000U
@@ -31,17 +31,17 @@ LV_FONT_DECLARE(lv_font_montserrat_28);
 #define SC_SLIDER_ZONE_BORDER_OPA      12
 #define SC_AUDIO_ON_PULSE_BIAS         1.0f
 #define SC_AUDIO_OFF_PULSE_BIAS       -1.0f
-#define SC_AUDIO_PULSE_DAMPING_PER_S   1.2f
+#define SC_AUDIO_PULSE_DAMPING_PER_S   0.85f
 #define SC_LCD_BACKLIGHT_MAX_LEVEL     1023.0f
 #define SC_LCD_BASE_BACKLIGHT_MIN      0.10f
-#define SC_LCD_BASE_BACKLIGHT_MAX      0.78f
-#define SC_LCD_BREATHING_DEPTH         0.035f
-#define SC_LCD_AUDIO_ON_BOOST          0.025f
-#define SC_LCD_PULSE_ON_MIN_DELTA      0.16f
-#define SC_LCD_PULSE_ON_HEADROOM_GAIN  0.18f
-#define SC_LCD_PULSE_OFF_MIN_DELTA     0.14f
-#define SC_LCD_PULSE_OFF_LEVEL_GAIN    0.10f
-#define SC_LCD_AMBIENT_FILTER_RATE     3.0f
+#define SC_LCD_BASE_BACKLIGHT_MAX      0.72f
+#define SC_LCD_BREATHING_DEPTH         0.065f
+#define SC_LCD_AUDIO_ON_BOOST          0.035f
+#define SC_LCD_PULSE_ON_MIN_DELTA      0.24f
+#define SC_LCD_PULSE_ON_HEADROOM_GAIN  0.28f
+#define SC_LCD_PULSE_OFF_MIN_DELTA     0.18f
+#define SC_LCD_PULSE_OFF_LEVEL_GAIN    0.16f
+#define SC_LCD_AMBIENT_FILTER_RATE     2.2f
 
 typedef enum {
     SC_UI_MODE_REST = 0,
@@ -56,7 +56,6 @@ typedef enum {
 static lv_display_t *s_display;
 static lv_indev_t *s_touch_indev;
 static bool s_started;
-static lv_timer_t *s_touch_poll_timer;
 static lv_timer_t *s_ambient_timer;
 static lv_timer_t *s_slider_timeout_timer;
 static lv_obj_t *s_rest_surface;
@@ -206,28 +205,6 @@ static void sc_exit_slider_mode(void)
 static void sc_trigger_audio_toggle_pulse(bool audio_enabled)
 {
     s_audio_toggle_pulse_bias = audio_enabled ? SC_AUDIO_ON_PULSE_BIAS : SC_AUDIO_OFF_PULSE_BIAS;
-}
-
-static void sc_lvgl_touch_poll_cb(lv_timer_t *timer)
-{
-    (void)timer;
-
-    esp_lcd_touch_handle_t touch = sc_lcd_panel_if_get_touch_handle();
-    if (touch == NULL) {
-        return;
-    }
-
-    uint16_t x[1];
-    uint16_t y[1];
-    uint8_t count = 0;
-
-    esp_lcd_touch_read_data(touch);
-    bool pressed = esp_lcd_touch_get_coordinates(touch, x, y, NULL, &count, 1);
-
-    (void)x;
-    (void)y;
-    (void)pressed;
-    (void)count;
 }
 
 static uint8_t sc_zone_point_to_percent(const lv_obj_t *zone, const lv_point_t *point)
@@ -536,8 +513,8 @@ void sc_lvgl_display_create_ambient_screen(void)
     lv_obj_set_style_bg_opa(lv_scr_act(), LV_OPA_COVER, 0);
     lv_obj_set_style_pad_all(lv_scr_act(), 0, 0);
     lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0xFFF6EA), 0);
-    lv_obj_set_style_bg_grad_color(lv_scr_act(), lv_color_hex(0xFFF6EA), 0);
+    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0xFFE4B8), 0);
+    lv_obj_set_style_bg_grad_color(lv_scr_act(), lv_color_hex(0xFFE4B8), 0);
     lv_obj_set_style_bg_grad_dir(lv_scr_act(), LV_GRAD_DIR_NONE, 0);
     s_screen_brightness_percent = sc_light_service_get_target_brightness_percent();
     s_slider_wait_release = false;
@@ -585,11 +562,6 @@ void sc_lvgl_display_create_ambient_screen(void)
     lv_obj_add_event_cb(s_brightness_zone, sc_slider_event_cb, LV_EVENT_ALL, (void *)(intptr_t)SC_SLIDER_ROLE_BRIGHTNESS);
 
     sc_update_slider_visuals();
-
-    if (s_touch_poll_timer == NULL) {
-        s_touch_poll_timer = lv_timer_create(sc_lvgl_touch_poll_cb, 30, NULL);
-    }
-    sc_lvgl_touch_poll_cb(NULL);
 
     if (s_ambient_timer == NULL) {
         s_ambient_timer = lv_timer_create(sc_ambient_anim_cb, SC_AMBIENT_TIMER_MS, NULL);

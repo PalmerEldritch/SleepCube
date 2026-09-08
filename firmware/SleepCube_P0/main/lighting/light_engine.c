@@ -29,6 +29,12 @@
 
 #define SC_LIGHT_MAX_SPATIAL_KNOTS 8
 #define SC_TWO_PI (6.28318530718f)
+#define SC_LIGHT_SPATIAL_AMPLITUDE_SCALE (0.56f)
+#define SC_LIGHT_SPATIAL_MIN_SCALE       (0.80f)
+#define SC_LIGHT_SPATIAL_MAX_SCALE       (1.22f)
+#define SC_LIGHT_CAL_R                   (0.97f)
+#define SC_LIGHT_CAL_G                   (1.10f)
+#define SC_LIGHT_CAL_B                   (0.50f)
 
 static float sc_clampf(float v, float lo, float hi)
 {
@@ -64,7 +70,7 @@ static float sc_lerp(float a, float b, float t)
 
 static float sc_spatial_knot_wave(float time_s, uint8_t knot_idx)
 {
-    const float speed = (float)SC_LIGHT_SPATIAL_SPEED_PCT / 100.0f;
+    const float speed = ((float)SC_LIGHT_SPATIAL_SPEED_PCT / 100.0f) * 0.50f;
     const float h = (float)(((uint32_t)knot_idx * 97U + 31U) % 251U) / 250.0f;
     const float f1_hz = (0.018f + (0.030f * h)) * speed;
     const float f2_hz = (0.009f + (0.020f * (1.0f - h))) * speed;
@@ -72,7 +78,7 @@ static float sc_spatial_knot_wave(float time_s, uint8_t knot_idx)
     const float p2 = SC_TWO_PI * (0.49f + (0.33f * h));
     const float a = sinf((SC_TWO_PI * f1_hz * time_s) + p1);
     const float b = sinf((SC_TWO_PI * f2_hz * time_s) + p2);
-    return (0.62f * a) + (0.38f * b);
+    return (0.80f * a) + (0.20f * b);
 }
 
 void sc_light_engine_render_warm(float brightness_pct, int8_t warmth_shift_pct,
@@ -88,14 +94,14 @@ void sc_light_engine_render_warm(float brightness_pct, int8_t warmth_shift_pct,
     const float max_scale = ((float)CONFIG_SC_LED_MAX_BRIGHTNESS_PCT) / 100.0f;
     const float level = electrical * max_scale;
 
-    const float base_r = ((float)CONFIG_SC_LIGHT_WARM_R) * level;
-    const float base_g = ((float)CONFIG_SC_LIGHT_WARM_G) * level;
-    const float base_b = ((float)CONFIG_SC_LIGHT_WARM_B) * level;
+    const float base_r = ((float)CONFIG_SC_LIGHT_WARM_R) * level * SC_LIGHT_CAL_R;
+    const float base_g = ((float)CONFIG_SC_LIGHT_WARM_G) * level * SC_LIGHT_CAL_G;
+    const float base_b = ((float)CONFIG_SC_LIGHT_WARM_B) * level * SC_LIGHT_CAL_B;
 
     const float warm_delta = (255.0f * level * (float)warmth) / 100.0f;
-    const float rf = sc_clampf(base_r + warm_delta, 0.0f, 255.0f);
-    const float gf = sc_clampf(base_g + (warm_delta / 3.0f), 0.0f, 255.0f);
-    const float bf = sc_clampf(base_b - warm_delta, 0.0f, 255.0f);
+    const float rf = sc_clampf(base_r + (0.75f * warm_delta), 0.0f, 255.0f);
+    const float gf = sc_clampf(base_g + (0.30f * warm_delta), 0.0f, 255.0f);
+    const float bf = sc_clampf(base_b - (1.10f * warm_delta), 0.0f, 255.0f);
 
 #if SC_LIGHT_SPATIAL_UNDULATION_ENABLE
     float knots[SC_LIGHT_MAX_SPATIAL_KNOTS];
@@ -109,7 +115,7 @@ void sc_light_engine_render_warm(float brightness_pct, int8_t warmth_shift_pct,
     for (int k = 0; k < knot_count; k++) {
         knots[k] = sc_spatial_knot_wave(time_s, (uint8_t)k);
     }
-    const float spatial_amp = (float)SC_LIGHT_SPATIAL_UNDULATION_PCT / 100.0f;
+    const float spatial_amp = ((float)SC_LIGHT_SPATIAL_UNDULATION_PCT / 100.0f) * SC_LIGHT_SPATIAL_AMPLITUDE_SCALE;
 #endif
 
     for (size_t i = 0; i < led_count; i++) {
@@ -127,7 +133,9 @@ void sc_light_engine_render_warm(float brightness_pct, int8_t warmth_shift_pct,
             }
             const float t = x - (float)i0;
             const float undulation = sc_lerp(knots[i0], knots[i1], t);
-            local_scale = sc_clampf(1.0f + (spatial_amp * undulation), 0.55f, 1.45f);
+            local_scale = sc_clampf(1.0f + (spatial_amp * undulation),
+                                    SC_LIGHT_SPATIAL_MIN_SCALE,
+                                    SC_LIGHT_SPATIAL_MAX_SCALE);
         }
 #endif
 

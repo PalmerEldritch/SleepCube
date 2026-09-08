@@ -43,6 +43,8 @@ typedef struct {
     uint16_t sweep_period_ms;
     uint16_t hpf_cutoff_hz;
     uint8_t hpf_stages;
+    uint16_t lpf_cutoff_hz;
+    uint8_t lpf_stages;
     uint8_t volume_percent;
     bool playback_enabled;
     uint32_t mp3_decode_error_count;
@@ -83,6 +85,9 @@ void sc_audio_player_get_sweep(uint16_t *start_hz, uint16_t *end_hz, uint16_t *p
 void sc_audio_player_set_hpf(uint16_t cutoff_hz, uint8_t stages);
 uint16_t sc_audio_player_get_hpf_cutoff_hz(void);
 uint8_t sc_audio_player_get_hpf_stages(void);
+void sc_audio_player_set_lpf(uint16_t cutoff_hz, uint8_t stages);
+uint16_t sc_audio_player_get_lpf_cutoff_hz(void);
+uint8_t sc_audio_player_get_lpf_stages(void);
 void sc_audio_player_set_mp3_source(sc_audio_mp3_source_t source);
 sc_audio_mp3_source_t sc_audio_player_get_mp3_source(void);
 void sc_audio_player_set_mp3_mix_mode(sc_audio_mp3_mix_mode_t mode);
