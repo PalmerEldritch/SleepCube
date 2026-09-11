@@ -17,6 +17,7 @@ Earlier product/prototype FRS, TRS, compliance, hardware and P0 implementation d
 - `/docs/software/05_ICD.md` — Control↔Audio interface contract
 - `/docs/software/06_VVM.md` — verification and validation matrix
 - `/docs/software/07_IMP.md` — implementation/release plan
+- `/docs/software/08_STATUS.md` — authoritative current development state and session handoff
 - `/docs/adr/` — accepted architecture/design decisions
 
 If active documents conflict with legacy prototype documents, do not silently resolve the conflict from legacy material. Follow accepted ADRs and the active SRS/SAS/ICD, or flag the conflict/TBD.
@@ -63,6 +64,7 @@ Unless superseded by an accepted ADR:
 ## Implementation discipline
 
 - Work against the current milestone in `/docs/software/07_IMP.md`.
+- Read `/docs/software/08_STATUS.md` before starting implementation work and treat it as the authoritative handoff snapshot of current progress, known issues and next action.
 - Keep each controller's state ownership explicit.
 - Prefer deterministic state machines/event queues over distributed shared state.
 - Do not make UI/light tasks block indefinitely on UART/audio operations.
@@ -70,6 +72,35 @@ Unless superseded by an accepted ADR:
 - Update the ICD before treating protocol changes as stable.
 - Add/update an ADR for architectural decisions or changes in ownership/interface strategy.
 - Add verification evidence/coverage when implementing a normative requirement.
+
+## Mandatory session closeout
+
+After any development session that changes code, architecture, interfaces, verification state, milestone progress, known defects or technical risk, **update the repository documentation before ending the session**.
+
+`/docs/software/08_STATUS.md` is the mandatory authoritative handoff record. Update it so that a fresh Codex/agent session can determine the current development state and continue correctly **without relying on prior chat context**.
+
+The session closeout shall record at minimum:
+
+- current milestone and status;
+- material implementation changes made during the session;
+- verification/tests performed and their results;
+- functionality or requirements not yet verified;
+- known defects, blockers, technical risks and unresolved decisions;
+- the exact next recommended development task.
+
+Also update the following when affected:
+
+- `/docs/software/07_IMP.md` — milestone completion/progress and plan changes;
+- `/docs/software/06_VVM.md` — new verification evidence, failures or acceptance-criteria changes;
+- `/docs/software/05_ICD.md` — stable interface/protocol contract changes;
+- `/docs/software/04_SAS.md` — architecture/ownership/state-model changes;
+- `/docs/software/03_UX.md` — intentional user-visible behaviour changes;
+- `/docs/adr/` — new or superseded architecture/design decisions;
+- public API comments — changed software contracts.
+
+Do not manufacture progress or verification evidence merely to complete the closeout. Clearly mark incomplete, failed, blocked or unverified work.
+
+If a session is analysis-only and makes no material change to implementation, architecture, verification state, milestone progress or known risks, a status-file edit is not required.
 
 ## Documentation promotion trigger
 
@@ -82,6 +113,7 @@ Required actions:
 - update relevant implementation/reference documentation;
 - update `/docs/software/06_VVM.md` when verification evidence or acceptance criteria change;
 - update `/docs/software/07_IMP.md` milestone status/notes when applicable;
+- update `/docs/software/08_STATUS.md` with the resulting current state and next task;
 - update public API comments if contracts changed;
 - add/update ADR when an architectural decision was introduced or changed;
 - update `/docs/software/05_ICD.md` for stable inter-controller contract changes.
