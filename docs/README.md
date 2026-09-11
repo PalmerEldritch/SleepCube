@@ -14,8 +14,11 @@ The active documents are in [`docs/software/`](software/):
 6. `05_ICD.md` — inter-controller communication contract
 7. `06_VVM.md` — verification and validation matrix
 8. `07_IMP.md` — implementation and release plan
+9. `08_STATUS.md` — authoritative current development state and session handoff
 
 Architecture decisions remain in [`docs/adr/`](adr/).
+
+`08_STATUS.md` is intentionally separate from the implementation plan: `07_IMP.md` defines what is planned and the milestone gates, while `08_STATUS.md` records what is currently implemented, verified, blocked and recommended next. Development sessions shall keep the status snapshot current according to `AGENTS.md` so continuation does not depend on chat history.
 
 ## Legacy prototype/product documentation
 
