@@ -22,9 +22,12 @@ The physical enclosure, production hardware design, regulatory compliance, acous
 | `05_ICD.md` | Control↔audio communication contract | Yes |
 | `06_VVM.md` | Requirement verification plan | Yes |
 | `07_IMP.md` | Implementation milestones and release gates | Process baseline |
+| `08_STATUS.md` | Authoritative current development state and session-to-session handoff | Process record |
 | `../adr/*` | Architecture decision records | Normative for accepted decisions |
 
 If documents conflict, accepted ADRs and the SRS/SAS/ICD take precedence over historical prototype documentation.
+
+`08_STATUS.md` does not redefine requirements or architecture. It records the latest implementation/verification state, known issues and next recommended task so development can continue without dependence on chat history.
 
 ## 3. Legacy material
 
@@ -52,7 +55,15 @@ Areas include `SYS`, `UI`, `LGT`, `AUD`, `SES`, `COM`, `SET`, `FLT`, `STA`.
 | Rest view | Default ambient UI state shown during normal operation |
 | Adjustment view | Temporary UI used for volume and brightness adjustment |
 
-## 6. Open design items
+## 6. Session continuity
+
+At the start of a development session, read `08_STATUS.md` before making implementation changes.
+
+At the end of any session that materially changes implementation, architecture, interfaces, verification state, milestone progress, known defects or technical risk, update `08_STATUS.md` before ending the session. The handoff shall be sufficient for a fresh development session to continue from repository state alone.
+
+Detailed closeout rules are defined in the repository `AGENTS.md`.
+
+## 7. Open design items
 
 The following are intentionally not frozen by the initial R00 documentation pass:
 
