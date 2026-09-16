@@ -1,5 +1,5 @@
 {
-    "idf.currentSetup": "/home/jeppe/.espressif/v5.5.3/esp-idf",
-    "cmake.sourceDirectory": "/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0",
+    "idf.currentSetup": "/home/jeppe/esp/v6.0/esp-idf",
+    "cmake.sourceDirectory": "/home/jeppe/Projekt/SleepCube/firmware/audio",
     "idf.pythonInstallPath": "/usr/bin/python"
 }
