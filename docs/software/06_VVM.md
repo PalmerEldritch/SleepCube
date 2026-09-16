@@ -41,6 +41,8 @@
 | SRS-AUD-005 | HWT, MAN | Volume transitions are subjectively smooth; quantitative criterion to be added after M2 |
 | SRS-AUD-006 | HWT | End-of-content behaviour continues intended presentation without user intervention |
 | SRS-AUD-007 | FI, INS | Suspend/disrupt Control-side servicing; active audio buffers remain local to Audio Controller |
+| SRS-AUD-008 | INS, HWT | Canonical 44.1 kHz/16-bit mono PCM WAV mounts, validates and plays from `/sleepcube/audio.wav` |
+| SRS-AUD-009 | FI, LOG | Missing card/file and malformed/unsupported WAV remain silent and produce actionable diagnostics |
 | SRS-SES-001 | INS, IT | Invalid/unbounded PLAY is impossible/rejected |
 | SRS-SES-002 | HWT | Nominal session duration configured to 30 min |
 | SRS-SES-003 | FI, HWT | Disconnect/reset Control during playback; Audio Controller still stops at deadline |
@@ -90,6 +92,7 @@ close the associated R00 requirements.
 | M1-BLD-001 | Clean ESP32-S3/8 MB Audio Controller build and image inspection | PASS | `verification/2026-09-16_M1_audio_bringup.md` |
 | M1-HWT-001 | AtomS3 Lite boot/logging, 10 silent resets and 20 finite diagnostic sequences | PASS — hash-verified flash, complete application log, 10/10 silent resets to `READY`, and 21/20 exact-count retained-format sequences plus final-image regression | `verification/2026-09-16_M1_audio_bringup.md` |
 | M1-MAN-001 | Speaker noise, distortion, dropout and transient listening assessment | PASS — clear tones, no distortion/clicks/pops, and quiet noise-free silent portions at approximately 20–30 cm using laptop USB power | `verification/2026-09-16_M1_audio_bringup.md` |
+| M2-BLD-001 | Normal 30-minute and separate finite 60-minute Audio Controller builds; deterministic content generation | PASS — both ESP32-S3/8 MB images build at 314,352 bytes with valid image integrity; generated WAV format verified | `verification/2026-09-16_M2_standalone_audio.md` |
 
 M1-BLD-001 is structural evidence toward SRS-SYS-001/SRS-SYS-003 only. It does
 not verify storage, decoding, product fades, session timing or the 60-minute

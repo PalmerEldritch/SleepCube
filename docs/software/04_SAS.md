@@ -140,6 +140,18 @@ The Control Controller owns the user/product interpretation of a session.
 
 The Audio Controller independently owns and enforces the playback deadline. Once a finite playback session has begun, loss of the Control Controller or UART link shall not disable that deadline.
 
+### 6.3 Content and volume persistence
+
+ADR-0005 defines the R00 content contract: the Audio Controller mounts the
+ATOMIC Speaker Base microSD card, validates `/sleepcube/audio.wav` as 44.1 kHz
+signed 16-bit mono PCM WAV, and duplicates decoded mono samples into the
+confirmed stereo I2S slots. The runtime does not expose paths to the Control
+Controller and does not automatically format or modify content storage.
+
+ADR-0006 assigns authoritative persisted audio volume to Audio Controller NVS.
+The Control Controller may present or request volume, but must reconcile with
+the Audio Controller after startup or independent reset.
+
 ## 7. Startup synchronization
 
 Expected nominal sequence:
@@ -191,4 +203,4 @@ Accepted architecture decisions are recorded separately, including:
 - independent Audio Controller timeout enforcement;
 - retention/migration of existing Control Controller UI and lighting implementation.
 
-Future ADR candidates include audio codec/storage policy, protocol framing/checksum, volume persistence ownership and degraded-state UX.
+Future ADR candidates include protocol framing/checksum and degraded-state UX.

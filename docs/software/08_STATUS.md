@@ -6,10 +6,11 @@
 
 ## 1. Current milestone
 
-**M1 complete — M2 standalone audio service is next**
+**M2 standalone audio service in progress**
 
-Status: **M1 passes on `feat/m1-audio-bringup` at source commit `838248a`;
-M2 has not started.**
+Status: **M1 passes. M2 software is implemented and builds on
+`feat/m2-standalone-audio`; on-target storage/playback/timer/endurance
+verification remains pending.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -21,6 +22,11 @@ flashed and produced clear tones without distortion or clicks/pops in its first
 run; its silent portions were also quiet and without noise. The final image then
 passed an audio regression, complete application-log capture and ten silent reset
 cycles to `READY`. M1 meets its standalone hardware exit criterion.
+
+M2 now has an accepted content/storage policy (ADR-0005), accepted volume
+persistence ownership (ADR-0006), and a clean-building standalone implementation.
+It must not be treated as complete until the available 1 GB card is staged and
+the normal-session and endurance hardware gates are executed.
 
 Repository organization now reflects the two-controller architecture:
 
@@ -61,20 +67,43 @@ The independent ESP-IDF project under `firmware/audio/` now contains:
 - tracked ESP32-S3/8 MB/USB Serial-JTAG build defaults;
 - an AtomS3 Lite board mapping for Speaker Base I2S and the local button;
 - a bounded I2S output abstraction with finite write timeouts and fail-safe shutdown;
-- a deterministic button-triggered 440 Hz / 1 kHz diagnostic sequence;
+- the retained M1 generated-tone source for historical diagnostic reference;
 - silent startup, exact completion counters and actionable boot/fault logging;
 - local build, flash, monitor and hardware-test instructions;
 - a two-second silent startup-log delay so application boot/`READY` output occurs
   after the native USB Serial/JTAG endpoint can re-enumerate.
 
-The failed initial configuration was 44.1 kHz signed 16-bit MSB-aligned mono.
+The M2 implementation additionally contains:
+
+- integrated Speaker Base microSD mounting on GPIO6/GPIO7/GPIO8 with fixed-low
+  card select and no automatic formatting;
+- strict validation of `/sleepcube/audio.wav` as 44.1 kHz, mono, signed 16-bit
+  RIFF/WAVE PCM;
+- buffered local looping and mono-to-duplicated-stereo conversion;
+- a single playback-owner task with STOPPED/STARTING/PLAYING/STOPPING/FAULT state;
+- one-second start/manual-stop ramps, 250 ms volume ramps, and a five-second
+  timeout fade that reaches silence at the finite deadline;
+- a bounded provisional quadratic volume law capped at -12 dBFS, with Audio
+  Controller NVS persistence and validation;
+- normal 30-minute and separately built finite 60-minute endurance configurations;
+- 60-second frame/byte/loop/deadline heartbeat logging;
+- short-press PLAY/STOP and one-second-hold volume cycling as the M2-only local
+  standalone test interface;
+- a deterministic, loop-safe validation-WAV generator.
+
+The failed initial M1 configuration was 44.1 kHz signed 16-bit MSB-aligned mono.
 The confirmed M1 format is 44.1 kHz signed 16-bit Philips-I2S stereo
 with identical left/right samples and a -24 dBFS diagnostic peak. Both use BCLK
 GPIO5, LRCLK GPIO39 and DATA GPIO38. This is the confirmed hardware-output format
-for M1; M2 still owns the separate codec/container content-format decision.
+for M1 and remains the M2 amplifier-facing format. ADR-0005 now fixes the
+separate content format as mono PCM WAV at 44.1 kHz/16-bit.
 
 Hardware bring-up status: **PASS; build, flash, boot/reset, 21 exact-count
 playbacks, final-image regression and listening gates complete.**
+
+M2 hardware status: **Not yet tested.** The user has identified a backed-up
+1 GB card currently reported as `vfat`; its exact on-target FAT mount and content
+path remain to be verified.
 
 Planned ownership:
 
@@ -138,10 +167,29 @@ Verified on the intended AtomS3 Lite target:
 - one final-image audio regression completed with the exact retained-format count
   and clean listening result.
 
+Verified structurally for M2:
+
+- ADR-0005 selects Speaker Base microSD and canonical 44.1 kHz/16-bit mono PCM
+  WAV at `/sleepcube/audio.wav`;
+- ADR-0006 assigns authoritative persisted volume to Audio Controller NVS;
+- normal 30-minute and finite 60-minute endurance configurations both build
+  for ESP32-S3/8 MB with 314,352-byte application images and valid image
+  checksum/validation hash;
+- the endurance build contains `CONFIG_SC_M2_ENDURANCE_BUILD=y`, while the
+  normal build does not;
+- the deterministic generator produced a valid 176,444-byte, two-second PCM WAV
+  smoke-test asset with SHA-256
+  `02f05343ebb010d00da938825d6046b07c488fea6a16685b69dd31294708c102`;
+- `git diff --check` passes;
+- build evidence and pending hardware gates are recorded in
+  `docs/software/verification/2026-09-16_M2_standalone_audio.md`.
+
 Not yet verified for the new architecture:
 
-- selected audio storage and codec path;
-- Audio Controller playback/fade/timer implementation;
+- M2 microSD mount and canonical content validation on the intended hardware;
+- M2 stored-audio playback, looping, fades and volume listening quality;
+- Audio Controller 30-minute timeout and 60-minute endurance behaviour;
+- Audio Controller volume persistence across reset/power cycle;
 - UART electrical connection and GPIO assignment;
 - transport framing/integrity behaviour;
 - semantic protocol behaviour;
@@ -155,6 +203,8 @@ Accepted active ADRs:
 - ADR-0002: touch-first ambient UI on the Control Controller;
 - ADR-0003: two-controller software architecture;
 - ADR-0004: 3.3 V full-duplex UART semantic audio link and independently enforced finite Audio Controller timeout.
+- ADR-0005: Speaker Base microSD with canonical 44.1 kHz/16-bit mono PCM WAV content.
+- ADR-0006: Audio Controller owns authoritative persisted volume.
 
 Historical decision:
 
@@ -172,7 +222,9 @@ No architectural blocker is currently known. The M1 hardware/audio-quality risk
 is closed for generated-tone playback on the supplied 1 W/8 Ω reference speaker.
 The initial MSB-mono distortion was resolved by standard Philips-I2S stereo with
 duplicated channels. The TEBM 10 W/4 Ω speaker was not used and is not required
-for M2 entry.
+for M2 entry. The available 1 GB `vfat` card has enough capacity for the selected
+PCM policy; FAT mount compatibility and fixed-low-CS operation still require
+first on-target proof.
 
 The AtomS3 Lite requires manual reset-button handling around flashing: hold reset
 for approximately two seconds to enter download mode before the flash command,
@@ -187,28 +239,26 @@ source content was required by the SleepCube build.
 
 The following implementation choices remain intentionally open:
 
-- audio codec/container and storage policy;
 - exact UART TX/RX GPIO assignment;
 - protocol framing, integrity and idempotency strategy;
-- quantitative volume law and fade timing;
-- final ownership of persisted audio volume.
+- final product tuning of the provisional M2 volume law and fade timing.
 
 ## 6. Next recommended task
 
-**Begin M2 storage and codec/container selection.**
+**Stage and run the first M2 hardware test.**
 
-The next development session should:
+The exact next task is:
 
-1. evaluate the available Audio Controller storage path and candidate audio
-   codec/container choices against memory, complexity and endurance needs;
-2. record the selected content format/storage policy in the required M2 ADR;
-3. implement the smallest standalone storage/read/decode/buffer path through the
-   confirmed Philips-I2S output API;
-4. keep UART and Control Controller integration out of this M2 entry task.
-
-M1 now satisfies the standalone-playback prerequisite. Preserve the planned
-milestone order: complete the M2 standalone audio service before beginning M3
-Control↔Audio UART integration.
+1. connect the 1 GB card to the laptop read-only first and confirm its exact FAT
+   variant and current layout;
+2. create `/sleepcube/audio.wav` using the tracked deterministic generator,
+   record its deployed size/hash, and eject the card cleanly;
+3. insert the card into the unpowered Speaker Base, build/flash the normal M2
+   image using the established manual download/reset procedure, and capture the
+   complete storage/content/`READY` log;
+4. verify short-press PLAY/STOP, file looping, fade quality, all four volume
+   levels and NVS restoration before starting long timer/endurance runs;
+5. keep UART and Control Controller integration out of scope until M2 passes.
 
 ## 7. Session closeout record
 
@@ -246,6 +296,25 @@ Control↔Audio UART integration.
   session timing, endurance, UART integration or full SRS audio compliance.
 - Exact next task is the four-step M2 storage/codec selection and bring-up sequence
   in section 6.
+
+### 2026-09-16 — M2 software baseline and storage preparation
+
+- Created `feat/m2-standalone-audio` from the completed M1 branch.
+- Accepted ADR-0005 selecting the integrated microSD card, FAT16/FAT32 and
+  canonical `/sleepcube/audio.wav` 44.1 kHz/16-bit mono PCM content.
+- Accepted ADR-0006 assigning authoritative persisted volume to Audio Controller
+  NVS.
+- Implemented storage mounting, strict WAV parsing, local buffering/looping,
+  gain ramps, persistent bounded volume, finite-session timing, state/fault
+  ownership and standalone button controls.
+- Added a separate compile-time 60-minute endurance image without introducing a
+  normal runtime path for unbounded playback.
+- Added a deterministic validation-content generator and updated the Audio
+  Controller operating instructions.
+- Clean-built the normal and endurance configurations; both produce
+  314,352-byte ESP32-S3/8 MB images with valid integrity metadata.
+- Hardware verification has not started. The next action is the five-step card
+  staging and first-target sequence in section 6.
 
 ### Ongoing closeout requirement
 

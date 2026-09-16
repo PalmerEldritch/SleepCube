@@ -2,8 +2,11 @@
 
 Standalone ESP-IDF firmware for the AtomS3 Lite and ATOMIC Speaker Base.
 
-M1 is a generated-tone hardware diagnostic only. It intentionally contains no
-microSD, codec, UART, session-controller, or Waveshare dependency.
+M2 turns the M1-confirmed output path into a standalone finite-session audio
+service. It reads one canonical PCM WAV asset from the Speaker Base microSD
+card, buffers and loops it locally, applies gain ramps, persists volume on the
+Audio Controller and independently enforces the playback deadline. UART and
+Waveshare integration remain out of scope until M3/M4.
 
 ## Toolchain
 
@@ -11,84 +14,124 @@ microSD, codec, UART, session-controller, or Waveshare dependency.
 - target: `esp32s3`
 - configured flash size: 8 MB
 
-Source the ESP-IDF environment before using `idf.py`. On the current
-development machine:
+Source the ESP-IDF environment before using `idf.py`:
 
 ```sh
 source /home/jeppe/esp/v6.0/esp-idf/export.sh
 ```
 
-## Clean build
+## Content card
 
-From this directory:
+The firmware accepts exactly this R00 content contract:
+
+| Property | Required value |
+| --- | --- |
+| Card filesystem | FAT16 or FAT32 |
+| Card path | `/sleepcube/audio.wav` |
+| Container | RIFF/WAVE |
+| Encoding | Linear PCM, signed 16-bit little-endian |
+| Channels | Mono |
+| Sample rate | 44,100 Hz |
+
+The card is never automatically formatted and normal playback does not modify
+its files. Existing files outside `/sleepcube/audio.wav` are ignored.
+
+Generate a deterministic, loop-safe 60-second validation asset on the laptop:
 
 ```sh
-idf.py fullclean
-idf.py set-target esp32s3
-idf.py build
+python3 tools/generate_m2_test_wav.py /path/to/card/sleepcube/audio.wav \
+  --seconds 60
 ```
 
-For a clean build without creating project-local configuration or build files:
+The parent directory is created if needed. Unmount/eject the card cleanly,
+insert it into the unpowered Speaker Base, and then connect USB power.
+
+## Clean normal build
+
+The normal image enforces a 30-minute session including its five-second timeout
+fade:
 
 ```sh
-idf.py -B /tmp/sleepcube-audio-build \
-  -D SDKCONFIG=/tmp/sleepcube-audio-sdkconfig \
+idf.py -B /tmp/sleepcube-m2-build \
+  -D SDKCONFIG=/tmp/sleepcube-m2-sdkconfig \
+  set-target esp32s3 build
+```
+
+## Separate endurance build
+
+The endurance image changes the finite deadline to 60 minutes. It is a
+compile-time verification image, not a normal command path for bypassing the
+30-minute product timeout:
+
+```sh
+idf.py -B /tmp/sleepcube-m2-endurance-build \
+  -D SDKCONFIG=/tmp/sleepcube-m2-endurance-sdkconfig \
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.endurance' \
   set-target esp32s3 build
 ```
 
 ## Flash and monitor
 
-Connect the AtomS3 Lite over USB-C. Flashing requires two manual reset-button
-actions:
+Connect the AtomS3 Lite over USB-C. Flashing requires two manual button actions:
 
-1. Before starting the flash command, hold reset for about two seconds until
-   the internal green LED lights, then release it to enter download mode.
-2. Run the flash command and wait until it reports completion.
-3. Press reset once after flashing completes to leave download mode and start
-   the application.
+1. Hold reset for about two seconds until the internal green LED lights, then
+   release it to enter download mode.
+2. Run the flash command and wait for completion.
+3. Press reset once after flashing to leave download mode and start the app.
 
 ```sh
-idf.py -p /dev/ttyACM0 flash
+idf.py -B /tmp/sleepcube-m2-build \
+  -D SDKCONFIG=/tmp/sleepcube-m2-sdkconfig \
+  -p /dev/ttyACM0 flash
 ```
 
-The application USB serial interface may re-enumerate under a new device name.
-Attach the monitor to the application-mode device without resetting it:
+The application USB serial interface may re-enumerate under a different device
+name. Attach without resetting it:
 
 ```sh
-idf.py -p /dev/ttyACM1 monitor --no-reset
+idf.py -B /tmp/sleepcube-m2-build \
+  -D SDKCONFIG=/tmp/sleepcube-m2-sdkconfig \
+  -p /dev/ttyACM1 monitor --no-reset
 ```
 
-Exit the monitor with `Ctrl-]`. Device names are examples; identify the actual
-port before each command. Do not combine `flash monitor` for this board because
-the manual post-flash reset must occur between those operations.
+Exit with `Ctrl-]`. Port names are examples; identify the actual port each time.
+Do not combine `flash monitor`, because this board needs the manual post-flash
+reset between those operations.
 
-## M1 diagnostic operation
+## Standalone controls
 
-Boot is silent. The firmware waits two seconds for the native USB Serial/JTAG
-endpoint to re-enumerate, then logs its identity, detected flash size, I2S
-configuration, and `READY`. Press the AtomS3 Lite button once to play one finite
-sequence:
+Startup remains silent. Successful initialization logs the card identity,
+validated content properties, retained I2S format, session duration and saved
+volume before reporting `READY` in `STOPPED` state.
 
-1. 500 ms silence;
-2. 440 Hz tone with 250 ms fade-in, 2 s steady level, and 250 ms fade-out;
-3. 500 ms silence;
-4. 1 kHz tone with the same envelope;
-5. 500 ms silence.
+- short button press: toggle PLAY/STOP;
+- hold for at least one second and release: cycle persistent volume through
+  25%, 50%, 75% and 100%;
+- reset/power cycle: always return to silent `STOPPED`; playback is not restored.
 
-The M1 peak level is approximately -24 dBFS. Completion logs report the
-sequence number and exact frame/byte counts: `286650` frames and `1146600` bytes for a
-complete sequence. Any I2S error disables output and latches a silent fault
-state until reboot.
+Start and manual stop use one-second linear gain ramps. A 250 ms ramp is used
+for volume changes. The timeout fade begins five seconds before the finite
+deadline so output reaches stopped/silent at the deadline. Output gain is
+quadratic over the user percentage and capped at -12 dBFS at 100% while M2
+listening evidence is gathered.
 
-The retained M1 configuration is 44.1 kHz signed 16-bit standard
-Philips-I2S stereo. Each generated mono sample is duplicated into both channel
-slots so the NS4168 channel selection cannot discard the signal.
+Playback logs a heartbeat every 60 seconds with state, exact frame/byte counts,
+content-loop count and remaining session time. Any storage/read/I2S failure
+latches a silent `FAULT` state and requires reboot after correcting the cause.
 
-| Signal | AtomS3 Lite GPIO |
+## Hardware mapping
+
+| Function | AtomS3 Lite GPIO |
 | --- | --- |
-| BCLK | GPIO5 |
-| LRCLK/WS | GPIO39 |
-| DATA | GPIO38 |
-| MCLK | Not used |
+| I2S BCLK | GPIO5 |
+| I2S LRCLK/WS | GPIO39 |
+| I2S DATA | GPIO38 |
+| microSD MOSI | GPIO6 |
+| microSD MISO | GPIO8 |
+| microSD CLK | GPIO7 |
+| microSD CS | Fixed low on Speaker Base |
+| Local button | GPIO41, active-low |
 
-This bring-up format is not the final R00 content-format decision.
+The amplifier-facing format remains the M1-confirmed 44.1 kHz signed 16-bit
+Philips-I2S stereo format with each decoded mono sample duplicated into both
+channel slots.

@@ -52,8 +52,10 @@
 | SRS-AUD-003 | PR-AUD-001 | The Audio Controller shall expose enough status for the Control Controller to distinguish at least unavailable/not-ready, stopped and playing states. |
 | SRS-AUD-004 | PR-AUD-002 | Audio start and manual stop shall use controlled gain transitions to avoid abrupt software-induced level changes. |
 | SRS-AUD-005 | PR-AUD-002 | User volume changes shall be applied smoothly enough to avoid objectionable discrete gain transients. |
-| SRS-AUD-006 | PR-AUD-001 | End-of-content handling shall continue the intended sleep-audio presentation without requiring user track selection. Exact looping/content sequencing is TBD until the audio content format is frozen. |
+| SRS-AUD-006 | PR-AUD-001 | End-of-content handling shall restart the canonical audio content without requiring user track selection while a finite playback session remains active. |
 | SRS-AUD-007 | PR-AUD-001 | Audio playback shall not depend on the Control Controller continuously servicing audio buffers or file data. |
+| SRS-AUD-008 | PR-AUD-001 | Software R00 audio content shall use RIFF/WAVE linear PCM, mono, signed 16-bit little-endian samples at 44.1 kHz, stored at the canonical Audio Controller content path defined by ADR-0005. |
+| SRS-AUD-009 | PR-AUD-001, PR-FLT-001 | Missing, unreadable, malformed or unsupported audio content shall not start uncontrolled output and shall produce an actionable development log. |
 
 ## 6. Session timer
 
@@ -109,8 +111,6 @@
 
 The following shall be resolved before software R00 is released but are not yet specified here:
 
-- supported audio codec/container and sample format;
-- file naming/content-discovery rules;
 - exact UART packet representation and integrity mechanism;
 - detailed acknowledgement/retry policy;
 - quantitative audio fade durations and volume law after hardware bring-up.

@@ -1,0 +1,2 @@
+# Additional defaults for the separate M2 endurance-validation image.
+CONFIG_SC_M2_ENDURANCE_BUILD=y

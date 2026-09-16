@@ -69,6 +69,14 @@ Exit criteria:
 
 **Goal:** Make AtomS3 an autonomous finite-session audio appliance.
 
+**Status:** In progress on `feat/m2-standalone-audio`. The software baseline now
+implements the ADR-0005 microSD/PCM-WAV content path, buffered local looping,
+bounded gain transitions, Audio Controller NVS volume ownership per ADR-0006,
+an authoritative playback task, a normal 30-minute deadline and a separately
+configured finite 60-minute endurance image. Both configurations build cleanly
+for ESP32-S3/8 MB. On-target microSD, playback, persistence, timing and endurance
+evidence remain pending; M2 is not complete.
+
 Deliverables:
 
 - content storage/access;
@@ -238,8 +246,9 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-M1 is complete. Begin M2 by evaluating and selecting the Audio Controller content
-storage and codec/container policy, recording the decision in the required ADR,
-then implement the smallest standalone stored-audio decode/buffer path through
-the confirmed Philips-I2S output API. Do not begin UART integration during this
-selection/bring-up step.
+Stage the deterministic M2 validation WAV at `/sleepcube/audio.wav` on the
+available FAT card, then flash the normal 30-minute image and verify card mount,
+strict content validation, standalone PLAY/STOP, looping, volume ramps and volume
+persistence. After the normal timer gate passes, flash the separately configured
+60-minute endurance image and capture its heartbeat/completion log. Do not begin
+UART integration until these M2 hardware gates pass.

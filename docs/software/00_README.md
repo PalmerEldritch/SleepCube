@@ -67,13 +67,14 @@ Detailed closeout rules are defined in the repository `AGENTS.md`.
 
 ## 7. Open design items
 
-The following are intentionally not frozen by the initial R00 documentation pass:
+The following remain intentionally open after the M2 storage and volume ADRs:
 
-- final audio file format(s) and encoding parameters;
-- final removable/non-removable storage policy;
 - exact binary/text representation of the UART protocol;
 - checksum/framing implementation;
 - startup/reconnection retry timing;
-- exact ownership of persisted audio volume if implementation evidence favours one controller.
+- final perceptual tuning of volume and fade parameters after M2 hardware evidence.
 
 These shall be resolved through implementation milestones and ADRs before R00 release.
+
+ADR-0005 freezes the R00 audio content/storage policy. ADR-0006 freezes Audio
+Controller ownership of persisted audio volume.

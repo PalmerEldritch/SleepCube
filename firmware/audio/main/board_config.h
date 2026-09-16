@@ -4,7 +4,7 @@
 #include "driver/i2s_std.h"
 
 #if !CONFIG_IDF_TARGET_ESP32S3
-#error "SleepCube Audio Controller M1 supports only the AtomS3 Lite / ESP32-S3 target"
+#error "SleepCube Audio Controller supports only the AtomS3 Lite / ESP32-S3 target"
 #endif
 
 /* AtomS3 Lite to ATOMIC Speaker Base connector mapping. */
@@ -14,7 +14,13 @@
 #define SC_AUDIO_I2S_DATA_GPIO        GPIO_NUM_38
 #define SC_BOARD_BUTTON_GPIO          GPIO_NUM_41
 
-/* M1 vendor-reference bring-up format. This is not the final R00 content format. */
+/* ATOMIC Speaker Base microSD wiring. Card select is tied low on the base. */
+#define SC_SDCARD_SPI_HOST            SPI2_HOST
+#define SC_SDCARD_MOSI_GPIO           GPIO_NUM_6
+#define SC_SDCARD_MISO_GPIO           GPIO_NUM_8
+#define SC_SDCARD_CLK_GPIO            GPIO_NUM_7
+
+/* Confirmed amplifier-facing format from M1. */
 #define SC_AUDIO_SAMPLE_RATE_HZ       44100U
 #define SC_AUDIO_BITS_PER_SAMPLE      16U
 #define SC_AUDIO_CHANNEL_COUNT        2U
@@ -28,3 +34,4 @@
 #define SC_STARTUP_LOG_DELAY_MS       2000U
 #define SC_BUTTON_DEBOUNCE_MS         30U
 #define SC_BUTTON_POLL_MS             10U
+#define SC_BUTTON_LONG_PRESS_MS       1000U

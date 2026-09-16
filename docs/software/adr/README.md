@@ -46,6 +46,8 @@ Routine implementation details that are already constrained by SRS/SAS/ICD and d
 | ADR-0002 | Accepted | Touch-first ambient UI on the Control Controller |
 | ADR-0003 | Accepted | Two-controller software architecture |
 | ADR-0004 | Accepted | UART semantic audio link and independent playback timeout |
+| ADR-0005 | Accepted | microSD-hosted 44.1 kHz/16-bit mono PCM WAV content |
+| ADR-0006 | Accepted | Audio Controller owns authoritative persisted volume |
 
 ## Legacy decision history
 

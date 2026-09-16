@@ -2,12 +2,21 @@ idf_component_register(
     SRCS
         "main.c"
         "audio_output.c"
-        "diagnostic_tone.c"
+        "audio_settings.c"
+        "content_storage.c"
+        "playback_controller.c"
+        "wav_reader.c"
     INCLUDE_DIRS "."
     REQUIRES
         esp_app_format
         esp_driver_gpio
         esp_driver_i2s
+        esp_driver_sdspi
+        esp_driver_spi
+        esp_timer
         esp_system
+        fatfs
+        nvs_flash
+        sdmmc
         spi_flash
 )
