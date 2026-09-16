@@ -16,19 +16,22 @@ The active documents are in [`docs/software/`](software/):
 8. `07_IMP.md` — implementation and release plan
 9. `08_STATUS.md` — authoritative current development state and session handoff
 
-Architecture decisions remain in [`docs/adr/`](adr/).
+Active architecture decisions are in [`docs/software/adr/`](software/adr/).
 
 `08_STATUS.md` is intentionally separate from the implementation plan: `07_IMP.md` defines what is planned and the milestone gates, while `08_STATUS.md` records what is currently implemented, verified, blocked and recommended next. Development sessions shall keep the status snapshot current according to `AGENTS.md` so continuation does not depend on chat history.
 
 ## Legacy prototype/product documentation
 
-The existing FRS, TRS, compliance matrix, prototype BOM, implementation notes, datasheets and hardware investigation material are retained as historical/reference material. They describe earlier prototype and whole-product development and are **not authoritative for the software R00 baseline unless explicitly referenced by an active software document or ADR**.
+Superseded product/prototype requirements, compliance material, implementation notes, process documents and obsolete architecture decisions are retained under [`docs/legacy/`](legacy/) as historical/reference material. They are **not authoritative for the software R00 baseline unless explicitly referenced by an active software document or accepted ADR**.
 
-In particular:
+Examples include:
 
-- `01_FRS.md`
-- `02_TRS.md`
-- `05_ComplianceMatrix.md`
-- `implementation/SC_P0_*`
+- `legacy/01_FRS.md`
+- `legacy/02_TRS.md`
+- `legacy/05_ComplianceMatrix.md`
+- `legacy/implementation/SC_P0_*`
+- `legacy/adr/ADR-0001-audio-p0-pipeline.md`
 
-remain useful evidence of prior decisions and implementation behaviour, but future software development shall be driven by the active software document set above.
+These records remain useful evidence of prior requirements, implementation behaviour and decisions, but future software development shall be driven by the active software document set above.
+
+Hardware examples, pin maps, datasheets and vendor/reference source material are kept separately under `/references/` because they may still be technically relevant without being normative software requirements.
