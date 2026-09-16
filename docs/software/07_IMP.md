@@ -33,7 +33,8 @@ Exit criteria:
 
 **Status:** Complete. The standalone diagnostic firmware and reproducible
 ESP32-S3/8 MB build configuration are implemented on
-`feat/m1-audio-bringup`. Clean-build and image-inspection checks pass. Target
+`feat/m1-audio-bringup` at source commit `838248a`. Clean-build and image-
+inspection checks pass. Target
 flash/hash verification passes, and one finite generated-tone sequence completed
 with the expected frame/byte count. The first listening check on the supplied
 1 W/8 Ω reference speaker failed due to considerable noise, clicks/pops and

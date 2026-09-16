@@ -13,6 +13,7 @@ gates complete
 | Audio Controller | M5Stack AtomS3 Lite, ESP32-S3FN8 |
 | Audio output | M5Stack ATOMIC Speaker Base, NS4168, supplied 1 W/8 Ω speaker; TEBM 10 W/4 Ω speaker not connected |
 | ESP-IDF | v6.0, commit `662a3be354759d9487bf4b1a629fadb766cb1800` |
+| M1 source commit | `838248a7195bea285a058e7686523e50e27f5113` (firmware sources match the tested final image; the flashed pre-commit image reports the prior dirty-tree version string) |
 | Target / flash image | `esp32s3` / 8 MB |
 | Initial I2S format (tested) | 44.1 kHz, signed 16-bit, MSB-aligned mono, master TX |
 | Confirmed M1 I2S format | 44.1 kHz, signed 16-bit Philips-I2S stereo, identical left/right samples, master TX |

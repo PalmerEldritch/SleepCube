@@ -8,7 +8,8 @@
 
 **M1 complete — M2 standalone audio service is next**
 
-Status: **M1 passes on `feat/m1-audio-bringup`; M2 has not started.**
+Status: **M1 passes on `feat/m1-audio-bringup` at source commit `838248a`;
+M2 has not started.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
