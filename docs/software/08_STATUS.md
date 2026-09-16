@@ -1,22 +1,31 @@
 # SleepCube Software Development Status
 
 **Baseline:** R00 (draft)  
-**Last updated:** 2026-09-11  
+**Last updated:** 2026-09-16  
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M0 — Documentation baseline**
+**M0 — Documentation and repository baseline**
 
-Status: **In review / essentially complete**
+Status: **Complete on `docs/software-r00-baseline`, pending merge/release of the baseline branch.**
 
-The software-focused R00 documentation set has been created on branch `docs/software-r00-baseline` and is under review in PR #1. No firmware behaviour has been changed as part of M0.
+The software-focused R00 documentation set and repository restructuring are in place. No intended runtime firmware behaviour has been changed as part of M0.
+
+Repository organization now reflects the two-controller architecture:
+
+- `firmware/control/` — Waveshare ESP32-C6 Control Controller firmware;
+- `firmware/audio/` — AtomS3 Lite Audio Controller ESP-IDF project scaffold;
+- `docs/software/` — active software R00 documentation;
+- `docs/software/adr/` — active architecture/design decisions;
+- `docs/legacy/` — superseded product/prototype documentation and historical implementation records;
+- `references/` — non-normative vendor examples, pin maps, datasheets and reference source material.
 
 ## 2. Current implementation state
 
 ### Control Controller — Waveshare ESP32-C6
 
-Existing P0 firmware remains the active implementation.
+Existing P0 firmware has been reorganized under `firmware/control/` and remains the active control-side implementation.
 
 Working/valuable implementation to preserve:
 
@@ -27,7 +36,7 @@ Working/valuable implementation to preserve:
 - persistent light brightness handling;
 - application event queue / `app_core` structure.
 
-The existing local audio stack remains present in the repository but is considered legacy implementation pending migration to the Audio Controller.
+The existing local audio stack remains present in the control firmware as legacy implementation pending migration to the Audio Controller.
 
 Planned migration seam:
 
@@ -37,7 +46,9 @@ Planned migration seam:
 
 ### Audio Controller — AtomS3 Lite + ATOMIC Speaker Base
 
-Implementation status: **Not yet brought up for SleepCube.**
+An independent ESP-IDF project scaffold now exists under `firmware/audio/`.
+
+Hardware bring-up status: **Not yet verified for SleepCube.**
 
 Planned ownership:
 
@@ -58,9 +69,17 @@ Verified from the previous Waveshare prototype development:
 - RGB lighting engine is operational and suitable for reuse;
 - the original Waveshare-local audio path did not achieve acceptable audio quality despite substantial investigation.
 
+Verified structurally for the R00 repository baseline:
+
+- active software documentation is separated from legacy prototype documentation;
+- Control and Audio firmware have separate project directories;
+- active ADRs are separated from superseded legacy decisions;
+- ADR-0001 is retained as historical decision evidence under `docs/legacy/adr/` and is superseded by ADR-0003.
+
 Not yet verified for the new architecture:
 
-- AtomS3 Lite + ATOMIC Speaker Base standalone audio quality;
+- AtomS3 Lite + ATOMIC Speaker Base standalone boot/logging on the intended development setup;
+- standalone audio quality;
 - selected audio storage and codec path;
 - Audio Controller playback/fade/timer implementation;
 - UART electrical connection and GPIO assignment;
@@ -71,10 +90,15 @@ Not yet verified for the new architecture:
 
 ## 4. Architectural decisions in force
 
-Accepted unless superseded by a later ADR:
+Accepted active ADRs:
 
+- ADR-0002: touch-first ambient UI on the Control Controller;
 - ADR-0003: two-controller software architecture;
 - ADR-0004: 3.3 V full-duplex UART semantic audio link and independently enforced finite Audio Controller timeout.
+
+Historical decision:
+
+- ADR-0001: previous Waveshare-local P0 audio pipeline; superseded by ADR-0003 and archived under `docs/legacy/adr/`.
 
 Key ownership rule:
 
@@ -100,11 +124,11 @@ The following implementation choices remain intentionally open:
 
 **M1 — Standalone Audio Controller bring-up.**
 
-The next development session should:
+The Audio Controller ESP-IDF project already exists. The next development session should:
 
-1. create the Audio Controller firmware target for AtomS3 Lite;
-2. confirm basic board boot/logging and toolchain configuration;
-3. bring up the ATOMIC Speaker Base using its intended I2S pins;
+1. confirm the `firmware/audio/` project targets ESP32-S3 and builds cleanly with the selected ESP-IDF toolchain;
+2. flash the AtomS3 Lite and confirm basic board boot/logging;
+3. bring up the ATOMIC Speaker Base using the intended I2S pins;
 4. play a deterministic local test signal/audio asset without any Waveshare dependency;
 5. assess audible noise, distortion, transients and playback stability;
 6. document exact hardware pin use and measured/observed results;
