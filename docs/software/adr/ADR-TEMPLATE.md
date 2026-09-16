@@ -1,16 +1,17 @@
-# ADR-XXXX: <Title>
+# ADR-XXXX — <Title>
 
-## Status
-
-Proposed | Accepted | Superseded
+**Status:** Proposed | Accepted | Superseded  
+**Date:** YYYY-MM-DD  
+**Supersedes:** ADR-XXXX | None  
+**Superseded by:** ADR-XXXX | None
 
 ## Context
 
-What problem is being solved and what constraints apply.
+Describe the problem, constraints and why a durable architecture/design decision is needed.
 
 ## Decision
 
-State the chosen approach.
+State the chosen approach precisely enough that implementation and review can determine whether the decision is being followed.
 
 ## Consequences
 
@@ -18,17 +19,22 @@ State the chosen approach.
 
 - ...
 
-### Negative
+### Costs / Risks
 
 - ...
 
 ## Alternatives Considered
 
-- Option A
-- Option B
+- Option A — reason not selected.
+- Option B — reason not selected.
+
+## Verification / Implications
+
+Describe any resulting implementation obligations, compatibility constraints, tests, measurements or follow-up decisions that should be tracked.
 
 ## References
 
-- Code paths
-- Datasheets
-- Related docs
+- Related SRS/SAS/ICD sections
+- Related ADRs
+- Relevant code paths
+- Hardware references or datasheets when applicable
