@@ -23,7 +23,7 @@ The physical enclosure, production hardware design, regulatory compliance, acous
 | `06_VVM.md` | Requirement verification plan | Yes |
 | `07_IMP.md` | Implementation milestones and release gates | Process baseline |
 | `08_STATUS.md` | Authoritative current development state and session-to-session handoff | Process record |
-| `../adr/*` | Architecture decision records | Normative for accepted decisions |
+| `adr/*` | Architecture decision records | Normative for accepted decisions |
 
 If documents conflict, accepted ADRs and the SRS/SAS/ICD take precedence over historical prototype documentation.
 
@@ -31,7 +31,9 @@ If documents conflict, accepted ADRs and the SRS/SAS/ICD take precedence over hi
 
 ## 3. Legacy material
 
-The former FRS/TRS/compliance matrix and P0 implementation documents remain as reference material only. Their useful behavioural requirements have been selectively carried into this software baseline. Hardware/product requirements not represented here are intentionally outside software R00.
+The former FRS/TRS/compliance matrix, P0 implementation documents and superseded architecture decisions remain under `../legacy/` as reference material only. Their useful behavioural requirements have been selectively carried into this software baseline. Hardware/product requirements not represented here are intentionally outside software R00.
+
+Vendor examples, pin maps, datasheets and other non-normative technical source material are maintained under the repository-level `/references/` directory.
 
 ## 4. Requirement IDs
 
