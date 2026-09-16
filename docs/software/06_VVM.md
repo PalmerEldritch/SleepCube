@@ -80,11 +80,26 @@
 | UX-LGT-001 | MAN | Ambient display modulation is smooth in dark-room observation |
 | UX-STA-002 | FI, MAN | Audio absence does not block rest view/brightness control |
 
-## 4. ICD coverage
+## 4. Development milestone evidence
+
+The following evidence supports milestone progression but does not by itself
+close the associated R00 requirements.
+
+| Evidence ID | Scope | Result | Record |
+| --- | --- | --- | --- |
+| M1-BLD-001 | Clean ESP32-S3/8 MB Audio Controller build and image inspection | PASS | `verification/2026-09-16_M1_audio_bringup.md` |
+| M1-HWT-001 | AtomS3 Lite boot/logging, 10 silent resets and 20 finite diagnostic sequences | PASS — hash-verified flash, complete application log, 10/10 silent resets to `READY`, and 21/20 exact-count retained-format sequences plus final-image regression | `verification/2026-09-16_M1_audio_bringup.md` |
+| M1-MAN-001 | Speaker noise, distortion, dropout and transient listening assessment | PASS — clear tones, no distortion/clicks/pops, and quiet noise-free silent portions at approximately 20–30 cm using laptop USB power | `verification/2026-09-16_M1_audio_bringup.md` |
+
+M1-BLD-001 is structural evidence toward SRS-SYS-001/SRS-SYS-003 only. It does
+not verify storage, decoding, product fades, session timing or the 60-minute
+SRS-AUD-010 endurance requirement.
+
+## 5. ICD coverage
 
 All normative `ICD-*` requirements shall receive direct protocol unit or integration coverage when the final framing is frozen. M3 may use temporary bring-up tests; M4 completion requires an updated matrix with concrete frame-level test cases.
 
-## 5. R00 release gate
+## 6. R00 release gate
 
 Software R00 shall not be released until:
 

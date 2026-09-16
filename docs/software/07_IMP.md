@@ -31,6 +31,26 @@ Exit criteria:
 
 **Goal:** Prove basic target hardware control independently of SleepCube integration.
 
+**Status:** Complete. The standalone diagnostic firmware and reproducible
+ESP32-S3/8 MB build configuration are implemented on
+`feat/m1-audio-bringup`. Clean-build and image-inspection checks pass. Target
+flash/hash verification passes, and one finite generated-tone sequence completed
+with the expected frame/byte count. The first listening check on the supplied
+1 W/8 Ω reference speaker failed due to considerable noise, clicks/pops and
+apparent overdrive. A controlled Philips-I2S stereo/duplicated-channel comparison
+at -24 dBFS then built, flashed and completed one exact-count sequence. Both tones
+were reported clear and without distortion or clicks/pops. Explicit silence-floor
+evidence also passes: the silent portions were reported quiet and without noise.
+The monitor captured 21 exact-count retained-format sequences without I2S errors;
+listening was at approximately 20–30 cm using laptop USB power. The final image
+also passed an audio regression, complete application-log capture and ten silent
+resets to `READY` without panic, watchdog or reboot loop.
+
+A two-second silent delay before application logging makes `READY` observable
+after native USB re-enumeration. The confirmed M1 format is 44.1 kHz signed
+16-bit Philips-I2S stereo with duplicated channels at a -24 dBFS diagnostic peak.
+See `verification/2026-09-16_M1_audio_bringup.md`.
+
 Deliverables:
 
 - new Audio Controller ESP-IDF project;
@@ -217,4 +237,8 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-After M0 documentation approval, M1 should begin with the AtomS3 Lite + ATOMIC Speaker Base as a completely standalone target. The first proof should be a generated or known PCM tone/sample through the NS4168 before storage/codec/protocol complexity is introduced.
+M1 is complete. Begin M2 by evaluating and selecting the Audio Controller content
+storage and codec/container policy, recording the decision in the required ADR,
+then implement the smallest standalone stored-audio decode/buffer path through
+the confirmed Philips-I2S output API. Do not begin UART integration during this
+selection/bring-up step.

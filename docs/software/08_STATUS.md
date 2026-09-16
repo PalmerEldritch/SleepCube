@@ -6,16 +6,25 @@
 
 ## 1. Current milestone
 
-**M0 — Documentation and repository baseline**
+**M1 complete — M2 standalone audio service is next**
 
-Status: **Complete on `docs/software-r00-baseline`, pending merge/release of the baseline branch.**
+Status: **M1 passes on `feat/m1-audio-bringup`; M2 has not started.**
 
-The software-focused R00 documentation set and repository restructuring are in place. No intended runtime firmware behaviour has been changed as part of M0.
+M0 remains complete on the underlying software R00 baseline. M1 now has a
+button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
+build. The target was flashed and completed one sequence, but its initial
+MSB-aligned mono output produced unacceptable noise, clicks/pops and apparent
+overdrive on the supplied 1 W/8 Ω speaker. A standard Philips-I2S stereo
+comparison with duplicated channels and a reduced -24 dBFS peak was then built,
+flashed and produced clear tones without distortion or clicks/pops in its first
+run; its silent portions were also quiet and without noise. The final image then
+passed an audio regression, complete application-log capture and ten silent reset
+cycles to `READY`. M1 meets its standalone hardware exit criterion.
 
 Repository organization now reflects the two-controller architecture:
 
 - `firmware/control/` — Waveshare ESP32-C6 Control Controller firmware;
-- `firmware/audio/` — AtomS3 Lite Audio Controller ESP-IDF project scaffold;
+- `firmware/audio/` — AtomS3 Lite Audio Controller ESP-IDF project and M1 diagnostic;
 - `docs/software/` — active software R00 documentation;
 - `docs/software/adr/` — active architecture/design decisions;
 - `docs/legacy/` — superseded product/prototype documentation and historical implementation records;
@@ -46,9 +55,25 @@ Planned migration seam:
 
 ### Audio Controller — AtomS3 Lite + ATOMIC Speaker Base
 
-An independent ESP-IDF project scaffold now exists under `firmware/audio/`.
+The independent ESP-IDF project under `firmware/audio/` now contains:
 
-Hardware bring-up status: **Not yet verified for SleepCube.**
+- tracked ESP32-S3/8 MB/USB Serial-JTAG build defaults;
+- an AtomS3 Lite board mapping for Speaker Base I2S and the local button;
+- a bounded I2S output abstraction with finite write timeouts and fail-safe shutdown;
+- a deterministic button-triggered 440 Hz / 1 kHz diagnostic sequence;
+- silent startup, exact completion counters and actionable boot/fault logging;
+- local build, flash, monitor and hardware-test instructions;
+- a two-second silent startup-log delay so application boot/`READY` output occurs
+  after the native USB Serial/JTAG endpoint can re-enumerate.
+
+The failed initial configuration was 44.1 kHz signed 16-bit MSB-aligned mono.
+The confirmed M1 format is 44.1 kHz signed 16-bit Philips-I2S stereo
+with identical left/right samples and a -24 dBFS diagnostic peak. Both use BCLK
+GPIO5, LRCLK GPIO39 and DATA GPIO38. This is the confirmed hardware-output format
+for M1; M2 still owns the separate codec/container content-format decision.
+
+Hardware bring-up status: **PASS; build, flash, boot/reset, 21 exact-count
+playbacks, final-image regression and listening gates complete.**
 
 Planned ownership:
 
@@ -76,10 +101,44 @@ Verified structurally for the R00 repository baseline:
 - active ADRs are separated from superseded legacy decisions;
 - ADR-0001 is retained as historical decision evidence under `docs/legacy/adr/` and is superseded by ADR-0003.
 
+Verified for M1 software/build bring-up:
+
+- a clean out-of-tree build passes with ESP-IDF v6.0 commit
+  `662a3be354759d9487bf4b1a629fadb766cb1800`;
+- generated application image targets ESP32-S3 with 8 MB flash configuration;
+- image checksum and validation hash are valid;
+- project sources compile without warnings;
+- final application image is 196,672 bytes with 81% of the 1 MB application partition free;
+- the Philips-I2S stereo comparison also builds without project warnings; its
+  196,672-byte ESP32-S3/8 MB image has a valid checksum and validation hash;
+- the final logging-delay image remains 196,672 bytes with valid checksum and
+  validation hash and passed hash-verified flash plus hardware regression;
+- `git diff --check` passes;
+- detailed completed evidence and the hardware procedure are recorded in
+  `docs/software/verification/2026-09-16_M1_audio_bringup.md`.
+
+Verified on the intended AtomS3 Lite target:
+
+- `esptool` identified ESP32-S3 revision v0.2 with embedded 8 MB flash;
+- bootloader, partition table and application writes passed hash verification;
+- the rejected initial format completed one button-triggered sequence with
+  exactly 286,650 frames / 573,300 bytes and no logged I2S transport error;
+- the retained Philips-I2S image flashed with hash verification and completed
+  one sequence with exactly 286,650 frames / 1,146,600 bytes and no logged write
+  error; both tones were reported clear and without distortion or clicks/pops,
+  and the silent portions were quiet and without noise.
+- sequences 2 through 21 also completed with exactly 286,650 frames / 1,146,600
+  bytes and no logged I2S timeout, partial write, panic or reboot;
+- listening was performed at approximately 20–30 cm using laptop USB power.
+- the final logging-delay image captured complete application identity,
+  configuration, silent initialization and `READY` output;
+- ten consecutive brief resets each reported reset reason 1, initialized silent
+  output and reached `READY`, with no automatic tone, panic, watchdog or reboot loop;
+- one final-image audio regression completed with the exact retained-format count
+  and clean listening result.
+
 Not yet verified for the new architecture:
 
-- AtomS3 Lite + ATOMIC Speaker Base standalone boot/logging on the intended development setup;
-- standalone audio quality;
 - selected audio storage and codec path;
 - Audio Controller playback/fade/timer implementation;
 - UART electrical connection and GPIO assignment;
@@ -108,9 +167,22 @@ Key ownership rule:
 
 ## 5. Known issues / blockers
 
-No architectural blocker is currently known.
+No architectural blocker is currently known. The M1 hardware/audio-quality risk
+is closed for generated-tone playback on the supplied 1 W/8 Ω reference speaker.
+The initial MSB-mono distortion was resolved by standard Philips-I2S stereo with
+duplicated channels. The TEBM 10 W/4 Ω speaker was not used and is not required
+for M2 entry.
 
-Primary technical risk is whether the purchased AtomS3 Lite + ATOMIC Speaker Base produces acceptably clean audio under the intended SleepCube operating conditions. This shall be resolved before investing in the distributed protocol implementation.
+The AtomS3 Lite requires manual reset-button handling around flashing: hold reset
+for approximately two seconds to enter download mode before the flash command,
+then press reset after flashing completes to start the application. The earlier
+ROM `waiting for download` observation was caused by omitting the second manual
+reset, not by a demonstrated reset defect. The application may re-enumerate under
+a new device name; attach monitoring without resetting it.
+
+The installed ESP-IDF worktree reports `v6.0-dirty` because file modes differ
+from its tag, but its `HEAD` is exactly the v6.0 commit above. No changed ESP-IDF
+source content was required by the SleepCube build.
 
 The following implementation choices remain intentionally open:
 
@@ -122,21 +194,59 @@ The following implementation choices remain intentionally open:
 
 ## 6. Next recommended task
 
-**M1 — Standalone Audio Controller bring-up.**
+**Begin M2 storage and codec/container selection.**
 
-The Audio Controller ESP-IDF project already exists. The next development session should:
+The next development session should:
 
-1. confirm the `firmware/audio/` project targets ESP32-S3 and builds cleanly with the selected ESP-IDF toolchain;
-2. flash the AtomS3 Lite and confirm basic board boot/logging;
-3. bring up the ATOMIC Speaker Base using the intended I2S pins;
-4. play a deterministic local test signal/audio asset without any Waveshare dependency;
-5. assess audible noise, distortion, transients and playback stability;
-6. document exact hardware pin use and measured/observed results;
-7. update this status file and the VVM/IMP before ending the session.
+1. evaluate the available Audio Controller storage path and candidate audio
+   codec/container choices against memory, complexity and endurance needs;
+2. record the selected content format/storage policy in the required M2 ADR;
+3. implement the smallest standalone storage/read/decode/buffer path through the
+   confirmed Philips-I2S output API;
+4. keep UART and Control Controller integration out of this M2 entry task.
 
-Do **not** begin Control↔Audio UART integration until standalone Audio Controller playback has been demonstrated sufficiently to justify continuing with the new hardware path.
+M1 now satisfies the standalone-playback prerequisite. Preserve the planned
+milestone order: complete the M2 standalone audio service before beginning M3
+Control↔Audio UART integration.
 
 ## 7. Session closeout record
+
+### 2026-09-16 — M1 diagnostic implementation
+
+- Created `feat/m1-audio-bringup` from the approved documentation baseline.
+- Implemented reproducible Audio Controller defaults, board mapping, I2S output
+  abstraction, generated-tone diagnostics, button trigger, bounded write/fault
+  handling and project operating instructions.
+- Verified clean ESP32-S3 build, 8 MB image metadata/integrity, application size
+  and repository whitespace; recorded evidence in the M1 verification report.
+- Subsequently flashed the image with hash verification and captured one
+  successful finite diagnostic sequence on the AtomS3 Lite.
+- The user confirmed that the test used the supplied 1 W/8 Ω speaker and reported
+  clear tones with considerable noise, clicks/pops and apparent overdrive; the
+  initial MSB-mono format therefore fails the M1 listening gate.
+- Implemented and clean-built the Philips-I2S stereo comparison with duplicated
+  channels and a reduced -24 dBFS peak.
+- Flashed that image with hash verification and captured one exact-count
+  retained-format sequence; the user reported clear tones without distortion
+  or clicks/pops and quiet, noise-free silent portions.
+- Captured 21 retained-format sequences in total; all completed with exact frame/
+  byte counts and no logged I2S timeout, partial write, panic or reboot.
+- Recorded the listening setup as approximately 20–30 cm with laptop USB power.
+- A standard monitor and immediate reopen watcher both missed application startup
+  logs during native USB re-enumeration. Added and clean-built a two-second silent
+  startup-log delay, then flashed it with hash verification.
+- Captured the final image's complete application identity/configuration/`READY`
+  log and an exact-count clean audio regression.
+- Verified ten consecutive silent resets to `READY` with reset reason 1 and no
+  panic, watchdog, reboot loop or automatic playback.
+- Corrected the operating procedure to use manual entry into download mode and
+  a manual post-flash reset before attaching a no-reset monitor.
+- M1 passes; this tone test does not claim storage, decoding, product-audio fades,
+  session timing, endurance, UART integration or full SRS audio compliance.
+- Exact next task is the four-step M2 storage/codec selection and bring-up sequence
+  in section 6.
+
+### Ongoing closeout requirement
 
 At the end of every development session that changes code, architecture, interfaces, verification state, milestone progress or known risks, this file shall be updated so a new session can continue from repository state alone.
 
