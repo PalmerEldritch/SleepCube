@@ -18,7 +18,8 @@ Earlier product/prototype FRS, TRS, compliance, hardware and P0 implementation d
 - `/docs/software/06_VVM.md` — verification and validation matrix
 - `/docs/software/07_IMP.md` — implementation/release plan
 - `/docs/software/08_STATUS.md` — authoritative current development state and session handoff
-- `/docs/adr/` — accepted architecture/design decisions
+- `/docs/software/adr/` — active architecture/design decisions
+- `/docs/legacy/` — superseded historical product/prototype documentation and obsolete implementation records
 
 If active documents conflict with legacy prototype documents, do not silently resolve the conflict from legacy material. Follow accepted ADRs and the active SRS/SAS/ICD, or flag the conflict/TBD.
 
@@ -61,6 +62,15 @@ Unless superseded by an accepted ADR:
 - Lighting shall not depend on Audio Controller availability.
 - Preserve working Waveshare UI/lighting behaviour unless a requirement explicitly justifies change.
 
+## ADR discipline
+
+- Active ADRs live in `/docs/software/adr/`.
+- Superseded or obsolete architecture decisions may be retained under `/docs/legacy/adr/` for historical traceability.
+- ADR numbers are permanent identifiers; do not renumber later ADRs when an earlier ADR is superseded or moved to legacy.
+- Do not silently reverse an accepted ADR by rewriting it. Create a new ADR that supersedes the old decision when the architecture changes materially.
+- Minor clarification and path/reference maintenance are allowed when they do not change the decision itself.
+- Use `/docs/software/adr/ADR-TEMPLATE.md` for new ADRs.
+
 ## Implementation discipline
 
 - Work against the current milestone in `/docs/software/07_IMP.md`.
@@ -95,7 +105,7 @@ Also update the following when affected:
 - `/docs/software/05_ICD.md` — stable interface/protocol contract changes;
 - `/docs/software/04_SAS.md` — architecture/ownership/state-model changes;
 - `/docs/software/03_UX.md` — intentional user-visible behaviour changes;
-- `/docs/adr/` — new or superseded architecture/design decisions;
+- `/docs/software/adr/` — new or superseded architecture/design decisions;
 - public API comments — changed software contracts.
 
 Do not manufacture progress or verification evidence merely to complete the closeout. Clearly mark incomplete, failed, blocked or unverified work.
