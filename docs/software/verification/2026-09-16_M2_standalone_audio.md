@@ -10,8 +10,8 @@
 
 - M5Stack AtomS3 Lite seated in ATOMIC Speaker Base;
 - supplied 1 W/8 Ω speaker on the Speaker Base `SPK` connector;
-- available 1 GB card reported by the host as `vfat`, with previous content
-  backed up before M2;
+- available 1 GB FAT16 card (UUID `A87B-A154`), with previous content backed up
+  before M2;
 - laptop USB port for power, flashing and serial monitoring;
 - no Waveshare controller, UART wiring or TEBM 10 W/4 Ω speaker.
 
@@ -28,7 +28,15 @@ The deterministic generator produced a two-second structural test file:
 - detected format: RIFF/WAVE, Microsoft PCM, 16-bit mono, 44.1 kHz;
 - SHA-256: `02f05343ebb010d00da938825d6046b07c488fea6a16685b69dd31294708c102`.
 
-The actual card-deployed validation asset and hash remain to be recorded.
+The generated 60-second validation asset was copied without removing or changing
+the card's existing files. The deployed file was then read back and verified:
+
+- path: `/sleepcube/audio.wav`;
+- size: 5,292,044 bytes;
+- detected format: RIFF/WAVE, Microsoft PCM, 16-bit mono, 44.1 kHz;
+- SHA-256: `e5be6d74956eec50828d22b66cddb85edc7d437d23e531254398755ede4ca4d4`;
+- byte comparison against the generated source: PASS;
+- free space after deployment: approximately 888.9 MiB.
 
 ## 3. Build evidence
 
@@ -45,6 +53,7 @@ Results:
 | Normal finite 30-minute session | PASS | 314,352 bytes; checksum and validation hash valid; 70% of 1 MB app partition free |
 | Finite 60-minute endurance image | PASS | 314,352 bytes; `CONFIG_SC_M2_ENDURANCE_BUILD=y`; 70% of 1 MB app partition free |
 | Deterministic WAV generator smoke test | PASS | Correct RIFF/WAVE PCM mono signed-16 44.1 kHz output |
+| FAT16 card content staging/read-back | PASS | Canonical 60-second asset matches its generated source byte-for-byte and existing card files remain present |
 | Repository whitespace check | PASS | `git diff --check` reports no errors |
 
 The installed ESP-IDF worktree identifies itself as `v6.0-dirty` due to
@@ -53,7 +62,7 @@ commit and no ESP-IDF source modification is required by M2.
 
 ## 4. Hardware evidence pending
 
-- identify the card and exact mounted FAT variant on target;
+- mount the confirmed FAT16 card through the Speaker Base fixed-low-CS SPI path;
 - validate canonical file discovery and rejected missing/unsupported content;
 - verify silent startup and deterministic `READY` state;
 - verify start/stop fades and loop boundary listening quality;
@@ -62,6 +71,7 @@ commit and no ESP-IDF source modification is required by M2.
 - verify the normal 30-minute fade reaches `STOPPED` at its deadline;
 - run the separate 60-minute endurance image without underrun, partial write,
   panic, watchdog or reboot;
-- record listening distance, power source, content hash and audible limitations.
+- record listening distance, power source and audible limitations. The deployed
+  content hash is recorded above.
 
 No M2 hardware or listening claim is made by this record yet.

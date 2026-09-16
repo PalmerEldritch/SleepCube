@@ -75,7 +75,9 @@ bounded gain transitions, Audio Controller NVS volume ownership per ADR-0006,
 an authoritative playback task, a normal 30-minute deadline and a separately
 configured finite 60-minute endurance image. Both configurations build cleanly
 for ESP32-S3/8 MB. On-target microSD, playback, persistence, timing and endurance
-evidence remain pending; M2 is not complete.
+evidence remain pending; M2 is not complete. The 1 GB FAT16 validation card is
+now staged with a hash-verified canonical 60-second test asset while preserving
+its previous files.
 
 Deliverables:
 
@@ -246,9 +248,9 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Stage the deterministic M2 validation WAV at `/sleepcube/audio.wav` on the
-available FAT card, then flash the normal 30-minute image and verify card mount,
-strict content validation, standalone PLAY/STOP, looping, volume ramps and volume
-persistence. After the normal timer gate passes, flash the separately configured
-60-minute endurance image and capture its heartbeat/completion log. Do not begin
-UART integration until these M2 hardware gates pass.
+Insert the staged FAT16 card into the unpowered Speaker Base, then flash the
+normal 30-minute image and verify card mount, strict content validation,
+standalone PLAY/STOP, looping, volume ramps and volume persistence. After the
+normal timer gate passes, flash the separately configured 60-minute endurance
+image and capture its heartbeat/completion log. Do not begin UART integration
+until these M2 hardware gates pass.

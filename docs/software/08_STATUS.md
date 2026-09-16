@@ -101,9 +101,9 @@ separate content format as mono PCM WAV at 44.1 kHz/16-bit.
 Hardware bring-up status: **PASS; build, flash, boot/reset, 21 exact-count
 playbacks, final-image regression and listening gates complete.**
 
-M2 hardware status: **Not yet tested.** The user has identified a backed-up
-1 GB card currently reported as `vfat`; its exact on-target FAT mount and content
-path remain to be verified.
+M2 hardware status: **Not yet tested.** The available 1 GB card is confirmed as
+FAT16 and has been staged with the canonical 60-second validation asset. Its
+Speaker Base mount and playback path remain to be verified on target.
 
 Planned ownership:
 
@@ -184,6 +184,18 @@ Verified structurally for M2:
 - build evidence and pending hardware gates are recorded in
   `docs/software/verification/2026-09-16_M2_standalone_audio.md`.
 
+Verified for M2 card preparation:
+
+- `/dev/sda1` was identified as a 1,006,904,320-byte FAT16 removable partition
+  with UUID `A87B-A154`;
+- existing root-level and trash content was inspected before staging and left
+  intact;
+- the generated 60-second test asset was deployed as `/sleepcube/audio.wav`;
+- the on-card file is 5,292,044 bytes, is detected as 44.1 kHz/16-bit mono PCM
+  WAV, and matches the generated source byte-for-byte;
+- deployed SHA-256 is
+  `e5be6d74956eec50828d22b66cddb85edc7d437d23e531254398755ede4ca4d4`.
+
 Not yet verified for the new architecture:
 
 - M2 microSD mount and canonical content validation on the intended hardware;
@@ -249,16 +261,12 @@ The following implementation choices remain intentionally open:
 
 The exact next task is:
 
-1. connect the 1 GB card to the laptop read-only first and confirm its exact FAT
-   variant and current layout;
-2. create `/sleepcube/audio.wav` using the tracked deterministic generator,
-   record its deployed size/hash, and eject the card cleanly;
-3. insert the card into the unpowered Speaker Base, build/flash the normal M2
+1. insert the staged card into the unpowered Speaker Base, build/flash the normal M2
    image using the established manual download/reset procedure, and capture the
    complete storage/content/`READY` log;
-4. verify short-press PLAY/STOP, file looping, fade quality, all four volume
+2. verify short-press PLAY/STOP, file looping, fade quality, all four volume
    levels and NVS restoration before starting long timer/endurance runs;
-5. keep UART and Control Controller integration out of scope until M2 passes.
+3. keep UART and Control Controller integration out of scope until M2 passes.
 
 ## 7. Session closeout record
 
@@ -313,8 +321,12 @@ The exact next task is:
   Controller operating instructions.
 - Clean-built the normal and endurance configurations; both produce
   314,352-byte ESP32-S3/8 MB images with valid integrity metadata.
-- Hardware verification has not started. The next action is the five-step card
-  staging and first-target sequence in section 6.
+- On-target M2 verification has not started.
+- Confirmed the available card as FAT16, preserved its existing files, deployed
+  the canonical 60-second validation asset, and verified its format, size, hash
+  and byte-for-byte identity after read-back.
+- Paused before target flashing at the user's request. The exact resume point is
+  the three-step first-target sequence in section 6.
 
 ### Ongoing closeout requirement
 
