@@ -1,16 +1,16 @@
 # SleepCube Software Development Status
 
 **Baseline:** R00 (draft)  
-**Last updated:** 2026-09-16  
+**Last updated:** 2026-09-17
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
 **M2 standalone audio service in progress**
 
-Status: **M1 passes. M2 software is implemented and builds on
-`feat/m2-standalone-audio`; on-target storage/playback/timer/endurance
-verification remains pending.**
+Status: **M1 passes. M2 software and the normal 30-minute on-target hardware
+gate pass on `feat/m2-standalone-audio`; 60-minute endurance playback and
+content-fault injection remain pending.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -25,8 +25,10 @@ cycles to `READY`. M1 meets its standalone hardware exit criterion.
 
 M2 now has an accepted content/storage policy (ADR-0005), accepted volume
 persistence ownership (ADR-0006), and a clean-building standalone implementation.
-It must not be treated as complete until the available 1 GB card is staged and
-the normal-session and endurance hardware gates are executed.
+The staged 1 GB card mounts on target; canonical content, silent startup,
+playback/looping, fades, all volume levels, persistence and the normal finite
+timer have passed. M2 must not be treated as complete until the full endurance
+run and missing/unsupported-content fault injection pass.
 
 Repository organization now reflects the two-controller architecture:
 
@@ -101,9 +103,13 @@ separate content format as mono PCM WAV at 44.1 kHz/16-bit.
 Hardware bring-up status: **PASS; build, flash, boot/reset, 21 exact-count
 playbacks, final-image regression and listening gates complete.**
 
-M2 hardware status: **Not yet tested.** The available 1 GB card is confirmed as
-FAT16 and has been staged with the canonical 60-second validation asset. Its
-Speaker Base mount and playback path remain to be verified on target.
+M2 hardware status: **Normal gate passes; endurance in progress.** The 1 GB
+FAT16 card mounts through the Speaker Base fixed-low-CS SPI path and its
+canonical 60-second WAV validates and loops cleanly. The controller starts and
+resets silent, all four volume levels and NVS restoration pass, and the normal
+1,800-second session reaches silent `STOPPED` after its five-second timeout fade.
+The separately flashed endurance image boots, validates the card and reports a
+3,600-second session, but endurance playback has not yet started.
 
 Planned ownership:
 
@@ -196,12 +202,30 @@ Verified for M2 card preparation:
 - deployed SHA-256 is
   `e5be6d74956eec50828d22b66cddb85edc7d437d23e531254398755ede4ca4d4`.
 
+Verified on M2 target hardware on 2026-09-17:
+
+- normal and endurance images rebuilt at application version `61b3b26`, flashed
+  with write verification and booted on the AtomS3 Lite;
+- FAT16 card mounted with capacity 1,007,681,536 bytes and the canonical WAV
+  validated as 2,646,000 frames / 60,000 ms;
+- startup and reset reached silent `STOPPED`/`READY` without automatic playback;
+- loop boundary, one-second start/manual-stop fades and 25/50/75/100% bounded
+  volume playback were clean on the supplied 1 W/8 ohm speaker;
+- persisted 75% volume was restored after reset; the saved level was returned
+  to 50% before long-run testing;
+- the normal 1,800-second session completed 30 loops and reached silent
+  `STOPPED` with 79,381,504 frames / 317,526,016 bytes and no logged underrun,
+  partial write, storage error, panic, watchdog or reboot;
+- its final five-second timeout fade was reported smooth; laptop USB supplied
+  power. M2-specific listening distance was not recorded;
+- the separate endurance image identifies a 3,600-second session, mounts and
+  validates content and reaches silent `READY`; playback remains unstarted.
+
 Not yet verified for the new architecture:
 
-- M2 microSD mount and canonical content validation on the intended hardware;
-- M2 stored-audio playback, looping, fades and volume listening quality;
-- Audio Controller 30-minute timeout and 60-minute endurance behaviour;
-- Audio Controller volume persistence across reset/power cycle;
+- M2 missing-card/file and malformed/unsupported-content silent fault handling;
+- Audio Controller 60-minute endurance playback and timeout behaviour;
+- final normal-image restoration and short target regression after test images;
 - UART electrical connection and GPIO assignment;
 - transport framing/integrity behaviour;
 - semantic protocol behaviour;
@@ -231,12 +255,13 @@ Key ownership rule:
 ## 5. Known issues / blockers
 
 No architectural blocker is currently known. The M1 hardware/audio-quality risk
-is closed for generated-tone playback on the supplied 1 W/8 Ω reference speaker.
+is closed for generated-tone and stored-PCM playback on the supplied 1 W/8 Ω
+reference speaker.
 The initial MSB-mono distortion was resolved by standard Philips-I2S stereo with
 duplicated channels. The TEBM 10 W/4 Ω speaker was not used and is not required
-for M2 entry. The available 1 GB `vfat` card has enough capacity for the selected
-PCM policy; FAT mount compatibility and fixed-low-CS operation still require
-first on-target proof.
+for M2 entry. The available 1 GB FAT16 card has enough capacity for the selected
+PCM policy; FAT mount compatibility and fixed-low-CS operation now pass on the
+intended hardware.
 
 The AtomS3 Lite requires manual reset-button handling around flashing: hold reset
 for approximately two seconds to enter download mode before the flash command,
@@ -257,16 +282,21 @@ The following implementation choices remain intentionally open:
 
 ## 6. Next recommended task
 
-**Stage and run the first M2 hardware test.**
+**Run the already-flashed M2 endurance image.**
 
 The exact next task is:
 
-1. insert the staged card into the unpowered Speaker Base, build/flash the normal M2
-   image using the established manual download/reset procedure, and capture the
-   complete storage/content/`READY` log;
-2. verify short-press PLAY/STOP, file looping, fade quality, all four volume
-   levels and NVS restoration before starting long timer/endurance runs;
-3. keep UART and Control Controller integration out of scope until M2 passes.
+1. reconnect a no-reset serial monitor to the installed endurance image (or
+   reboot and recapture its silent `READY` log if power was removed), record the
+   listening distance, then short-press once and leave the unit untouched;
+2. capture the complete 3,600-second run through its five-second timeout fade,
+   verify monotonic heartbeats/final counters and confirm clean listening and
+   silent `STOPPED` with no underrun, partial write, panic, watchdog or reboot;
+3. exercise missing-card/file and malformed/unsupported-WAV startup faults,
+   confirming actionable diagnostics and silent fault containment;
+4. restore the normal 30-minute image, run a short card/playback regression and
+   update the M2 record/VVM/status. Keep UART and Control Controller integration
+   out of scope until these M2 gates pass.
 
 ## 7. Session closeout record
 
@@ -327,6 +357,26 @@ The exact next task is:
   and byte-for-byte identity after read-back.
 - Paused before target flashing at the user's request. The exact resume point is
   the three-step first-target sequence in section 6.
+
+### 2026-09-17 — M2 normal hardware gate and endurance staging
+
+- Rebuilt the normal and endurance images at application version `61b3b26`;
+  both remained 314,352 bytes for ESP32-S3/8 MB.
+- Flashed the normal image and captured successful FAT16 mount, strict canonical
+  WAV validation and silent deterministic `READY` on the intended AtomS3 Lite,
+  Speaker Base, supplied 1 W/8 ohm speaker and laptop USB power setup.
+- Verified clean standalone start/stop and content looping, all 25/50/75/100%
+  volume levels, persisted-volume restoration across reset and silent startup.
+- Completed the normal 1,800-second gate: 30 loops, 79,381,504 frames,
+  317,526,016 bytes and a smooth five-second timeout fade to silent `STOPPED`,
+  with no logged stream or runtime fault.
+- Flashed and booted the separate 3,600-second endurance image. Its identity,
+  saved 50% volume, card/content validation and silent `READY` state pass.
+- Paused before pressing PLAY for the endurance run. No partial endurance result
+  is claimed. The installed image is the endurance build and was left stopped;
+  the exact resume sequence is in section 6.
+- Missing/unsupported-content fault injection, the full endurance run and final
+  restoration/regression of the normal image remain pending; M2 is not complete.
 
 ### Ongoing closeout requirement
 

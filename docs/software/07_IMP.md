@@ -74,10 +74,14 @@ implements the ADR-0005 microSD/PCM-WAV content path, buffered local looping,
 bounded gain transitions, Audio Controller NVS volume ownership per ADR-0006,
 an authoritative playback task, a normal 30-minute deadline and a separately
 configured finite 60-minute endurance image. Both configurations build cleanly
-for ESP32-S3/8 MB. On-target microSD, playback, persistence, timing and endurance
-evidence remain pending; M2 is not complete. The 1 GB FAT16 validation card is
-now staged with a hash-verified canonical 60-second test asset while preserving
-its previous files.
+for ESP32-S3/8 MB. On-target microSD/content validation, silent startup,
+standalone playback/looping, all four bounded volume levels, NVS restoration and
+the normal 30-minute finite timeout passed on 2026-09-17. The separate endurance
+image is flashed and its 60-minute configuration, card mount and silent `READY`
+boot are verified, but endurance playback has not started. Missing/unsupported
+content fault injection and the 60-minute run remain pending, so M2 is not
+complete. The 1 GB FAT16 validation card retains its hash-verified canonical
+60-second test asset and previous files.
 
 Deliverables:
 
