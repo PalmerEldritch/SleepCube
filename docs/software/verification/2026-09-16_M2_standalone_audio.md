@@ -1,12 +1,12 @@
 # M2 Standalone Audio Verification Record
 
-**Dates:** 2026-09-16 (implementation/card preparation), 2026-09-17
-(hardware verification)
+**Dates:** 2026-09-16 (implementation/card preparation), 2026-09-17 and
+2026-09-18 (hardware verification)
 
 **Branch:** `feat/m2-standalone-audio`
 
-**Milestone status:** In progress; normal 30-minute hardware gate passes,
-60-minute endurance playback and content-fault injection remain pending
+**Milestone status:** PASS; M2 standalone hardware, timer, endurance and
+representative content-fault gates complete
 
 ## 1. Intended hardware
 
@@ -62,17 +62,19 @@ The installed ESP-IDF worktree identifies itself as `v6.0-dirty` due to
 previously documented file-mode differences; its `HEAD` remains the required
 commit and no ESP-IDF source modification is required by M2.
 
-Both images were rebuilt at repository commit `61b3b26` before flashing. This
-commit changes only `.vscode/settings.json`; the M2 firmware source baseline is
-the preceding implementation commit `10c38d8`. Each rebuilt image is 314,352
-bytes and reports application version `61b3b26` at boot.
+The normal and endurance images used for the long-run tests were rebuilt at
+repository commit `61b3b26`. That commit changes only `.vscode/settings.json`;
+the M2 firmware source baseline is the preceding implementation commit
+`10c38d8`. The final restored normal image was rebuilt at documentation commit
+`082c7ed`. All images remained 314,352 bytes; the final deployed image reports
+application version `082c7ed`.
 
 ## 4. Normal-session hardware evidence
 
-Hardware used on 2026-09-17 matched section 1. Power was supplied by the laptop
-USB port. Listening used the supplied 1 W/8 ohm speaker; the TEBM speaker and
-Waveshare controller were not connected. M2 listening distance was not recorded
-and remains an evidence limitation.
+Hardware used on 2026-09-17 and 2026-09-18 matched section 1. Power was supplied
+by the laptop USB port. Listening used the supplied 1 W/8 ohm speaker; the TEBM
+speaker and Waveshare controller were not connected. The endurance listening
+distance was approximately 30 cm.
 
 ### 4.1 Boot, storage and content
 
@@ -138,22 +140,57 @@ during the fade, and reached `STOPPED` at the deadline with:
 The user reported that the final five-second fade was smooth and that the
 speaker remained silent afterward.
 
-## 5. Endurance checkpoint and pending evidence
+## 5. Endurance evidence
 
-The separate endurance image was rebuilt, hash-verified during flash and booted
-successfully. Its captured log identified `M2 60-minute endurance`, restored the
-persisted 50% volume, mounted and validated the same card/content, reported a
-3,600-second session, and reached silent `STOPPED`/`READY`. The serial monitor
-was then closed and playback was deliberately **not started** when the session
-was paused. No endurance playback result is claimed.
+The separate endurance image was hash-verified during flash. A fresh boot on
+2026-09-18 identified `M2 60-minute endurance`, restored the persisted 50%
+volume, mounted and validated the card/content, reported a 3,600-second session,
+and reached silent `STOPPED`/`READY`.
 
-Still pending before M2 completion:
+The session then ran untouched for the full hour. All 60 expected content-loop
+and heartbeat records were captured with monotonic counters. The controller
+requested `session-timeout` five seconds before its deadline, completed loop 60
+during the fade, and reached `STOPPED` with:
 
-- run the installed endurance image for its full 60-minute finite session and
-  verify heartbeats, exact final state, absence of underrun/partial write/panic/
-  watchdog/reboot, and listening quality;
-- exercise missing-file/card and malformed or unsupported WAV fault paths,
-  confirming actionable diagnostics and silent `FAULT` behaviour;
-- record the listening distance for the remaining M2 run;
-- after test-only endurance/fault work, restore the normal image and perform a
-  short card/playback regression before handing the Audio Controller to M3.
+- 158,761,472 frames;
+- 635,045,888 I2S bytes;
+- 60 content loops;
+- no underrun, short/partial I2S write, storage error, panic, watchdog or reboot.
+
+At approximately 30 cm, the user reported no playback, transition or
+loop-boundary artifact during the run. The timeout completed without an audible
+artifact.
+
+## 6. Content-fault evidence
+
+Two representative startup faults were exercised with the endurance image:
+
+| Fault | Diagnostic/result | Audible result |
+| --- | --- | --- |
+| Card absent | SD initialization reported `ESP_ERR_TIMEOUT`, included the insertion hint, and the application logged that startup remained silent and playback was disabled | No sound |
+| Unsupported canonical WAV | Card mounted, then a valid RIFF/WAVE PCM mono 8-bit/44.1 kHz file was rejected with `ESP_ERR_NOT_SUPPORTED`; startup remained silent and playback was disabled | No sound |
+
+The unsupported test file was one second of digital silence, 44,144 bytes, with
+SHA-256 `4a1c1fe26907077c442f9f5f00dd5598d80a4556e9a8789fe00bc4affcb87909`.
+The original canonical asset was preserved on the card throughout the test,
+restored afterward, synced and reverified at its original SHA-256
+`e5be6d74956eec50828d22b66cddb85edc7d437d23e531254398755ede4ca4d4`.
+
+These cases demonstrate silent containment for missing storage and a
+structurally valid but unsupported format. They are M2 developmental evidence,
+not exhaustive release verification of every missing, unreadable or malformed
+content permutation covered by SRS-AUD-009.
+
+## 7. Final deployed state and conclusion
+
+The normal 30-minute image was rebuilt and hash-verified during flash after
+fault injection. Its captured boot reported version `082c7ed`, restored 50%
+volume, mounted the restored card, validated the canonical 16-bit WAV and
+reached silent `STOPPED`/`READY`. A final short regression completed a clean
+fade-in and manual fade-out, returning to `STOPPED` after 349,184 frames /
+1,396,736 bytes with no logged fault. The user confirmed silent startup and
+clean playback/transitions.
+
+M2 passes its standalone exit gates. The result does not claim UART transport,
+semantic inter-controller control, final product tuning, or exhaustive R00
+fault/compliance coverage.

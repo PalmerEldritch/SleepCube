@@ -1,16 +1,15 @@
 # SleepCube Software Development Status
 
 **Baseline:** R00 (draft)  
-**Last updated:** 2026-09-17
+**Last updated:** 2026-09-18
+
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M2 standalone audio service in progress**
+**M2 standalone audio service complete; M3 UART transport bring-up next**
 
-Status: **M1 passes. M2 software and the normal 30-minute on-target hardware
-gate pass on `feat/m2-standalone-audio`; 60-minute endurance playback and
-content-fault injection remain pending.**
+Status: **M1 and M2 pass on `feat/m2-standalone-audio`. M3 has not started.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -26,9 +25,10 @@ cycles to `READY`. M1 meets its standalone hardware exit criterion.
 M2 now has an accepted content/storage policy (ADR-0005), accepted volume
 persistence ownership (ADR-0006), and a clean-building standalone implementation.
 The staged 1 GB card mounts on target; canonical content, silent startup,
-playback/looping, fades, all volume levels, persistence and the normal finite
-timer have passed. M2 must not be treated as complete until the full endurance
-run and missing/unsupported-content fault injection pass.
+playback/looping, fades, all volume levels, persistence, normal finite timer,
+60-minute endurance run and representative missing-storage/unsupported-content
+fault injection pass. The original asset is restored and the normal image is
+the final deployed firmware.
 
 Repository organization now reflects the two-controller architecture:
 
@@ -103,13 +103,15 @@ separate content format as mono PCM WAV at 44.1 kHz/16-bit.
 Hardware bring-up status: **PASS; build, flash, boot/reset, 21 exact-count
 playbacks, final-image regression and listening gates complete.**
 
-M2 hardware status: **Normal gate passes; endurance in progress.** The 1 GB
+M2 hardware status: **PASS.** The 1 GB
 FAT16 card mounts through the Speaker Base fixed-low-CS SPI path and its
 canonical 60-second WAV validates and loops cleanly. The controller starts and
 resets silent, all four volume levels and NVS restoration pass, and the normal
 1,800-second session reaches silent `STOPPED` after its five-second timeout fade.
-The separately flashed endurance image boots, validates the card and reports a
-3,600-second session, but endurance playback has not yet started.
+The separate 3,600-second endurance session completed 60 loops and reached
+silent `STOPPED` without a logged stream/runtime fault or reported audible
+artifact. Representative absent-card and unsupported-WAV faults remained silent
+with actionable diagnostics. The normal image was restored and regressed.
 
 Planned ownership:
 
@@ -202,7 +204,7 @@ Verified for M2 card preparation:
 - deployed SHA-256 is
   `e5be6d74956eec50828d22b66cddb85edc7d437d23e531254398755ede4ca4d4`.
 
-Verified on M2 target hardware on 2026-09-17:
+Verified on M2 target hardware on 2026-09-17 and 2026-09-18:
 
 - normal and endurance images rebuilt at application version `61b3b26`, flashed
   with write verification and booted on the AtomS3 Lite;
@@ -217,15 +219,21 @@ Verified on M2 target hardware on 2026-09-17:
   `STOPPED` with 79,381,504 frames / 317,526,016 bytes and no logged underrun,
   partial write, storage error, panic, watchdog or reboot;
 - its final five-second timeout fade was reported smooth; laptop USB supplied
-  power. M2-specific listening distance was not recorded;
-- the separate endurance image identifies a 3,600-second session, mounts and
-  validates content and reaches silent `READY`; playback remains unstarted.
+  power;
+- the separate 3,600-second endurance session completed all 60 loops at
+  approximately 30 cm, ending in `STOPPED` with 158,761,472 frames /
+  635,045,888 bytes, no logged stream/runtime fault and no audible artifact;
+- absent-card startup produced actionable `ESP_ERR_TIMEOUT`, while a valid but
+  unsupported 8-bit WAV produced actionable `ESP_ERR_NOT_SUPPORTED`; both
+  disabled playback and produced no sound;
+- the canonical 16-bit asset was restored and its original SHA-256 reverified;
+  the normal image was rebuilt/flashed at version `082c7ed` and passed silent
+  boot plus a clean 349,184-frame / 1,396,736-byte PLAY/STOP regression.
 
 Not yet verified for the new architecture:
 
-- M2 missing-card/file and malformed/unsupported-content silent fault handling;
-- Audio Controller 60-minute endurance playback and timeout behaviour;
-- final normal-image restoration and short target regression after test images;
+- exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
+  and unsupported-format fault cases;
 - UART electrical connection and GPIO assignment;
 - transport framing/integrity behaviour;
 - semantic protocol behaviour;
@@ -282,21 +290,18 @@ The following implementation choices remain intentionally open:
 
 ## 6. Next recommended task
 
-**Run the already-flashed M2 endurance image.**
+**Start M3 with the UART physical/framing design freeze.**
 
 The exact next task is:
 
-1. reconnect a no-reset serial monitor to the installed endurance image (or
-   reboot and recapture its silent `READY` log if power was removed), record the
-   listening distance, then short-press once and leave the unit untouched;
-2. capture the complete 3,600-second run through its five-second timeout fade,
-   verify monotonic heartbeats/final counters and confirm clean listening and
-   silent `STOPPED` with no underrun, partial write, panic, watchdog or reboot;
-3. exercise missing-card/file and malformed/unsupported-WAV startup faults,
-   confirming actionable diagnostics and silent fault containment;
-4. restore the normal 30-minute image, run a short card/playback regression and
-   update the M2 record/VVM/status. Keep UART and Control Controller integration
-   out of scope until these M2 gates pass.
+1. create an M3 branch from the completed M2 baseline and inventory conflict-free
+   exposed GPIO on both controllers against the current hardware references;
+2. freeze the crossed TX/RX mapping plus common-ground wiring in `05_ICD.md`;
+3. evaluate and record the binary/text framing, resynchronization, integrity and
+   sequence strategy in the required new ADR, then replace ICD-PRO-006's TBD;
+4. implement only the bidirectional transport/parser harness and malformed/
+   truncated-frame tests required by M3. Keep PLAY/STOP/volume semantics and UI
+   integration in M4.
 
 ## 7. Session closeout record
 
@@ -377,6 +382,26 @@ The exact next task is:
   the exact resume sequence is in section 6.
 - Missing/unsupported-content fault injection, the full endurance run and final
   restoration/regression of the normal image remain pending; M2 is not complete.
+
+### 2026-09-18 — M2 endurance, fault injection and completion
+
+- Recaptured the endurance image's silent boot at persisted 50% volume and
+  recorded the listening distance as approximately 30 cm.
+- Completed the full 3,600-second endurance session: 60 loops, 158,761,472
+  frames, 635,045,888 bytes and finite timeout to `STOPPED`, with no logged
+  underrun, partial write, storage error, panic, watchdog or reboot. No audible
+  artifact was reported.
+- Verified absent-card startup containment: actionable `ESP_ERR_TIMEOUT`, no
+  automatic retry/reboot, playback disabled and no sound.
+- Preserved the canonical asset, temporarily staged a valid one-second 8-bit
+  WAV, and verified actionable `ESP_ERR_NOT_SUPPORTED`, disabled playback and no
+  sound. Restored and reverified the original asset hash afterward.
+- Rebuilt and hash-verified the normal 30-minute image at version `082c7ed`,
+  flashed it as the final deployed firmware, and captured restored-card silent
+  `READY` plus a clean 349,184-frame / 1,396,736-byte PLAY/STOP regression.
+- M2 passes. No UART, Control Controller integration, final product audio tuning
+  or exhaustive release-level content-fault claim is made. Section 6 defines
+  the exact M3 entry task.
 
 ### Ongoing closeout requirement
 
