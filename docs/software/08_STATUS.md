@@ -7,9 +7,11 @@
 
 ## 1. Current milestone
 
-**M2 standalone audio service complete; M3 UART transport bring-up next**
+**M2 standalone audio service complete; M3 UART transport preparation active**
 
-Status: **M1 and M2 pass on `feat/m2-standalone-audio`. M3 has not started.**
+Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 physical and
+framing design preparation is in progress, with hardware wiring pending ordered
+jumper cables.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -27,8 +29,19 @@ persistence ownership (ADR-0006), and a clean-building standalone implementation
 The staged 1 GB card mounts on target; canonical content, silent startup,
 playback/looping, fades, all volume levels, persistence, normal finite timer,
 60-minute endurance run and representative missing-storage/unsupported-content
-fault injection pass. The original asset is restored and the normal image is
-the final deployed firmware.
+fault injection pass. The M2 validation asset remains preserved on the card and
+the normal image is the final deployed firmware. A post-M2 follow-up also
+confirms clean electrical operation with the 10 W/4 ohm TEBM speaker and
+materially improved sleep-music quality at the intended approximately 30 cm
+listening distance. The active card content is now the full converted
+Interstellar mono track. A faint signal-correlated close-field noise remains a
+non-blocking tuning issue.
+
+M3 has an initial pin-use inventory and a conflict-free wiring candidate:
+Waveshare GPIO16 TX to Atom GPIO2 RX, Atom GPIO1 TX to Waveshare GPIO17 RX, and
+common ground with no 5 V inter-controller connection. This has not yet been
+frozen in the ICD or verified electrically. Protocol framing/integrity remains
+to be decided by the required ADR, and no M3 transport code exists yet.
 
 Repository organization now reflects the two-controller architecture:
 
@@ -112,6 +125,17 @@ The separate 3,600-second endurance session completed 60 loops and reached
 silent `STOPPED` without a logged stream/runtime fault or reported audible
 artifact. Representative absent-card and unsupported-WAV faults remained silent
 with actionable diagnostics. The normal image was restored and regressed.
+
+Post-M2 speaker/music follow-up status: **PASS WITH OBSERVATION.** The
+TEBM28C10-4/A 10 W/4 ohm speaker produced clean low-frequency validation content
+at 25% and 50%, with no distortion or detected warmth. The full Interstellar
+mono test asset was clear, fuller and not overdriven at approximately 30 cm,
+with no click, pop or dropout. A faint hiss/buzz-like component was noticeable
+only at close range (approximately 10 cm) and stopped with music. Active digital
+silence was quiet; a 4 kHz low-pass A/B and 50%/100% gain comparison did not
+isolate it to high-frequency speaker response or primarily to digital gain
+quantization. See
+`docs/software/verification/2026-09-18_TEBM_music_followup.md`.
 
 Planned ownership:
 
@@ -230,6 +254,23 @@ Verified on M2 target hardware on 2026-09-17 and 2026-09-18:
   the normal image was rebuilt/flashed at version `082c7ed` and passed silent
   boot plus a clean 349,184-frame / 1,396,736-byte PLAY/STOP regression.
 
+Verified in the 2026-09-18 post-M2 TEBM/music follow-up:
+
+- the TEBM28C10-4/A 10 W/4 ohm speaker remained clear at 25% and 50% during
+  low-frequency validation playback, with no distortion or detected warmth;
+- the converted Interstellar PCM track was clear and materially better than the
+  previous Waveshare-local path at approximately 30 cm, with good bass fullness
+  and no overdrive, click, pop or dropout;
+- a faint signal-correlated hiss/buzz was barely audible at 30 cm but noticeable
+  at approximately 10 cm and stopped with playback;
+- active digital silence was quiet, a controlled 4 kHz low-pass comparison did
+  not change the noise, and increasing firmware volume from 50% to 100% did not
+  materially improve its ratio to the music;
+- the full music asset and retained diagnostic/M2 assets were hash-verified on
+  the card, volume was restored to persisted 50%, and the card was safely
+  unmounted. Full evidence is in
+  `docs/software/verification/2026-09-18_TEBM_music_followup.md`.
+
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
@@ -266,10 +307,15 @@ No architectural blocker is currently known. The M1 hardware/audio-quality risk
 is closed for generated-tone and stored-PCM playback on the supplied 1 W/8 Ω
 reference speaker.
 The initial MSB-mono distortion was resolved by standard Philips-I2S stereo with
-duplicated channels. The TEBM 10 W/4 Ω speaker was not used and is not required
-for M2 entry. The available 1 GB FAT16 card has enough capacity for the selected
-PCM policy; FAT mount compatibility and fixed-low-CS operation now pass on the
-intended hardware.
+duplicated channels. The TEBM 10 W/4 Ω speaker is now demonstrated compatible
+at the tested levels and substantially improves the intended music relative to
+the original path. A faint signal-correlated hiss/buzz remains noticeable at
+approximately 10 cm. It is not present during active digital silence and was not
+changed by removing content above 4 kHz or by a 12 dB digital-gain comparison.
+Its source remains unresolved; reference audition of the exact mono asset is the
+next audio diagnostic. This does not block M3. The available 1 GB FAT16 card has
+enough capacity for the selected PCM policy; FAT mount compatibility and
+fixed-low-CS operation pass on the intended hardware.
 
 The AtomS3 Lite requires manual reset-button handling around flashing: hold reset
 for approximately two seconds to enter download mode before the flash command,
@@ -284,24 +330,29 @@ source content was required by the SleepCube build.
 
 The following implementation choices remain intentionally open:
 
-- exact UART TX/RX GPIO assignment;
+- final freeze and electrical verification of the candidate UART mapping
+  (Waveshare GPIO16/GPIO17 and Atom GPIO2/GPIO1);
 - protocol framing, integrity and idempotency strategy;
-- final product tuning of the provisional M2 volume law and fade timing.
+- final product tuning of the provisional M2 volume law and fade timing;
+- root cause and acceptance threshold for the close-field, signal-correlated
+  sleep-music noise.
 
 ## 6. Next recommended task
 
-**Start M3 with the UART physical/framing design freeze.**
+**Continue M3 with the UART physical/framing design freeze.**
 
 The exact next task is:
 
-1. create an M3 branch from the completed M2 baseline and inventory conflict-free
-   exposed GPIO on both controllers against the current hardware references;
-2. freeze the crossed TX/RX mapping plus common-ground wiring in `05_ICD.md`;
-3. evaluate and record the binary/text framing, resynchronization, integrity and
+1. freeze the candidate crossed TX/RX mapping plus common-ground/no-5-V wiring
+   in `05_ICD.md`, and replace the stale GPIO7/GPIO8 candidate in `04_SAS.md`;
+2. evaluate and record the binary/text framing, resynchronization, integrity and
    sequence strategy in the required new ADR, then replace ICD-PRO-006's TBD;
-4. implement only the bidirectional transport/parser harness and malformed/
+3. implement only the bidirectional transport/parser harness and malformed/
    truncated-frame tests required by M3. Keep PLAY/STOP/volume semantics and UI
-   integration in M4.
+   integration in M4;
+4. once the ordered jumper cables arrive, wire common ground and crossed 3.3 V
+   UART only, then verify bidirectional transport and fault containment on both
+   targets.
 
 ## 7. Session closeout record
 
@@ -402,6 +453,37 @@ The exact next task is:
 - M2 passes. No UART, Control Controller integration, final product audio tuning
   or exhaustive release-level content-fault claim is made. Section 6 defines
   the exact M3 entry task.
+
+### 2026-09-18 — M3 preparation and TEBM/music follow-up
+
+- Created `feat/m3-uart-transport` from the completed M2 baseline.
+- Inventoried exposed and already-used pins. The current conflict-free M3
+  candidate is Waveshare GPIO16 TX to Atom GPIO2 RX, Atom GPIO1 TX to Waveshare
+  GPIO17 RX, plus common ground and no inter-controller 5 V connection. Ordered
+  jumper cables are not yet available, so the mapping is not electrically
+  verified or frozen in the ICD.
+- Connected the TEBM28C10-4/A 10 W/4 ohm speaker to the Speaker Base and verified
+  silent reset, clean validation-tone output at 25%/50%, clean stop transitions,
+  no distortion and no detected warmth.
+- Converted the unfiltered Interstellar stereo WAV to the canonical mono PCM
+  format without normalization. At approximately 30 cm, the user reported
+  appropriate sleep-music loudness, good clarity and bass fullness, no overdrive,
+  click, pop or dropout, and a definite improvement over the former hardware
+  path.
+- Investigated a faint hiss/buzz noticeable at approximately 10 cm. It stops
+  with music; active digital silence is quiet; a 4 kHz low-pass A/B produced no
+  noticeable change; and a 50%/100% gain comparison did not materially improve
+  the noise-to-music ratio. The source remains unresolved and is non-blocking for
+  M3.
+- Restored the full Interstellar mono asset as `/sleepcube/audio.wav`, retained
+  both the A/B diagnostic and original M2 validation asset, hash-verified all
+  copies, restored persisted volume to 50%, synced and safely unmounted the card.
+- Added `verification/2026-09-18_TEBM_music_followup.md` and VVM developmental
+  evidence `M2-FUP-001`. No firmware source, stable architecture or interface
+  contract changed.
+- Exact next task: freeze the M3 electrical contract and protocol framing ADR,
+  update the SAS/ICD, then implement the parser/serializer harness while awaiting
+  the physical cables.
 
 ### Ongoing closeout requirement
 

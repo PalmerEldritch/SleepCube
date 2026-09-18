@@ -83,6 +83,16 @@ unsupported-WAV startup faults remained silent with actionable diagnostics. The
 canonical asset was hash-verified after restoration, and the final deployed
 normal image passed a short playback regression.
 
+A post-M2 developmental follow-up on 2026-09-18 also confirmed that the
+10 W/4 ohm TEBM speaker operates cleanly at the tested 25% and 50% levels and
+that the intended sleep-music track is materially better than the former
+Waveshare-local path at approximately 30 cm. A faint signal-correlated hiss/buzz
+remains noticeable at approximately 10 cm. Active digital silence is quiet, a
+controlled 4 kHz low-pass comparison did not change the observation, and a
+50%/100% comparison did not identify digital gain quantization as the primary
+cause. This is tracked as non-blocking final-product audio tuning; see
+`verification/2026-09-18_TEBM_music_followup.md`.
+
 Deliverables:
 
 - content storage/access;
@@ -109,8 +119,12 @@ Exit criteria:
 
 **Goal:** Establish robust bidirectional controller communication independent of product semantics.
 
-**Status:** Next milestone; implementation has not started. First freeze the
-physical TX/RX mapping and framing/integrity strategy in the ICD and required ADR.
+**Status:** In preparation on `feat/m3-uart-transport`. Board pin-use inventory
+has identified a conflict-free candidate using Waveshare GPIO16/GPIO17 and Atom
+Grove GPIO2/GPIO1 with crossed TX/RX and common ground. The required jumper
+cables are on order; the mapping remains a candidate until it is frozen in the
+ICD together with the framing/integrity ADR and verified on hardware. No M3
+transport code or two-controller evidence exists yet.
 
 Deliverables:
 
@@ -255,9 +269,19 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Insert the staged FAT16 card into the unpowered Speaker Base, then flash the
-normal 30-minute image and verify card mount, strict content validation,
-standalone PLAY/STOP, looping, volume ramps and volume persistence. After the
-normal timer gate passes, flash the separately configured 60-minute endurance
-image and capture its heartbeat/completion log. Do not begin UART integration
-until these M2 hardware gates pass.
+Complete the M3 physical/framing design freeze while awaiting or after receiving
+the jumper cables:
+
+1. confirm the candidate crossed wiring as Waveshare GPIO16 TX to Atom GPIO2 RX,
+   Atom GPIO1 TX to Waveshare GPIO17 RX, plus common ground and no 5 V
+   inter-controller connection;
+2. record the final electrical/pin contract in `05_ICD.md` and remove the stale
+   GPIO7/GPIO8 candidate from `04_SAS.md`;
+3. evaluate and accept the required protocol framing/integrity ADR, then replace
+   the representation TBD in ICD-PRO-006;
+4. implement and host-test only the M3 serializer/parser and malformed/truncated
+   frame handling before first two-controller UART validation.
+
+Keep PLAY/STOP/volume semantics and UI integration in M4. The close-field music
+noise recorded in `verification/2026-09-18_TEBM_music_followup.md` is a later
+audio-tuning follow-up and does not block M3.

@@ -97,6 +97,7 @@ close the associated R00 requirements.
 | M2-MAN-001 | Stored-audio noise, distortion, loop-boundary and transition assessment on supplied 1 W/8 ohm speaker | PASS — no persistent stopped-state noise, distortion, loop artifact, click or pop; manual and timeout fades clean using laptop USB power, with endurance listening at approximately 30 cm | `verification/2026-09-16_M2_standalone_audio.md` |
 | M2-END-001 | Separate finite 60-minute Audio Controller endurance run | PASS — 60 loops, 158,761,472 frames / 635,045,888 bytes, finite timeout to `STOPPED`, no logged stream/runtime fault and no reported audible artifact | `verification/2026-09-16_M2_standalone_audio.md` |
 | M2-FI-001 | Representative missing-storage and unsupported-content startup faults | PASS — absent card produced actionable `ESP_ERR_TIMEOUT`; valid 8-bit WAV produced actionable `ESP_ERR_NOT_SUPPORTED`; both disabled playback and remained silent | `verification/2026-09-16_M2_standalone_audio.md` |
+| M2-FUP-001 | 10 W/4 ohm TEBM compatibility and intended sleep-music follow-up | PASS WITH OBSERVATION — clean TEBM tone playback at 25%/50% and materially improved music at approximately 30 cm; no click, pop, dropout or overdrive. Faint signal-correlated noise remains noticeable at approximately 10 cm and is retained as a non-blocking tuning issue | `verification/2026-09-18_TEBM_music_followup.md` |
 
 M1-BLD-001 is structural evidence toward SRS-SYS-001/SRS-SYS-003 only. It does
 not verify storage, decoding, product fades, session timing or the 60-minute
