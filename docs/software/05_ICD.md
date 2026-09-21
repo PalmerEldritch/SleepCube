@@ -115,7 +115,7 @@ Optional transient `STARTING`, `STOPPING` or `FAULT` states may be exposed if us
 | ICD-AUD-001 | `PLAY` shall contain or imply a finite non-zero session duration accepted by the Audio Controller. |
 | ICD-AUD-002 | A `PLAY` request with absent, zero, out-of-range or otherwise invalid duration shall be rejected. |
 | ICD-AUD-003 | Successful `PLAY` shall establish the Audio Controller's independent timeout before or atomically with entry into playing state. |
-| ICD-AUD-004 | Receipt of duplicate/retried `PLAY` messages shall not accidentally create an unbounded or multiplicatively extended session. Exact idempotency strategy is TBD with framing design. |
+| ICD-AUD-004 | Receipt of duplicate/retried `PLAY` messages shall not accidentally create an unbounded or multiplicatively extended session. Exact idempotency strategy is TBD in M4 semantic protocol design. |
 
 ## 8. STOP contract
 

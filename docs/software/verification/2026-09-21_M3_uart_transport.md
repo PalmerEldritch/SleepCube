@@ -1,8 +1,8 @@
 # M3 UART transport bring-up — development record
 
 **Date:** 2026-09-21
-**Status:** Software/host gate passes; both images flashed and bidirectional
-PING/PONG verified; M3 fault/reset/link-loss gate pending.
+**Status:** M3 transport exit gate passes. External LED-strip behavior and
+product-level audio semantics remain outside this gate.
 
 ## Scope and configuration
 
@@ -188,3 +188,41 @@ panic, watchdog or reboot was observed on the still-running Control board.
 Both directed malformed/truncated-probe and independent-reset recovery paths
 therefore pass on target. A sustained intentional link-loss test and external
 LED-strip observation remain pending.
+
+## Sustained peer-unavailable interval and recovery
+
+With both monitors attached, the user held Waveshare RESET and then released
+it, leaving the Atom powered and the UART wiring untouched. The Atom logged
+nine consecutive missing-PONG rounds (`seq=32885` through `32893`) at its
+two-second diagnostic cadence. It also rejected malformed bytes during the
+peer reset (`SC_FRAME_BAD_COBS` and `SC_FRAME_TOO_LONG`) without a panic,
+watchdog, reboot or audio-state change in the captured log. After the
+Waveshare restarted, the Atom echoed the new `seq=1` Control PING and resumed
+matched PONGs from `seq=32894 total=116`; matches continued through at least
+`seq=32902 total=124`. The Control monitor reconnected, logged LCD/LVGL
+initialization and matched new PONGs through at least `seq=11 total=10`.
+
+The observed nonresponse interval was longer than the requested button-hold
+time because it includes USB/controller restart and application startup; the
+logs prove multiple missed diagnostic deadlines and recovery, not an exact
+electrical disconnect duration. The Control's one-time startup bad-frame probes
+were again safely rejected by the Atom after recovery. No UART jumper was
+removed, so this tests a sustained nonresponding peer rather than open-circuit
+electrical behavior.
+
+## M3 exit verdict and carry-forward
+
+M3 passes its defined transport exit criteria: bidirectional framed messages
+transfer repeatedly; malformed, truncated and restart-induced bytes are
+rejected without destabilizing either controller; independent resets and a
+sustained nonresponding peer recover automatically. The Atom remains
+authoritative for audio and the M3 harness issues no product audio commands.
+The user reported the Waveshare screen normal before the held-reset test, and
+the post-test log shows display initialization; USB re-enumeration still
+prevented capture of every early Control boot line. No external LED strip was
+connected, so physical lighting continuity is unverified. No subjective
+speaker-silence confirmation was supplied for the latest Atom reset, although
+its complete application log reported silent `STOPPED`/`READY`. These limits
+must not be misrepresented as release-level UI/light or audio verification.
+M4 may start with the semantic ICD and idempotency/status-synchronization
+design; `AUD-ISS-001` remains open.

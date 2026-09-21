@@ -123,8 +123,7 @@ Exit criteria:
 
 **Goal:** Establish robust bidirectional controller communication independent of product semantics.
 
-**Status:** Core transport gate passes; sustained peer-unavailable and external
-light observations pending on `feat/m3-uart-transport`. The Waveshare
+**Status:** Complete on `feat/m3-uart-transport`. The Waveshare
 GPIO16/GPIO17 ↔ Atom Grove GPIO2/GPIO1 crossed-TX/RX mapping with common ground
 and no shared 5 V is frozen in the ICD. ADR-0007 fixes bounded COBS/CRC-16
 framing. Both projects include a shared codec and independent transport-only
@@ -137,7 +136,12 @@ bad-CRC and truncated probes in both directions were rejected with subsequent
 valid matches. The complete Atom application log showed valid card/content and
 silent `STOPPED`/`READY`. The user reported the Waveshare screen normal, but no
 external LED strip is connected, so physical light continuity is unverified.
-A sustained peer-unavailable test is the remaining M3 fault-containment check.
+A sustained peer-unavailable test also passed: while Waveshare RESET was held,
+the Atom logged nine missed PONG rounds without panic/reboot, then resumed
+matches after Control restarted. The physical UART jumpers were not removed.
+M3's bidirectional-transfer and malformed-data exit criteria pass. Physical
+external-strip behavior and subjective speaker silence after the latest Atom
+reset remain unverified and are carried forward rather than claimed as passes.
 The first Waveshare BOOT/RESET attempt caused a recoverable USB enumeration
 error `-71`; a plain RESET restored it before flashing. See
 `verification/2026-09-21_M3_uart_transport.md`.
@@ -162,6 +166,10 @@ Exit criteria:
 ### M4 — Semantic audio protocol
 
 **Goal:** Implement the normative ICD contract.
+
+**Status:** Not started. M3 transport is available; first freeze the semantic
+message types/payloads, link-session identity, idempotent retry rules and
+authoritative status reconciliation in the ICD before enabling remote PLAY.
 
 Deliverables:
 

@@ -7,13 +7,14 @@
 
 ## 1. Current milestone
 
-**M2 standalone audio service complete; M3 core UART transport verified on target**
+**M3 UART transport complete; M4 semantic audio protocol is next**
 
-Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 framing,
-transport-only firmware and host builds/tests are ready. Both images flashed
-with hash verification. Bidirectional PING/PONG, deliberate malformed/truncated
-frames in both directions, and independent-reset recovery pass on target.
-Sustained peer-unavailability and external LED-strip observation remain open.**
+Status: **M1, M2 and the M3 transport exit gate pass on
+`feat/m3-uart-transport`. Both images flashed with hash verification.
+Bidirectional PING/PONG, malformed/truncated frames in both directions,
+independent resets and a sustained nonresponding Control peer all recovered on
+target. M4 semantics have not started. External LED-strip output remains
+unverified because no strip is connected.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -51,6 +52,14 @@ with hash verification on 2026-09-21. The Atom's initial transport task logged
 expected missing PONGs while the Waveshare still ran old firmware; after the
 Waveshare flash, both sides matched at least 21 responses. See
 `verification/2026-09-21_M3_uart_transport.md`.
+
+Later directed fault probes, independent resets and a sustained Control-reset
+interval also passed. The Atom logged nine missed PONG rounds, stayed running,
+and resumed matches after Waveshare restart. These are M3 transport-only
+results, not M4 PLAY/STOP/volume or release-level UI/light evidence.
+The latest Atom boot reported `STOPPED` with persisted volume 100%; M3 never
+issued PLAY, but a future local button PLAY would use that saved level unless
+changed. No external LED strip is connected.
 
 After the Waveshare BOOT/RESET operation, its previously enumerated USB device
 `AC:EB:E6:1E:67:C4` disappeared; the host logged failed re-enumeration with
@@ -323,8 +332,9 @@ Verified for M3 software preparation on 2026-09-21:
 - final pre-flash application images are 338,656 bytes (Audio) and 595,200
   bytes (Control); no on-target result is claimed from these builds;
 - both USB Serial/JTAG devices enumerate, with the Atom matched to its prior
-  stable USB ID; the user confirmed the jumper hookup but the UART electrical
-  path and absence of a cross-board power rail still need direct confirmation.
+  stable USB ID; the user confirmed the jumper hookup and bidirectional traffic
+  verified the UART signal path. The absence of a cross-board power rail was
+  not independently inspected.
 - the Atom M3 image from source commit `5894e14` was flashed to ESP32-S3 v0.2
   with embedded 8 MB flash; bootloader, partition table and application writes
   passed hash verification. After manual reset the user reported application
@@ -353,15 +363,21 @@ Verified for M3 software preparation on 2026-09-21:
   bad-CRC and truncated probes, then matched subsequent valid PONGs. No
   Control panic/reboot was observed. Atom restored persisted volume 100%; no
   separate subjective speaker-silence report was received in that turn.
+- during a sustained Waveshare RESET hold, the Atom logged nine missed PONG
+  rounds, rejected malformed restart bytes, did not panic/reboot, and resumed
+  matched replies. Control reinitialized its display and matched replies after
+  restart. No UART jumper was physically disconnected.
 
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
   and unsupported-format fault cases;
 - semantic protocol behaviour;
-- sustained peer-unavailability and semantic reconciliation behavior between
-  controllers;
+- semantic command, link-session and authoritative-status reconciliation
+  behavior between controllers;
 - external LED-strip continuity with M3 active (no strip is connected);
+- a complete early Control boot log after native USB re-enumeration; later
+  display initialization and transport startup/recovery logs were captured;
 - integrated two-controller system behaviour.
 
 ## 4. Architectural decisions in force
@@ -436,20 +452,21 @@ lines are connected to the powered other board.
 
 ## 6. Next recommended task
 
-**Finish the M3 peer-unavailable check and record remaining hardware gaps.**
+**Begin M4 with semantic ICD design before remote playback commands.**
 
 The exact next task is:
 
-1. With both monitors attached, ask the user to hold Waveshare RESET for about
-   eight seconds while the Atom remains powered, then release it. This
-   simulates a sustained nonresponding peer without hot-unplugging UART wiring.
-   Verify the Atom logs missing PONGs but remains stable and resumes matching
-   after Control restarts. Do not hold the Atom reset button for this test.
-2. Ask whether the Atom speaker remained silent after its last reset; the log
-   says `STOPPED`/silent, but subjective confirmation is pending.
-3. Record exact counts/results in the M3 report, and explicitly carry forward
-   external LED-strip continuity as unverified because no strip is connected.
-   Do not claim full UI/light integration or M4 semantic protocol behavior.
+1. Define M4 semantic message type IDs, bounded payloads, responses/events,
+   finite PLAY duration, status snapshot and error codes in `05_ICD.md`.
+2. Define link-session identity, duplicate/retry handling, command timeouts
+   and post-reset authoritative status reconciliation. Record any material
+   choice in an ADR without changing ADR-0007 framing silently.
+3. Extend the existing single UART transport/parser task rather than opening
+   a second driver; add host protocol tests before enabling remote PLAY/STOP/
+   SET_VOLUME on the Atom. Keep the Control UI/light tasks nonblocking.
+4. Carry forward external LED-strip continuity, subjective post-reset speaker
+   silence and `AUD-ISS-001` as open evidence items; do not claim them from
+   M3 PING/PONG success.
 
 ## 7. Session closeout record
 
@@ -503,6 +520,13 @@ The exact next task is:
   The exact next task is a sustained peer-unavailable test by holding
   Waveshare RESET about eight seconds, then confirming recovery without
   touching UART jumpers. External LED-strip behavior remains unverified.
+- The user held Waveshare RESET while Atom stayed powered. The Atom logged nine
+  missed PONG rounds and rejected malformed restart bytes without panic or
+  reboot, then resumed matches after Control restarted. The Control log showed
+  display initialization and resumed PONG matches. No jumper was removed.
+  M3's transport exit criteria pass; external LED-strip output and subjective
+  speaker silence after the latest Atom reset were not observed. Exact next
+  task is M4 semantic ICD/idempotency/status design in section 6.
 
 ### 2026-09-16 — M1 diagnostic implementation
 
