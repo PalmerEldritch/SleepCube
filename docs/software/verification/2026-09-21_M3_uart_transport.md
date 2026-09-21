@@ -97,3 +97,18 @@ still pending recapture.
 
 No on-target UART, malformed-frame, reset, link-loss, UI or listening result is
 claimed by this report yet. `AUD-ISS-001` is separate and remains open.
+
+## Waveshare download-mode attempt — 2026-09-21
+
+The user reported the Waveshare ready for flashing after the documented
+BOOT/RESET sequence. Immediately before the write, stable USB ID
+`AC:EB:E6:1E:67:C4` and `/dev/ttyACM0` were absent; only the Atom remained.
+`lsusb` showed one Espressif USB Serial/JTAG device. Kernel events showed the
+Waveshare disconnecting at USB path `3-4.1`, followed by an unsuccessful
+reenumeration (`device not accepting address`, error `-71`, and `unable to
+enumerate USB device`). **No Waveshare flash command was run and no Waveshare
+flash content was changed.** This is a USB enumeration interruption, not
+evidence of an M3 UART or firmware failure. Next safe action: ask the user to
+press Waveshare RESET once without unplugging either powered board, then
+reinspect the stable USB identity. Avoid unplugging one powered controller while
+its UART jumpers remain attached to the other.

@@ -11,8 +11,9 @@
 
 Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 framing,
 transport-only firmware and host builds/tests are ready. The Atom M3 image has
-been hash-verified on flash and its diagnostic task is running; Waveshare M3
-flash and physical UART verification remain pending.**
+been hash-verified on flash and its diagnostic task is running; the first
+Waveshare download-mode attempt lost USB enumeration (error `-71`) before any
+write. Physical UART verification remains pending.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -50,6 +51,12 @@ verification on 2026-09-21; after manual reset the user reported application
 start and its transport task logged periodic PINGs with expected missing PONGs
 while the Waveshare still runs old firmware. See
 `verification/2026-09-21_M3_uart_transport.md`.
+
+After the Waveshare BOOT/RESET operation, its previously enumerated USB device
+`AC:EB:E6:1E:67:C4` disappeared; the host logged failed re-enumeration with
+error `-71`. No Waveshare flash command was run or storage altered. The next
+hardware check is a Waveshare RESET press without unplugging either powered
+board, followed by a new USB identity check.
 
 Repository organization now reflects the two-controller architecture:
 
@@ -398,6 +405,14 @@ The following implementation choices remain intentionally open:
 - root cause and release disposition of `AUD-ISS-001`, including exact-mono
   reference audition and representative listening after any mitigation.
 
+Current M3 hardware-test interruption: the Waveshare USB Serial/JTAG endpoint
+failed to enumerate after BOOT/RESET (kernel error `-71`). This occurred before
+any Waveshare flash and does not implicate the M3 firmware. Do not guess a
+replacement serial port or hot-unplug one controller while its UART lines are
+connected to the powered other board. First try a Waveshare RESET press and
+recheck USB enumeration; if that fails, power down both boards before changing
+USB or jumper connections.
+
 ## 6. Next recommended task
 
 **Continue M3 with controlled two-controller target flashing and UART evidence.**
@@ -408,10 +423,12 @@ The exact next task is:
    header orientation before any flash/power-cycle step. Identify the Atom by
    stable USB serial ID `44:1B:F6:F4:FE:C8` (currently `/dev/ttyACM1`) and the
    Waveshare by `AC:EB:E6:1E:67:C4` (currently `/dev/ttyACM0`).
-2. Ask the user to put the Waveshare into download mode (hold BOOT, press and
-   release RESET, then release BOOT, per the [Waveshare board FAQ](https://docs.waveshare.com/ESP32-C6-Touch-LCD-1.47/FAQ)) and give
-   explicit go-ahead. Flash the M3 UI/light-safe image using stable USB ID
-   `AC:EB:E6:1E:67:C4`, then press RESET if it remains in download mode.
+2. Ask the user to press Waveshare RESET once without disconnecting the USB or
+   UART jumpers. Recheck whether stable USB ID `AC:EB:E6:1E:67:C4` reappears.
+   If it does, use the [Waveshare board FAQ](https://docs.waveshare.com/ESP32-C6-Touch-LCD-1.47/FAQ)
+   BOOT/RESET sequence again only if needed; obtain explicit flash go-ahead
+   before writing the M3 UI/light-safe image. If it does not, power down both
+   controllers before changing cables or jumpers and investigate the USB path.
 3. Capture a complete boot log from each controller and confirm silent Atom
    startup/card validation. Verify retained Waveshare UI/light function and
    repeated PING/PONG each way, including deliberate bad-CRC/truncated-frame
@@ -444,6 +461,10 @@ The exact next task is:
   the Waveshare remained on old firmware, but not a complete boot log.
 - Exact next task: prompt the user for Waveshare download mode and go-ahead,
   flash/monitor its M3 image, then complete the M3 hardware gate in section 6.
+- The user then entered Waveshare download mode and gave flash go-ahead, but
+  its USB endpoint disappeared and failed re-enumeration with kernel error
+  `-71`. No Waveshare flash command ran. The exact next action is a Waveshare
+  RESET press without unplugging either board, then a fresh USB identity check.
 
 ### 2026-09-16 — M1 diagnostic implementation
 

@@ -101,6 +101,7 @@ close the associated R00 requirements.
 | M3-UT-001 | Shared COBS/CRC parser and resynchronization host tests | PASS — maximum-payload round trip; bad COBS/version/length/CRC, incomplete/overlong frames, timeout and delimiter recovery | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-BLD-001 | Separate ESP32-S3 Audio and ESP32-C6 Control transport builds | PASS — both 8 MB USB-console builds; Control M3 defaults preserve UI/light and disable old local audio | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-FLS-001 | First M3 Atom flash/image identity | PASS — ESP32-S3 v0.2/8 MB identified; bootloader, partition table and application writes hash-verified; application started after manual reset and M3 PINGs logged; complete boot log pending | `verification/2026-09-21_M3_uart_transport.md` |
+| M3-FLS-002 | Waveshare M3 flash/image identity | INTERRUPTED — Waveshare USB disappeared after BOOT/RESET, then failed enumeration with kernel error `-71`; no flash command run | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-IT-001 | Physical bidirectional PING/PONG, malformed/truncated injection and post-error recovery | PENDING — Atom M3 task sends PINGs but receives no PONG from old Waveshare firmware; Waveshare M3 image not yet flashed | `verification/2026-09-21_M3_uart_transport.md` |
 
 Open developmental issue `AUD-ISS-001` is not a failure of the M3 UART gate.
