@@ -1,8 +1,8 @@
 # M3 UART transport bring-up — development record
 
 **Date:** 2026-09-21
-**Status:** Software/host gate passes; Atom image flashed, boot and two-controller
-hardware gate pending.
+**Status:** Software/host gate passes; both images flashed and bidirectional
+PING/PONG verified; M3 fault/reset/link-loss gate pending.
 
 ## Scope and configuration
 
@@ -18,7 +18,7 @@ USB enumeration on this date showed two Espressif USB Serial/JTAG devices:
 | Stable USB serial ID suffix | Current path | Identification |
 | --- | --- | --- |
 | `44:1B:F6:F4:FE:C8` | `/dev/ttyACM1` | AtomS3 Lite, matched to prior M1 target record |
-| `AC:EB:E6:1E:67:C4` | `/dev/ttyACM0` | Waveshare, by exclusion; verify before flashing |
+| `AC:EB:E6:1E:67:C4` | `/dev/ttyACM0` | Waveshare, confirmed by ESP32-C6FH8 chip identification during flash |
 
 The user confirmed the jumper connections after the build preparation. Their
 orientation, absence of a 5 V bridge, and electrical operation have **not**
@@ -95,8 +95,9 @@ The monitor caught only a partial application identity line, so a complete
 post-reset boot log, silent-start confirmation and card/content validation are
 still pending recapture.
 
-No on-target UART, malformed-frame, reset, link-loss, UI or listening result is
-claimed by this report yet. `AUD-ISS-001` is separate and remains open.
+At this stage, before the Waveshare flash, no on-target UART, malformed-frame,
+reset, link-loss, UI or listening result was claimed. Later evidence follows.
+`AUD-ISS-001` is separate and remains open.
 
 ## Waveshare download-mode attempt — 2026-09-21
 
@@ -112,3 +113,27 @@ evidence of an M3 UART or firmware failure. Next safe action: ask the user to
 press Waveshare RESET once without unplugging either powered board, then
 reinspect the stable USB identity. Avoid unplugging one powered controller while
 its UART jumpers remain attached to the other.
+
+## Waveshare flash and first bidirectional link — 2026-09-21
+
+The user pressed Waveshare RESET without disconnecting cables. Stable USB ID
+`AC:EB:E6:1E:67:C4` returned as `/dev/ttyACM0`. The previously authorized M3
+Control flash then succeeded through that stable path using ESP-IDF's automatic
+reset. `esptool` identified ESP32-C6FH8 revision v0.2 with embedded 8 MB
+flash. Bootloader, partition table and 595,200-byte application writes all
+passed hash verification. The image was built from source commit `86d8e3e`;
+its SHA-256 was
+`5efe50d8adb9790242e37985d68eaf2850d273f0c877ac9cecc9ae90b680afcd`.
+The flash command did not write the Control storage partition.
+
+No-reset USB monitors then captured repeated valid traffic in both directions:
+the Atom matched PONGs through `total=21` (including `seq=32956`) and echoed
+Control PINGs; the Waveshare matched through `total=21` (including `seq=22`)
+and echoed Atom PINGs. Matching responses arrived approximately 30 ms after
+their logged PINGs in representative samples. No timeout, parser rejection,
+panic or reboot appeared in these captured intervals. This directly verifies
+the crossed UART path and basic bidirectional framing. The monitors attached
+after each board's one-time malformed/truncated probes, so their injection and
+post-error recovery are still **unverified on target**. Full boot logs, visual
+UI/lighting continuity, independent reset and link-loss tests also remain
+pending. M3 has not passed its complete exit gate.

@@ -137,10 +137,12 @@ old firmware. Electrical transfer, malformed-frame containment
 on target, and UI/light coexistence remain unverified. See
 `verification/2026-09-21_M3_uart_transport.md`.
 
-The first Waveshare download-mode attempt did not reach flashing: its USB
-Serial/JTAG device disappeared and failed to re-enumerate (kernel error `-71`).
-No Waveshare image was written. M3 hardware validation is paused until the USB
-port returns; this is not yet an M3 firmware or UART failure.
+The first Waveshare download-mode attempt lost USB enumeration (kernel error
+`-71`) before any write. A subsequent RESET restored its stable USB identity;
+the M3 UI/light-safe image then flashed with hash verification. Both boards
+have now exchanged and matched at least 21 diagnostic PING/PONGs each. The
+one-time malformed/truncated probes, full boot logs, UI/light continuity and
+reset/link-loss gates remain pending; M3 is not complete.
 
 Deliverables:
 

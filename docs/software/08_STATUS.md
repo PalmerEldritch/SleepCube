@@ -11,9 +11,9 @@
 
 Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 framing,
 transport-only firmware and host builds/tests are ready. The Atom M3 image has
-been hash-verified on flash and its diagnostic task is running; the first
-Waveshare download-mode attempt lost USB enumeration (error `-71`) before any
-write. Physical UART verification remains pending.**
+been hash-verified on flash and its diagnostic task is running. The Waveshare
+also flashed after RESET restored USB enumeration. Basic bidirectional UART
+PING/PONG passes; malformed-frame, reset and link-loss gates remain pending.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -45,18 +45,19 @@ GPIO1 TX to Waveshare GPIO17 RX, and common ground with no 5 V inter-controller
 connection. ADR-0007 specifies bounded COBS/CRC-16 framing. Both firmwares now
 build with a shared codec and a UART1 diagnostic PING/PONG task. The user
 confirmed the jumpers are connected and both boards have separate USB power,
-but the hookup and link have not been electrically verified. M3 images have not
-yet been integration-verified. The Atom M3 image was flashed with hash
-verification on 2026-09-21; after manual reset the user reported application
-start and its transport task logged periodic PINGs with expected missing PONGs
-while the Waveshare still runs old firmware. See
+and bidirectional UART communication has now been verified by matched PONGs.
+The no-5-V hookup has not been independently inspected. Both M3 images flashed
+with hash verification on 2026-09-21. The Atom's initial transport task logged
+expected missing PONGs while the Waveshare still ran old firmware; after the
+Waveshare flash, both sides matched at least 21 responses. See
 `verification/2026-09-21_M3_uart_transport.md`.
 
 After the Waveshare BOOT/RESET operation, its previously enumerated USB device
 `AC:EB:E6:1E:67:C4` disappeared; the host logged failed re-enumeration with
-error `-71`. No Waveshare flash command was run or storage altered. The next
-hardware check is a Waveshare RESET press without unplugging either powered
-board, followed by a new USB identity check.
+error `-71`. No flash command was run at that point. The user's subsequent
+RESET restored the stable USB identity, and the M3 Control image then flashed
+with all write hashes verified. Both boards now exchange and match diagnostic
+PING/PONG. The Control storage partition was not flashed.
 
 Repository organization now reflects the two-controller architecture:
 
@@ -330,6 +331,13 @@ Verified for M3 software preparation on 2026-09-21:
   startup. A no-reset monitor caught periodic M3 PINGs and missing PONGs as
   expected with the unflashed Waveshare; the complete boot log and silent/card
   validation still need recapture.
+- after RESET recovered its USB port, the Waveshare M3 image from source commit
+  `86d8e3e` flashed to ESP32-C6FH8 v0.2/8 MB with verified bootloader,
+  partition table and application hashes;
+- independent no-reset USB monitors captured at least 21 matched PONGs and
+  peer PING echoes on each board. Basic crossed-pin bidirectional UART transfer
+  works; the deliberately malformed/truncated probes occurred before capture
+  and have not been directly verified on target.
 
 Not yet verified for the new architecture:
 
@@ -398,42 +406,34 @@ source content was required by the SleepCube build.
 
 The following implementation choices remain intentionally open:
 
-- electrical verification of the frozen UART mapping (Waveshare GPIO16/GPIO17
-  and Atom GPIO2/GPIO1) and no cross-board power rail;
+- independent physical inspection of the no-cross-board-power-rail hookup;
 - M4 state-changing-command idempotency, retry, timeout and link-session rules;
 - final product tuning of the provisional M2 volume law and fade timing;
 - root cause and release disposition of `AUD-ISS-001`, including exact-mono
   reference audition and representative listening after any mitigation.
 
-Current M3 hardware-test interruption: the Waveshare USB Serial/JTAG endpoint
-failed to enumerate after BOOT/RESET (kernel error `-71`). This occurred before
-any Waveshare flash and does not implicate the M3 firmware. Do not guess a
-replacement serial port or hot-unplug one controller while its UART lines are
-connected to the powered other board. First try a Waveshare RESET press and
-recheck USB enumeration; if that fails, power down both boards before changing
-USB or jumper connections.
+Observed M3 setup issue: the Waveshare USB Serial/JTAG endpoint failed to
+enumerate after manual BOOT/RESET (kernel error `-71`), then returned after a
+plain RESET. The ESP-IDF automatic-reset flash succeeded. This did not indicate
+an M3 UART or firmware failure, but boot/download-mode handling should be
+watched in future flashes. Do not hot-unplug one controller while its UART
+lines are connected to the powered other board.
 
 ## 6. Next recommended task
 
-**Continue M3 with controlled two-controller target flashing and UART evidence.**
+**Continue M3 with fault-probe, boot, UI/light and reset/link-loss evidence.**
 
 The exact next task is:
 
-1. Confirm the Grove red 5 V contact is insulated/unconnected and check the
-   header orientation before any flash/power-cycle step. Identify the Atom by
-   stable USB serial ID `44:1B:F6:F4:FE:C8` (currently `/dev/ttyACM1`) and the
-   Waveshare by `AC:EB:E6:1E:67:C4` (currently `/dev/ttyACM0`).
-2. Ask the user to press Waveshare RESET once without disconnecting the USB or
-   UART jumpers. Recheck whether stable USB ID `AC:EB:E6:1E:67:C4` reappears.
-   If it does, use the [Waveshare board FAQ](https://docs.waveshare.com/ESP32-C6-Touch-LCD-1.47/FAQ)
-   BOOT/RESET sequence again only if needed; obtain explicit flash go-ahead
-   before writing the M3 UI/light-safe image. If it does not, power down both
-   controllers before changing cables or jumpers and investigate the USB path.
-3. Capture a complete boot log from each controller and confirm silent Atom
-   startup/card validation. Verify retained Waveshare UI/light function and
-   repeated PING/PONG each way, including deliberate bad-CRC/truncated-frame
-   rejection and subsequent recovery.
-4. Test independent resets, both boot orders and brief link loss/reconnection;
+1. Ask the user to confirm that the Waveshare screen and external lighting
+   still behave normally, and that the Atom remains silent while stopped.
+2. With monitors attached, perform a user-triggered reset of each controller
+   separately. Capture complete boot/application logs, including card/content
+   validation, and both boards' one-time bad-CRC/truncated-frame rejection plus
+   subsequent matched PONG recovery. Keep the UART jumpers connected.
+3. Verify both boot orders and a brief link-loss/reconnection safely; power
+   both boards down before physically changing UART jumpers if necessary.
+4. Confirm no panic/watchdog/reboot and retained UI/light function, then
    record exact logs/counts in the M3 report. Do not begin M4 until the M3
    physical gate passes or a blocker is documented.
 
@@ -465,6 +465,13 @@ The exact next task is:
   its USB endpoint disappeared and failed re-enumeration with kernel error
   `-71`. No Waveshare flash command ran. The exact next action is a Waveshare
   RESET press without unplugging either board, then a fresh USB identity check.
+- After user RESET, the Waveshare stable USB endpoint returned. Its M3 image
+  flashed with verified ESP32-C6FH8 v0.2/8 MB identity and all write hashes.
+  Both no-reset monitors captured at least 21 matched PONGs per controller
+  and peer PING echoes. Invalid-frame probes ran before monitoring and are
+  not yet direct on-target evidence; nor are complete boot logs, UI/light
+  continuity or reset/link-loss behavior. The exact next task is the four-step
+  hardware evidence sequence in section 6.
 
 ### 2026-09-16 — M1 diagnostic implementation
 
