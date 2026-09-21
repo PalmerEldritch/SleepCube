@@ -342,6 +342,11 @@ Verified for M3 software preparation on 2026-09-21:
   No external LED strip is connected, so external-light behavior is not
   verified. Later monitor counters reached at least 118 on both boards but did
   not show a user-triggered reset or fault-probe sequence.
+- a later independent Waveshare RESET was captured: the Control diagnostic
+  sequence restarted at 1, both boards resumed matched PONGs, and the
+  still-running Atom rejected Control's bad-CRC and time-expired partial
+  probes before matching subsequent valid replies. No Atom panic/reboot was
+  observed. The reciprocal Audio → Control probes remain unverified.
 
 Not yet verified for the new architecture:
 
@@ -431,10 +436,11 @@ The exact next task is:
 
 1. Ask the user to confirm that the Waveshare screen and external lighting
    still behave normally, and that the Atom remains silent while stopped.
-2. With monitors attached, perform a user-triggered reset of each controller
-   separately. Capture complete boot/application logs, including card/content
-   validation, and both boards' one-time bad-CRC/truncated-frame rejection plus
-   subsequent matched PONG recovery. Keep the UART jumpers connected.
+2. With both monitors attached, ask the user to reset the Atom once while
+   keeping the Waveshare running. Capture its complete boot/application log,
+   including card/content validation. Verify Audio → Control bad-CRC/truncated
+   probe rejection and subsequent matched PONG recovery. Keep UART jumpers
+   connected. The reciprocal Control → Audio direction already passed.
 3. Verify both boot orders and a brief link-loss/reconnection safely; power
    both boards down before physically changing UART jumpers if necessary.
 4. Confirm no panic/watchdog/reboot and retained UI/light function, then
@@ -481,6 +487,11 @@ The exact next task is:
   reset. Ask explicitly for a Waveshare RESET press while monitoring, then
   capture the startup and fault probes; do not infer a reset from the visual
   report.
+- The user then pressed Waveshare RESET. Its diagnostic sequence restarted,
+  the Atom remained up, and transport recovered. Waveshare's deliberate bad-CRC
+  and timed-out partial probes were rejected by the Atom; subsequent PONGs
+  matched. The exact next task is an independent Atom reset with both monitors
+  attached, to verify the reciprocal probes and full Audio boot/card log.
 
 ### 2026-09-16 — M1 diagnostic implementation
 

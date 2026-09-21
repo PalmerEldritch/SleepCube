@@ -145,3 +145,24 @@ capture continued to show increasing matched-PONG counters (at least 118 on
 the Waveshare and 118 on the Atom) without a visible Waveshare reset/startup
 sequence. Treat the visual report as UI observation only, not reset or
 fault-probe evidence.
+
+## Independent Waveshare reset and Control → Audio fault probes
+
+With both no-reset monitors attached, the user pressed Waveshare RESET. Its
+USB monitor saw a disconnect and reconnect; the Control diagnostic sequence
+restarted at `seq=1`, matched PONGs through at least `seq=17`, and echoed Atom
+PINGs. The Atom remained running. It logged a small number of missing PONGs
+during the reboot, then resumed matching valid replies (for example
+`seq=33100 total=163` and later `seq=33115 total=177`). No reboot, panic or
+watchdog appeared on the Atom.
+
+After three post-reset matches, the Waveshare logged `malformed CRC and partial
+probes sent` and `truncated probe tail sent result=ESP_OK`. The Atom logged a
+bad-CRC rejection (`reason=5`), `truncated frame discarded`, and a malformed
+COBS rejection of the discarded tail (`reason=2`); valid traffic then resumed.
+`reason=5` is `SC_FRAME_BAD_CRC` and `reason=2` is `SC_FRAME_BAD_COBS` in the
+shared parser. This verifies Control → Audio malformed/truncated containment
+and recovery on target. The Control USB monitor reattached after its earliest
+startup lines, so a complete Control boot log was not captured. The Audio →
+Control fault-probe direction still requires an Atom reset with both monitors
+attached.

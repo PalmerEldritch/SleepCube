@@ -145,6 +145,10 @@ one-time malformed/truncated probes, full boot logs, UI/light continuity and
 reset/link-loss gates remain pending; M3 is not complete.
 The user has reported the Waveshare screen normal with M3 active. External
 lighting remains unverified because no LED strip is connected.
+An independent Waveshare reset has since passed transport recovery; its
+bad-CRC and truncated probes were rejected by the still-running Atom and
+subsequent PONGs matched. The reciprocal Audio → Control probe direction,
+independent Atom reset and link-loss gate remain pending.
 
 Deliverables:
 
