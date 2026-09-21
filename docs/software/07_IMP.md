@@ -90,7 +90,11 @@ Waveshare-local path at approximately 30 cm. A faint signal-correlated hiss/buzz
 remains noticeable at approximately 10 cm. Active digital silence is quiet, a
 controlled 4 kHz low-pass comparison did not change the observation, and a
 50%/100% comparison did not identify digital gain quantization as the primary
-cause. This is tracked as non-blocking final-product audio tuning; see
+cause. Subsequent user listening found the noise on the supplied 1 W/8 ohm
+speaker and another small 3 W/4 ohm speaker as well; it is not specific to the
+TEBM. This is tracked as open issue `AUD-ISS-001`, non-blocking for M3 but
+requiring explicit R00 disposition. See
+`issues/AUD-ISS-001-playback-noise.md` and
 `verification/2026-09-18_TEBM_music_followup.md`.
 
 Deliverables:
@@ -229,12 +233,16 @@ Deliverables:
 - link disconnect/reconnect test;
 - power-cycle persistence tests;
 - latency/timing evidence;
+- explicit `AUD-ISS-001` audio-noise disposition supported by representative
+  intended-track listening, whether fixed/mitigated or accepted as a limitation;
 - release candidate build instructions.
 
 Exit criteria:
 
 - all non-deferred SRS/ICD requirements pass;
-- no unresolved R00-critical TBDs.
+- no unresolved R00-critical TBDs;
+- `AUD-ISS-001` has an evidence-backed release disposition and is not silently
+  treated as closed by UART or validation-tone success.
 
 ### M9 — R00 release
 
@@ -283,5 +291,7 @@ the jumper cables:
    frame handling before first two-controller UART validation.
 
 Keep PLAY/STOP/volume semantics and UI integration in M4. The close-field music
-noise recorded in `verification/2026-09-18_TEBM_music_followup.md` is a later
-audio-tuning follow-up and does not block M3.
+noise tracked in `issues/AUD-ISS-001-playback-noise.md` is a later audio-tuning
+follow-up and does not block M3. Its next diagnostic is an audition of the exact
+hash-matched canonical mono WAV on a known-clean reference output. It must be
+fixed, mitigated or explicitly accepted with evidence before R00 release.

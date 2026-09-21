@@ -24,6 +24,7 @@ The physical enclosure, production hardware design, regulatory compliance, acous
 | `07_IMP.md` | Implementation milestones and release gates | Process baseline |
 | `08_STATUS.md` | Authoritative current development state and session-to-session handoff | Process record |
 | `adr/*` | Architecture decision records | Normative for accepted decisions |
+| `issues/*` | Tracked unresolved defects/risks, follow-up tests and disposition criteria | Development record |
 
 If documents conflict, accepted ADRs and the SRS/SAS/ICD take precedence over historical prototype documentation.
 

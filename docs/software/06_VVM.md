@@ -97,7 +97,13 @@ close the associated R00 requirements.
 | M2-MAN-001 | Stored-audio noise, distortion, loop-boundary and transition assessment on supplied 1 W/8 ohm speaker | PASS — no persistent stopped-state noise, distortion, loop artifact, click or pop; manual and timeout fades clean using laptop USB power, with endurance listening at approximately 30 cm | `verification/2026-09-16_M2_standalone_audio.md` |
 | M2-END-001 | Separate finite 60-minute Audio Controller endurance run | PASS — 60 loops, 158,761,472 frames / 635,045,888 bytes, finite timeout to `STOPPED`, no logged stream/runtime fault and no reported audible artifact | `verification/2026-09-16_M2_standalone_audio.md` |
 | M2-FI-001 | Representative missing-storage and unsupported-content startup faults | PASS — absent card produced actionable `ESP_ERR_TIMEOUT`; valid 8-bit WAV produced actionable `ESP_ERR_NOT_SUPPORTED`; both disabled playback and remained silent | `verification/2026-09-16_M2_standalone_audio.md` |
-| M2-FUP-001 | 10 W/4 ohm TEBM compatibility and intended sleep-music follow-up | PASS WITH OBSERVATION — clean TEBM tone playback at 25%/50% and materially improved music at approximately 30 cm; no click, pop, dropout or overdrive. Faint signal-correlated noise remains noticeable at approximately 10 cm and is retained as a non-blocking tuning issue | `verification/2026-09-18_TEBM_music_followup.md` |
+| M2-FUP-001 | 10 W/4 ohm TEBM compatibility and intended sleep-music follow-up | PASS WITH OPEN ISSUE `AUD-ISS-001` — clean TEBM tone playback at 25%/50% and materially improved music at approximately 30 cm; no click, pop, dropout or overdrive. Signal-correlated noise was later reported on three different speakers and remains unresolved | `verification/2026-09-18_TEBM_music_followup.md`, `issues/AUD-ISS-001-playback-noise.md` |
+
+Open developmental issue `AUD-ISS-001` is not a failure of the M3 UART gate.
+It is not closed by the M2 validation-tone/PCM results or by successful
+two-controller transport tests. Before R00 release, record either a verified
+fix/mitigation or an explicit accepted limitation supported by representative
+sleep-music listening; see `issues/AUD-ISS-001-playback-noise.md`.
 
 M1-BLD-001 is structural evidence toward SRS-SYS-001/SRS-SYS-003 only. It does
 not verify storage, decoding, product fades, session timing or the 60-minute
@@ -115,4 +121,5 @@ Software R00 shall not be released until:
 2. all accepted ICD requirements have passing protocol/integration evidence;
 3. the 60-minute audio endurance run passes;
 4. controller-reset/link-loss fault injection passes;
-5. the active document set contains no unresolved TBD that affects required R00 external behaviour or safety/fault containment.
+5. the active document set contains no unresolved TBD that affects required R00 external behaviour or safety/fault containment;
+6. `AUD-ISS-001` has an explicit evidence-backed disposition (verified fix/mitigation or accepted limitation), rather than being silently treated as closed by transport or validation-tone success.

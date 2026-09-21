@@ -1,7 +1,7 @@
 # SleepCube Software Development Status
 
 **Baseline:** R00 (draft)  
-**Last updated:** 2026-09-18
+**Last updated:** 2026-09-21
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
@@ -34,8 +34,9 @@ the normal image is the final deployed firmware. A post-M2 follow-up also
 confirms clean electrical operation with the 10 W/4 ohm TEBM speaker and
 materially improved sleep-music quality at the intended approximately 30 cm
 listening distance. The active card content is now the full converted
-Interstellar mono track. A faint signal-correlated close-field noise remains a
-non-blocking tuning issue.
+Interstellar mono track. A signal-correlated music-playback noise is now tracked
+as open issue `AUD-ISS-001`: it was heard on three different speakers, remains
+non-blocking for M3, and needs explicit R00 disposition.
 
 M3 has an initial pin-use inventory and a conflict-free wiring candidate:
 Waveshare GPIO16 TX to Atom GPIO2 RX, Atom GPIO1 TX to Waveshare GPIO17 RX, and
@@ -126,8 +127,8 @@ silent `STOPPED` without a logged stream/runtime fault or reported audible
 artifact. Representative absent-card and unsupported-WAV faults remained silent
 with actionable diagnostics. The normal image was restored and regressed.
 
-Post-M2 speaker/music follow-up status: **PASS WITH OBSERVATION.** The
-TEBM28C10-4/A 10 W/4 ohm speaker produced clean low-frequency validation content
+Post-M2 speaker/music follow-up status: **PASS WITH OPEN ISSUE `AUD-ISS-001`.**
+The TEBM28C10-4/A 10 W/4 ohm speaker produced clean low-frequency validation content
 at 25% and 50%, with no distortion or detected warmth. The full Interstellar
 mono test asset was clear, fuller and not overdriven at approximately 30 cm,
 with no click, pop or dropout. A faint hiss/buzz-like component was noticeable
@@ -136,6 +137,13 @@ silence was quiet; a 4 kHz low-pass A/B and 50%/100% gain comparison did not
 isolate it to high-frequency speaker response or primarily to digital gain
 quantization. See
 `docs/software/verification/2026-09-18_TEBM_music_followup.md`.
+
+On 2026-09-21 the user also heard the noise with the supplied 1 W/8 ohm speaker
+and another small 3 W/4 ohm speaker, making a TEBM-only defect unlikely. A
+headphone-jack attempt produced severe high-pitched noise and is not a valid
+reference test because that jack shares the NS4168 differential Class-D output.
+Do not repeat it with those headphones. Detailed open issue and safe follow-up:
+`docs/software/issues/AUD-ISS-001-playback-noise.md`.
 
 Planned ownership:
 
@@ -266,6 +274,10 @@ Verified in the 2026-09-18 post-M2 TEBM/music follow-up:
 - active digital silence was quiet, a controlled 4 kHz low-pass comparison did
   not change the noise, and increasing firmware volume from 50% to 100% did not
   materially improve its ratio to the music;
+- subsequent user listening found the noise on the TEBM, supplied 1 W/8 ohm
+  speaker and another small 3 W/4 ohm speaker; the two smaller speakers made
+  the noise more prominent relative to the music. This is subjective evidence,
+  not a matched-level or logged comparison;
 - the full music asset and retained diagnostic/M2 assets were hash-verified on
   the card, volume was restored to persisted 50%, and the card was safely
   unmounted. Full evidence is in
@@ -304,16 +316,22 @@ Key ownership rule:
 ## 5. Known issues / blockers
 
 No architectural blocker is currently known. The M1 hardware/audio-quality risk
-is closed for generated-tone and stored-PCM playback on the supplied 1 W/8 Ω
-reference speaker.
+is closed for generated-tone and M2 validation-PCM playback on the supplied
+1 W/8 Ω reference speaker; this does not close the sleep-music issue below.
 The initial MSB-mono distortion was resolved by standard Philips-I2S stereo with
 duplicated channels. The TEBM 10 W/4 Ω speaker is now demonstrated compatible
 at the tested levels and substantially improves the intended music relative to
-the original path. A faint signal-correlated hiss/buzz remains noticeable at
-approximately 10 cm. It is not present during active digital silence and was not
-changed by removing content above 4 kHz or by a 12 dB digital-gain comparison.
-Its source remains unresolved; reference audition of the exact mono asset is the
-next audio diagnostic. This does not block M3. The available 1 GB FAT16 card has
+the original path. Open issue `AUD-ISS-001` records a signal-correlated hiss/buzz
+that was also heard with the supplied 1 W/8 Ω speaker and another small 3 W/4 Ω
+speaker. With the TEBM it was noticeable at approximately 10 cm. It is not
+present during active digital silence and was not changed by removing content
+above 4 kHz or by a 12 dB digital-gain comparison. A headphone-jack comparison
+was invalid because the jack directly shares the filterless differential
+Class-D output; severe high-pitched noise occurred and that test should not be
+repeated with those headphones. The exact mono asset has not yet been confirmed
+clean or noisy on a known-clean reference output. The root cause is unresolved;
+the issue does not block M3 but requires an explicit fix, mitigation or accepted
+limitation before R00 release. The available 1 GB FAT16 card has
 enough capacity for the selected PCM policy; FAT mount compatibility and
 fixed-low-CS operation pass on the intended hardware.
 
@@ -334,8 +352,8 @@ The following implementation choices remain intentionally open:
   (Waveshare GPIO16/GPIO17 and Atom GPIO2/GPIO1);
 - protocol framing, integrity and idempotency strategy;
 - final product tuning of the provisional M2 volume law and fade timing;
-- root cause and acceptance threshold for the close-field, signal-correlated
-  sleep-music noise.
+- root cause and release disposition of `AUD-ISS-001`, including exact-mono
+  reference audition and representative listening after any mitigation.
 
 ## 6. Next recommended task
 
@@ -484,6 +502,27 @@ The exact next task is:
 - Exact next task: freeze the M3 electrical contract and protocol framing ADR,
   update the SAS/ICD, then implement the parser/serializer harness while awaiting
   the physical cables.
+
+### 2026-09-21 — Audio-noise issue registration
+
+- User compared the Interstellar track through the TEBM 10 W/4 ohm, supplied
+  1 W/8 ohm, and another small 3 W/4 ohm speaker. The noise was present with all
+  three and more prominent relative to music on the two smaller speakers; the
+  TEBM retained the best overall sound. Exact conditions for the two additional
+  speaker swaps were not recorded, and no new serial capture was made.
+- Headphones in the Speaker Base's 3.5 mm jack produced severe high-pitched
+  noise with music nearly obscured. The jack shares the NS4168 differential
+  Class-D speaker output, so this was not an independent reference path. Do not
+  repeat that test with those headphones. No damage was established.
+- Created open issue `AUD-ISS-001` with reproduction context, evidence,
+  exclusions, safe next diagnostics and an explicit R00 disposition requirement.
+  Updated the follow-up verification record, VVM and implementation plan so
+  successful M3 work cannot silently close the audio issue.
+- No firmware, architecture or ICD contract changed; M3 remains in preparation.
+- Exact next M3 task remains the physical/framing design freeze in section 6.
+  The separate audio follow-up is to audition the exact hash-matched canonical
+  mono WAV on a known-clean reference output, then select targeted diagnostics
+  from `docs/software/issues/AUD-ISS-001-playback-noise.md`.
 
 ### Ongoing closeout requirement
 

@@ -162,3 +162,23 @@ the Speaker Base output with the same passage and investigate content-dependent
 amplifier/I2S behaviour and higher-precision gain/output options. Do not apply a
 blanket low-pass filter: the controlled 4 kHz comparison did not improve the
 observed noise.
+
+## 9. 2026-09-21 speaker-swap and headphone-test addendum
+
+The user repeated the Interstellar listening check with the supplied 1 W/8 ohm
+Speaker Base speaker and a different small 3 W/4 ohm speaker. The same kind of
+noise was heard on both, more prominently relative to the music than with the
+larger TEBM. The TEBM still had the best overall sound quality. This makes a
+TEBM-specific fault or its connector unlikely to be the sole cause. The later
+speaker swaps were subjective checks; their exact volume, distance and serial
+logs were not recorded.
+
+A separate attempt to use headphones in the Speaker Base's 3.5 mm jack produced
+very high-pitched noise and almost obscured the music. That test is invalid as a
+speaker-path reference: the jack is connected to the same unfiltered differential
+NS4168 Class-D output as `SPK`. It should not be repeated with those headphones.
+The result does not identify the cause of the subtler speaker-playback noise.
+
+The unresolved issue is tracked as `AUD-ISS-001` in
+`docs/software/issues/AUD-ISS-001-playback-noise.md`; it remains non-blocking
+for M3 but requires an explicit disposition before R00 release.
