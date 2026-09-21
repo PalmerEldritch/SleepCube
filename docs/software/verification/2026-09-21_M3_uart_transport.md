@@ -137,3 +137,11 @@ after each board's one-time malformed/truncated probes, so their injection and
 post-error recovery are still **unverified on target**. Full boot logs, visual
 UI/lighting continuity, independent reset and link-loss tests also remain
 pending. M3 has not passed its complete exit gate.
+
+The user subsequently reported the Waveshare screen behavior normal with both
+M3 images running. No external LED strip is connected, so external-light
+output and its continuity are **not verified**. The contemporaneous monitor
+capture continued to show increasing matched-PONG counters (at least 118 on
+the Waveshare and 118 on the Atom) without a visible Waveshare reset/startup
+sequence. Treat the visual report as UI observation only, not reset or
+fault-probe evidence.

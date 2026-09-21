@@ -103,6 +103,7 @@ close the associated R00 requirements.
 | M3-FLS-001 | First M3 Atom flash/image identity | PASS — ESP32-S3 v0.2/8 MB identified; bootloader, partition table and application writes hash-verified; application started after manual reset and M3 PINGs logged; complete boot log pending | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-FLS-002 | Waveshare M3 flash/image identity | PASS after RESET restored USB enumeration — ESP32-C6FH8 v0.2/8 MB identified; bootloader, partition table and 595,200-byte application writes hash-verified | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-IT-001 | Physical bidirectional PING/PONG, malformed/truncated injection and post-error recovery | PARTIAL — Atom and Waveshare each matched at least 21 PONGs and echoed peer PINGs; one-time invalid-frame probes occurred before monitoring and remain unverified on target | `verification/2026-09-21_M3_uart_transport.md` |
+| M3-MAN-001 | Retained Waveshare UI and external-light observation with M3 transport active | PARTIAL — user reports screen normal; no external LED strip connected, so external-light behavior unverified | `verification/2026-09-21_M3_uart_transport.md` |
 
 Open developmental issue `AUD-ISS-001` is not a failure of the M3 UART gate.
 It is not closed by the M2 validation-tone/PCM results or by successful

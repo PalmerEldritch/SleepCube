@@ -143,6 +143,8 @@ the M3 UI/light-safe image then flashed with hash verification. Both boards
 have now exchanged and matched at least 21 diagnostic PING/PONGs each. The
 one-time malformed/truncated probes, full boot logs, UI/light continuity and
 reset/link-loss gates remain pending; M3 is not complete.
+The user has reported the Waveshare screen normal with M3 active. External
+lighting remains unverified because no LED strip is connected.
 
 Deliverables:
 

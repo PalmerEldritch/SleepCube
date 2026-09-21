@@ -338,6 +338,10 @@ Verified for M3 software preparation on 2026-09-21:
   peer PING echoes on each board. Basic crossed-pin bidirectional UART transfer
   works; the deliberately malformed/truncated probes occurred before capture
   and have not been directly verified on target.
+- the user reported the Waveshare screen normal while M3 transport was active.
+  No external LED strip is connected, so external-light behavior is not
+  verified. Later monitor counters reached at least 118 on both boards but did
+  not show a user-triggered reset or fault-probe sequence.
 
 Not yet verified for the new architecture:
 
@@ -472,6 +476,11 @@ The exact next task is:
   not yet direct on-target evidence; nor are complete boot logs, UI/light
   continuity or reset/link-loss behavior. The exact next task is the four-step
   hardware evidence sequence in section 6.
+- The user reported the Waveshare screen normal, but no external LED strip is
+  connected. The active monitors showed continued PONG matches, not a fresh
+  reset. Ask explicitly for a Waveshare RESET press while monitoring, then
+  capture the startup and fault probes; do not infer a reset from the visual
+  report.
 
 ### 2026-09-16 — M1 diagnostic implementation
 
