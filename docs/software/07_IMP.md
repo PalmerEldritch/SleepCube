@@ -139,9 +139,9 @@ external LED strip is connected, so physical light continuity is unverified.
 A sustained peer-unavailable test also passed: while Waveshare RESET was held,
 the Atom logged nine missed PONG rounds without panic/reboot, then resumed
 matches after Control restarted. The physical UART jumpers were not removed.
-M3's bidirectional-transfer and malformed-data exit criteria pass. Physical
-external-strip behavior and subjective speaker silence after the latest Atom
-reset remain unverified and are carried forward rather than claimed as passes.
+M3's bidirectional-transfer and malformed-data exit criteria pass. The user
+later confirmed speaker(s) stayed silent after the Atom reset. Physical
+external-strip behavior remains unverified and is carried forward.
 The first Waveshare BOOT/RESET attempt caused a recoverable USB enumeration
 error `-71`; a plain RESET restored it before flashing. See
 `verification/2026-09-21_M3_uart_transport.md`.

@@ -59,7 +59,8 @@ and resumed matches after Waveshare restart. These are M3 transport-only
 results, not M4 PLAY/STOP/volume or release-level UI/light evidence.
 The latest Atom boot reported `STOPPED` with persisted volume 100%; M3 never
 issued PLAY, but a future local button PLAY would use that saved level unless
-changed. No external LED strip is connected.
+changed. The user later confirmed that the connected speaker(s) stayed silent
+after reset. No external LED strip is connected.
 
 After the Waveshare BOOT/RESET operation, its previously enumerated USB device
 `AC:EB:E6:1E:67:C4` disappeared; the host logged failed re-enumeration with
@@ -361,8 +362,8 @@ Verified for M3 software preparation on 2026-09-21:
   identity/configuration, valid card/content, auto-clear I2S and silent
   `STOPPED`/`READY` logs. The still-running Waveshare rejected the Atom's
   bad-CRC and truncated probes, then matched subsequent valid PONGs. No
-  Control panic/reboot was observed. Atom restored persisted volume 100%; no
-  separate subjective speaker-silence report was received in that turn.
+  Control panic/reboot was observed. Atom restored persisted volume 100%. The
+  user later confirmed the connected speaker(s) stayed silent after reset.
 - during a sustained Waveshare RESET hold, the Atom logged nine missed PONG
   rounds, rejected malformed restart bytes, did not panic/reboot, and resumed
   matched replies. Control reinitialized its display and matched replies after
@@ -464,9 +465,8 @@ The exact next task is:
 3. Extend the existing single UART transport/parser task rather than opening
    a second driver; add host protocol tests before enabling remote PLAY/STOP/
    SET_VOLUME on the Atom. Keep the Control UI/light tasks nonblocking.
-4. Carry forward external LED-strip continuity, subjective post-reset speaker
-   silence and `AUD-ISS-001` as open evidence items; do not claim them from
-   M3 PING/PONG success.
+4. Carry forward external LED-strip continuity and `AUD-ISS-001` as open
+   evidence items; do not claim them from M3 PING/PONG or silent-reset success.
 
 ## 7. Session closeout record
 
@@ -524,9 +524,12 @@ The exact next task is:
   missed PONG rounds and rejected malformed restart bytes without panic or
   reboot, then resumed matches after Control restarted. The Control log showed
   display initialization and resumed PONG matches. No jumper was removed.
-  M3's transport exit criteria pass; external LED-strip output and subjective
-  speaker silence after the latest Atom reset were not observed. Exact next
-  task is M4 semantic ICD/idempotency/status design in section 6.
+  M3's transport exit criteria pass; external LED-strip output was not
+  observed. Exact next task is M4 semantic ICD/idempotency/status design in
+  section 6.
+- In a follow-up clarification, the user confirmed the connected speaker(s)
+  were silent after the Atom reset. This closes the M3 subjective silent-start
+  observation only; `AUD-ISS-001` and external LED-strip validation remain open.
 
 ### 2026-09-16 — M1 diagnostic implementation
 

@@ -176,8 +176,10 @@ complete delayed application log: image version `5894e14`, reset reason 1,
 mount (1,007,681,536-byte card capacity), and a valid 44.1 kHz/16-bit mono
 PCM WAV with 6,009,855 frames / 136,277 ms. I2S entered its auto-clear silent
 state; the playback controller reported `STOPPED`, finite 1,800-second session,
-and `READY` with silent output. This is log evidence of silent startup; a
-separate subjective speaker-silence report was not received in this reset turn.
+and `READY` with silent output. The user later clarified that the connected
+speaker(s) stayed silent after reset, adding subjective confirmation to the
+logged silent startup. The exact speaker used for this observation was not
+separately identified in that follow-up.
 
 The Control board remained up, briefly logged missing PONGs while the Atom
 rebooted, and then matched the new Atom session's replies. After three
@@ -220,9 +222,9 @@ authoritative for audio and the M3 harness issues no product audio commands.
 The user reported the Waveshare screen normal before the held-reset test, and
 the post-test log shows display initialization; USB re-enumeration still
 prevented capture of every early Control boot line. No external LED strip was
-connected, so physical lighting continuity is unverified. No subjective
-speaker-silence confirmation was supplied for the latest Atom reset, although
-its complete application log reported silent `STOPPED`/`READY`. These limits
+connected, so physical lighting continuity is unverified. The user later
+confirmed that the speaker(s) stayed silent after the Atom reset; this does
+not evaluate music playback or close `AUD-ISS-001`. These limits
 must not be misrepresented as release-level UI/light or audio verification.
 M4 may start with the semantic ICD and idempotency/status-synchronization
 design; `AUD-ISS-001` remains open.
