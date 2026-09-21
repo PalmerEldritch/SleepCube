@@ -86,8 +86,14 @@ revision v0.2 with embedded 8 MB flash. Bootloader, partition table and the
 338,656-byte application image all completed hash verification. The exact
 post-commit application SHA-256 before flash was
 `6b20cb050b048461687745a7e93fee26e24629511731f91f1bb72bc3d5af9bf3`.
-The tool reported `Hard resetting via RTS pin`, but the Atom's required manual
-post-flash reset and application boot observation have **not** yet occurred.
+The tool reported `Hard resetting via RTS pin`. The user then pressed Atom
+reset and reported that the application started. A no-reset USB monitor attached
+after startup captured the M3 audio transport repeatedly sending PINGs
+(sequences 32778–32782) and reporting missing PONGs. This is expected while
+the Waveshare still runs its earlier firmware; it is not link-pass evidence.
+The monitor caught only a partial application identity line, so a complete
+post-reset boot log, silent-start confirmation and card/content validation are
+still pending recapture.
 
 No on-target UART, malformed-frame, reset, link-loss, UI or listening result is
 claimed by this report yet. `AUD-ISS-001` is separate and remains open.

@@ -11,8 +11,8 @@
 
 Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 framing,
 transport-only firmware and host builds/tests are ready. The Atom M3 image has
-been hash-verified on flash but awaits manual post-flash reset; no physical
-UART result exists yet.**
+been hash-verified on flash and its diagnostic task is running; Waveshare M3
+flash and physical UART verification remain pending.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -45,8 +45,10 @@ connection. ADR-0007 specifies bounded COBS/CRC-16 framing. Both firmwares now
 build with a shared codec and a UART1 diagnostic PING/PONG task. The user
 confirmed the jumpers are connected and both boards have separate USB power,
 but the hookup and link have not been electrically verified. M3 images have not
-yet been boot-verified. The Atom M3 image was flashed with hash verification on
-2026-09-21 and awaits the user's manual post-flash reset. See
+yet been integration-verified. The Atom M3 image was flashed with hash
+verification on 2026-09-21; after manual reset the user reported application
+start and its transport task logged periodic PINGs with expected missing PONGs
+while the Waveshare still runs old firmware. See
 `verification/2026-09-21_M3_uart_transport.md`.
 
 Repository organization now reflects the two-controller architecture:
@@ -317,8 +319,10 @@ Verified for M3 software preparation on 2026-09-21:
   path and absence of a cross-board power rail still need direct confirmation.
 - the Atom M3 image from source commit `5894e14` was flashed to ESP32-S3 v0.2
   with embedded 8 MB flash; bootloader, partition table and application writes
-  passed hash verification. Application boot remains unobserved pending the
-  user's manual post-flash reset.
+  passed hash verification. After manual reset the user reported application
+  startup. A no-reset monitor caught periodic M3 PINGs and missing PONGs as
+  expected with the unflashed Waveshare; the complete boot log and silent/card
+  validation still need recapture.
 
 Not yet verified for the new architecture:
 
@@ -404,13 +408,14 @@ The exact next task is:
    header orientation before any flash/power-cycle step. Identify the Atom by
    stable USB serial ID `44:1B:F6:F4:FE:C8` (currently `/dev/ttyACM1`) and the
    Waveshare by `AC:EB:E6:1E:67:C4` (currently `/dev/ttyACM0`).
-2. The Atom M3 image is already hash-verified on flash. Ask the user to press
-   Atom reset once to leave download mode, then capture its USB boot log and
-   confirm silent standalone startup.
-3. Flash the Waveshare M3 UI/light-safe image using its identified port and
-   board-specific procedure; capture both consoles. Verify repeated PING/PONG
-   each way, deliberate bad-CRC/truncated-frame rejection and recovery, silent
-   Atom startup, and retained UI/light function.
+2. Ask the user to put the Waveshare into download mode (hold BOOT, press and
+   release RESET, then release BOOT, per the [Waveshare board FAQ](https://docs.waveshare.com/ESP32-C6-Touch-LCD-1.47/FAQ)) and give
+   explicit go-ahead. Flash the M3 UI/light-safe image using stable USB ID
+   `AC:EB:E6:1E:67:C4`, then press RESET if it remains in download mode.
+3. Capture a complete boot log from each controller and confirm silent Atom
+   startup/card validation. Verify retained Waveshare UI/light function and
+   repeated PING/PONG each way, including deliberate bad-CRC/truncated-frame
+   rejection and subsequent recovery.
 4. Test independent resets, both boot orders and brief link loss/reconnection;
    record exact logs/counts in the M3 report. Do not begin M4 until the M3
    physical gate passes or a blocker is documented.
@@ -434,10 +439,11 @@ The exact next task is:
   UI/light coexistence test has yet been performed. `AUD-ISS-001` remains open.
 - Subsequently flashed the Atom image from commit `5894e14` after user download-
   mode go-ahead. ESP32-S3 v0.2/8 MB identity and all write hashes verified.
-  Application boot remains pending the user's manual post-flash reset.
-- Exact next task: confirm no 5 V jumper, ask user to press Atom reset once,
-  capture its boot log, then flash/monitor the Waveshare image and complete the
-  M3 hardware gate described in section 6.
+  The user performed the manual reset and reported application start. The
+  no-reset monitor captured ongoing M3 PINGs and expected missing PONGs while
+  the Waveshare remained on old firmware, but not a complete boot log.
+- Exact next task: prompt the user for Waveshare download mode and go-ahead,
+  flash/monitor its M3 image, then complete the M3 hardware gate in section 6.
 
 ### 2026-09-16 — M1 diagnostic implementation
 
