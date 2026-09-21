@@ -7,11 +7,11 @@
 
 ## 1. Current milestone
 
-**M2 standalone audio service complete; M3 UART transport preparation active**
+**M2 standalone audio service complete; M3 UART transport software ready for target bring-up**
 
-Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 physical and
-framing design preparation is in progress, with hardware wiring pending ordered
-jumper cables.**
+Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 framing,
+transport-only firmware and host builds/tests are ready, but M3 has not yet been
+flashed or verified across the physical UART.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -38,11 +38,13 @@ Interstellar mono track. A signal-correlated music-playback noise is now tracked
 as open issue `AUD-ISS-001`: it was heard on three different speakers, remains
 non-blocking for M3, and needs explicit R00 disposition.
 
-M3 has an initial pin-use inventory and a conflict-free wiring candidate:
-Waveshare GPIO16 TX to Atom GPIO2 RX, Atom GPIO1 TX to Waveshare GPIO17 RX, and
-common ground with no 5 V inter-controller connection. This has not yet been
-frozen in the ICD or verified electrically. Protocol framing/integrity remains
-to be decided by the required ADR, and no M3 transport code exists yet.
+M3 now has a frozen ICD mapping: Waveshare GPIO16 TX to Atom GPIO2 RX, Atom
+GPIO1 TX to Waveshare GPIO17 RX, and common ground with no 5 V inter-controller
+connection. ADR-0007 specifies bounded COBS/CRC-16 framing. Both firmwares now
+build with a shared codec and a UART1 diagnostic PING/PONG task. The user
+confirmed the jumpers are connected and both boards have separate USB power,
+but the hookup and link have not been electrically verified. M3 images have not
+yet been flashed. See `verification/2026-09-21_M3_uart_transport.md`.
 
 Repository organization now reflects the two-controller architecture:
 
@@ -69,6 +71,11 @@ Working/valuable implementation to preserve:
 - application event queue / `app_core` structure.
 
 The existing local audio stack remains present in the control firmware as legacy implementation pending migration to the Audio Controller.
+
+For the M3 hardware test, `sdkconfig.m3.defaults` selects the 8 MB
+ESP32-C6/USB Serial-JTAG build with UI and lighting enabled and legacy local
+audio disabled. The UART diagnostic runs in its own finite-wait task and does
+not dispatch product audio commands or block the UI/light task.
 
 Planned migration seam:
 
@@ -106,6 +113,12 @@ The M2 implementation additionally contains:
 - short-press PLAY/STOP and one-second-hold volume cycling as the M2-only local
   standalone test interface;
 - a deterministic, loop-safe validation-WAV generator.
+
+M3 adds a separate UART1 diagnostic task on Atom GPIO1 TX/GPIO2 RX. It starts
+independently of storage initialization, so a card failure cannot hide link
+diagnostics. It cannot start, stop or change standalone playback. The shared
+framing implementation is under `firmware/shared/protocol/`; the transport
+harness is under `firmware/shared/transport/`.
 
 The failed initial M1 configuration was 44.1 kHz signed 16-bit MSB-aligned mono.
 The confirmed M1 format is 44.1 kHz signed 16-bit Philips-I2S stereo
@@ -283,12 +296,29 @@ Verified in the 2026-09-18 post-M2 TEBM/music follow-up:
   unmounted. Full evidence is in
   `docs/software/verification/2026-09-18_TEBM_music_followup.md`.
 
+Verified for M3 software preparation on 2026-09-21:
+
+- the shared codec host test passes with strict compiler warnings and UBSan,
+  covering maximum-payload round trip, malformed COBS/version/length/CRC,
+  incomplete/overlong frames, timeout and recovery;
+- clean ESP-IDF v6.0 ESP32-S3/8 MB Audio and ESP32-C6/8 MB Control builds pass
+  from external build/configuration paths, followed by passing incremental
+  rebuilds after the final transport-task change;
+- the Control M3 configuration has USB Serial/JTAG console, UI and lighting
+  enabled and legacy local audio disabled; the Audio M3 configuration retains
+  the M2 standalone playback path;
+- final pre-flash application images are 338,656 bytes (Audio) and 595,200
+  bytes (Control); no on-target result is claimed from these builds;
+- both USB Serial/JTAG devices enumerate, with the Atom matched to its prior
+  stable USB ID; the user confirmed the jumper hookup but the UART electrical
+  path and absence of a cross-board power rail still need direct confirmation.
+
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
   and unsupported-format fault cases;
-- UART electrical connection and GPIO assignment;
-- transport framing/integrity behaviour;
+- UART electrical connection and GPIO assignment on target;
+- transport framing/integrity behaviour on target (host parser tests pass);
 - semantic protocol behaviour;
 - reset, link-loss and reconciliation behaviour between controllers;
 - integrated two-controller system behaviour.
@@ -302,6 +332,8 @@ Accepted active ADRs:
 - ADR-0004: 3.3 V full-duplex UART semantic audio link and independently enforced finite Audio Controller timeout.
 - ADR-0005: Speaker Base microSD with canonical 44.1 kHz/16-bit mono PCM WAV content.
 - ADR-0006: Audio Controller owns authoritative persisted volume.
+- ADR-0007: bounded COBS/CRC-16 UART framing, 16-bit sequence correlation and
+  M3-only diagnostic PING/PONG types.
 
 Historical decision:
 
@@ -348,31 +380,54 @@ source content was required by the SleepCube build.
 
 The following implementation choices remain intentionally open:
 
-- final freeze and electrical verification of the candidate UART mapping
-  (Waveshare GPIO16/GPIO17 and Atom GPIO2/GPIO1);
-- protocol framing, integrity and idempotency strategy;
+- electrical verification of the frozen UART mapping (Waveshare GPIO16/GPIO17
+  and Atom GPIO2/GPIO1) and no cross-board power rail;
+- M4 state-changing-command idempotency, retry, timeout and link-session rules;
 - final product tuning of the provisional M2 volume law and fade timing;
 - root cause and release disposition of `AUD-ISS-001`, including exact-mono
   reference audition and representative listening after any mitigation.
 
 ## 6. Next recommended task
 
-**Continue M3 with the UART physical/framing design freeze.**
+**Continue M3 with controlled two-controller target flashing and UART evidence.**
 
 The exact next task is:
 
-1. freeze the candidate crossed TX/RX mapping plus common-ground/no-5-V wiring
-   in `05_ICD.md`, and replace the stale GPIO7/GPIO8 candidate in `04_SAS.md`;
-2. evaluate and record the binary/text framing, resynchronization, integrity and
-   sequence strategy in the required new ADR, then replace ICD-PRO-006's TBD;
-3. implement only the bidirectional transport/parser harness and malformed/
-   truncated-frame tests required by M3. Keep PLAY/STOP/volume semantics and UI
-   integration in M4;
-4. once the ordered jumper cables arrive, wire common ground and crossed 3.3 V
-   UART only, then verify bidirectional transport and fault containment on both
-   targets.
+1. Confirm the Grove red 5 V contact is insulated/unconnected and check the
+   header orientation before any flash/power-cycle step. Identify the Atom by
+   stable USB serial ID `44:1B:F6:F4:FE:C8` (currently `/dev/ttyACM1`) and the
+   Waveshare by `AC:EB:E6:1E:67:C4` (currently `/dev/ttyACM0`).
+2. Ask the user to hold the Atom reset button for about two seconds to enter
+   download mode; flash the prepared M3 Atom image only after their go-ahead.
+   Ask them to press reset again after flash, then capture its USB boot log.
+3. Flash the Waveshare M3 UI/light-safe image using its identified port and
+   board-specific procedure; capture both consoles. Verify repeated PING/PONG
+   each way, deliberate bad-CRC/truncated-frame rejection and recovery, silent
+   Atom startup, and retained UI/light function.
+4. Test independent resets, both boot orders and brief link loss/reconnection;
+   record exact logs/counts in the M3 report. Do not begin M4 until the M3
+   physical gate passes or a blocker is documented.
 
 ## 7. Session closeout record
+
+### 2026-09-21 — M3 framing and transport software preparation
+
+- Froze the crossed UART GPIO/header mapping in the ICD and replaced the stale
+  Waveshare GPIO7/GPIO8 candidate in the SAS.
+- Accepted ADR-0007 for bounded COBS/zero-delimited packets with CRC-16,
+  sequence correlation, parser recovery and transport-only PING/PONG types.
+- Added a shared codec, host tests, independent UART1 diagnostic task on each
+  controller, and one deliberate bad-CRC/partial-packet probe per direction
+  after the link has matched three PONGs. No remote audio command is present.
+- Added the Waveshare M3 build defaults that retain UI/light but disable the
+  old local audio backend; M2 Atom playback remains standalone.
+- Host tests and both 8 MB target builds pass. User confirmed three UART
+  jumpers and separate USB power; USB IDs were mapped. Neither M3 image has
+  yet been flashed, and no physical PING/PONG, fault-injection, reset or UI/light
+  coexistence test has yet been performed. `AUD-ISS-001` remains open.
+- Exact next task: confirm no 5 V jumper, prompt user for Atom manual download
+  mode, then flash and monitor the Atom image before flashing/monitoring the
+  Waveshare image and completing the M3 hardware gate described in section 6.
 
 ### 2026-09-16 — M1 diagnostic implementation
 

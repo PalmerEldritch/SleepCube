@@ -6,7 +6,9 @@
 
 This document defines the logical and electrical contract between the Control Controller and Audio Controller.
 
-The initial revision freezes the semantic interface and failure rules while intentionally leaving the exact wire framing/encoding open until the transport implementation milestone.
+This revision freezes the physical mapping and ADR-0007 transport framing. M4
+will assign final semantic message types and payloads before remote audio
+commands are enabled.
 
 ## 2. Physical interface
 
@@ -17,6 +19,21 @@ The initial revision freezes the semantic interface and failure rules while inte
 | ICD-PHY-003 | R00 shall use dedicated GPIO not shared with real-time audio output, display/touch or external RGB-light timing. |
 | ICD-PHY-004 | Final TX/RX GPIO assignments shall be documented before M3 integration testing. |
 
+The selected three-wire mapping is:
+
+| Signal | Waveshare ESP32-C6 header H1 | AtomS3 Lite Grove HY2.0-4P |
+| --- | --- | --- |
+| Control TX → Audio RX | Pin 5, GPIO16 / `ESP_TXD` | Yellow, GPIO2, configured RX |
+| Audio TX → Control RX | Pin 7, GPIO17 / `ESP_RXD` | White, GPIO1, configured TX |
+| Common ground | Pin 6, GND | Black, GND |
+
+The Atom Grove red 5 V contact is left disconnected and insulated; neither
+board's 5 V nor 3.3 V rail shall be connected across the link. Each board is
+powered by its own USB-C cable. Both UART drivers may select a free peripheral
+and map it to these GPIOs; the Waveshare's `ESP_TXD`/`ESP_RXD` labels describe
+its header nets, not a mandatory peripheral instance. The USB Serial/JTAG
+console remains separate. Verify physical header orientation before power.
+
 ## 3. Protocol principles
 
 | ID | Requirement |
@@ -26,7 +43,26 @@ The initial revision freezes the semantic interface and failure rules while inte
 | ICD-PRO-003 | Each message shall carry a protocol version or be interpreted within an explicitly negotiated protocol version. |
 | ICD-PRO-004 | The receiver shall be able to reject malformed, incomplete or unsupported messages without performing an unsafe action. |
 | ICD-PRO-005 | Commands that change audio state shall support correlation with an acknowledgement/result or resulting authoritative status. |
-| ICD-PRO-006 | The exact representation (binary framed protocol vs compact textual protocol), integrity field and sequence-number strategy are TBD and shall be frozen by ADR before M4 completion. |
+| ICD-PRO-006 | Each wire packet shall use ADR-0007 version-1 COBS/zero-delimited binary framing, the bounded decoded header/payload/CRC-16 format below, and a 16-bit request sequence echoed by responses. |
+
+Decoded packet layout, before COBS encoding:
+
+| Offset | Size | Field |
+| --- | ---: | --- |
+| 0 | 1 | Protocol version (`1`) |
+| 1 | 1 | Message type |
+| 2 | 2 | Request/response sequence, little-endian |
+| 4 | 1 | Payload length (`0`–`32`) |
+| 5 | 0–32 | Payload |
+| 5 + payload length | 2 | CRC-16/CCITT-FALSE, little-endian, over preceding decoded bytes |
+
+COBS-encoded bytes are followed by one `0x00` delimiter. The maximum encoded
+packet is 41 bytes including that delimiter. Invalid length, version, COBS,
+CRC, overlong or time-expired partial frames shall not reach semantic handlers.
+M3 diagnostic types `0x70` PING and `0x71` PONG are transport-only and shall not
+change playback state. M4 will freeze the final semantic type/payload catalog
+and state-changing-command duplicate handling; sequence correlation alone is
+not exactly-once execution.
 
 ## 4. Required command semantics
 
@@ -116,12 +152,8 @@ Optional transient `STARTING`, `STOPPING` or `FAULT` states may be exposed if us
 | ICD-FLT-004 | Unknown message types shall be ignored/rejected safely and shall not alter playback. |
 | ICD-FLT-005 | Communication loss shall not disable an already-running Audio Controller session timer. |
 
-## 12. Candidate framing for M3/M4 evaluation
+## 12. M3/M4 framing handoff
 
-The implementation milestone should evaluate a compact framed binary protocol with fields equivalent to:
-
-```text
-SOF | version | type | sequence | length | payload | integrity
-```
-
-This is a design candidate, not yet a normative wire format. A compact newline-delimited textual protocol is also acceptable for the first bring-up if it meets malformed-message handling and migration requirements. The final choice shall be recorded by ADR.
+Section 3 and ADR-0007 define the version-1 wire format. M3 uses only diagnostic
+PING/PONG; M4 must define the semantic type catalog and duplicate-command
+behavior before any remote playback operation is enabled.

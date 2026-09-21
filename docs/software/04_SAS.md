@@ -191,7 +191,12 @@ No boot-order dependency shall be required. Either controller may be reset indep
 
 ## 10. Reference GPIO architecture
 
-R00 intends to use two dedicated Waveshare GPIOs currently available for the UART link (GPIO7/GPIO8) and the AtomS3 Lite exposed G1/G2 pins, plus common ground. Exact TX/RX mapping is an implementation detail to be frozen in the ICD/reference hardware documentation before integration testing.
+The M3 UART link uses Waveshare GPIO16 (TX) and GPIO17 (RX), crossed to the
+AtomS3 Lite Grove GPIO2 (RX, yellow) and GPIO1 (TX, white), plus common ground.
+The Atom Grove 5 V contact is not connected between controllers. Both retain
+independent USB power and USB Serial/JTAG consoles. The final electrical contract
+is in `05_ICD.md`; framing is governed by ADR-0007. GPIO8 on the Waveshare is
+already used by the light strip and must not be repurposed for this link.
 
 ## 11. Decisions requiring ADRs
 

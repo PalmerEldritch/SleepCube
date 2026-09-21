@@ -123,12 +123,17 @@ Exit criteria:
 
 **Goal:** Establish robust bidirectional controller communication independent of product semantics.
 
-**Status:** In preparation on `feat/m3-uart-transport`. Board pin-use inventory
-has identified a conflict-free candidate using Waveshare GPIO16/GPIO17 and Atom
-Grove GPIO2/GPIO1 with crossed TX/RX and common ground. The required jumper
-cables are on order; the mapping remains a candidate until it is frozen in the
-ICD together with the framing/integrity ADR and verified on hardware. No M3
-transport code or two-controller evidence exists yet.
+**Status:** Software bring-up complete; hardware gate pending on
+`feat/m3-uart-transport`. The Waveshare GPIO16/GPIO17 ↔ Atom Grove GPIO2/GPIO1
+crossed-TX/RX mapping with common ground and no shared 5 V is frozen in the ICD.
+ADR-0007 fixes bounded COBS/CRC-16 framing. Both projects include a shared
+codec and independent transport-only PING/PONG task; the Waveshare M3 build
+retains UI/lighting but disables legacy local audio. Host parser tests and
+clean ESP32-S3/ESP32-C6 builds pass. The user confirmed the jumpers are
+connected and both boards have separate USB power. Neither board has yet been
+flashed with M3, so electrical transfer, malformed-frame containment on target,
+and UI/light coexistence remain unverified. See
+`verification/2026-09-21_M3_uart_transport.md`.
 
 Deliverables:
 

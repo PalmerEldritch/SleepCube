@@ -98,6 +98,9 @@ close the associated R00 requirements.
 | M2-END-001 | Separate finite 60-minute Audio Controller endurance run | PASS — 60 loops, 158,761,472 frames / 635,045,888 bytes, finite timeout to `STOPPED`, no logged stream/runtime fault and no reported audible artifact | `verification/2026-09-16_M2_standalone_audio.md` |
 | M2-FI-001 | Representative missing-storage and unsupported-content startup faults | PASS — absent card produced actionable `ESP_ERR_TIMEOUT`; valid 8-bit WAV produced actionable `ESP_ERR_NOT_SUPPORTED`; both disabled playback and remained silent | `verification/2026-09-16_M2_standalone_audio.md` |
 | M2-FUP-001 | 10 W/4 ohm TEBM compatibility and intended sleep-music follow-up | PASS WITH OPEN ISSUE `AUD-ISS-001` — clean TEBM tone playback at 25%/50% and materially improved music at approximately 30 cm; no click, pop, dropout or overdrive. Signal-correlated noise was later reported on three different speakers and remains unresolved | `verification/2026-09-18_TEBM_music_followup.md`, `issues/AUD-ISS-001-playback-noise.md` |
+| M3-UT-001 | Shared COBS/CRC parser and resynchronization host tests | PASS — maximum-payload round trip; bad COBS/version/length/CRC, incomplete/overlong frames, timeout and delimiter recovery | `verification/2026-09-21_M3_uart_transport.md` |
+| M3-BLD-001 | Separate ESP32-S3 Audio and ESP32-C6 Control transport builds | PASS — both 8 MB USB-console builds; Control M3 defaults preserve UI/light and disable old local audio | `verification/2026-09-21_M3_uart_transport.md` |
+| M3-IT-001 | Physical bidirectional PING/PONG, malformed/truncated injection and post-error recovery | PENDING — images not yet flashed; user confirmed jumper hookup but no target logs captured | `verification/2026-09-21_M3_uart_transport.md` |
 
 Open developmental issue `AUD-ISS-001` is not a failure of the M3 UART gate.
 It is not closed by the M2 validation-tone/PCM results or by successful

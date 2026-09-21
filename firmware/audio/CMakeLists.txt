@@ -2,5 +2,9 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.22)
 
+set(EXTRA_COMPONENT_DIRS
+    "${CMAKE_CURRENT_LIST_DIR}/../shared/protocol"
+    "${CMAKE_CURRENT_LIST_DIR}/../shared/transport"
+)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(SleepCube_audio_controller)

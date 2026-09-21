@@ -63,6 +63,7 @@ set(SC_PRIV_REQUIRES
     sdmmc
     esp_driver_spi
     nvs_flash
+    transport
 )
 if(CONFIG_SC_ENABLE_UI AND CONFIG_SC_UI_BACKEND_LCD_TOUCH)
     list(APPEND SC_PRIV_REQUIRES
