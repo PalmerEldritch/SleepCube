@@ -166,3 +166,25 @@ and recovery on target. The Control USB monitor reattached after its earliest
 startup lines, so a complete Control boot log was not captured. The Audio →
 Control fault-probe direction still requires an Atom reset with both monitors
 attached.
+
+## Independent Atom reset and Audio → Control fault probes
+
+With both no-reset monitors attached, the user briefly pressed Atom RESET while
+the Waveshare remained running. The Atom monitor reconnected and captured its
+complete delayed application log: image version `5894e14`, reset reason 1,
+8 MiB flash, I2S/GPIO mapping, persisted volume 100%, read-only-policy FAT
+mount (1,007,681,536-byte card capacity), and a valid 44.1 kHz/16-bit mono
+PCM WAV with 6,009,855 frames / 136,277 ms. I2S entered its auto-clear silent
+state; the playback controller reported `STOPPED`, finite 1,800-second session,
+and `READY` with silent output. This is log evidence of silent startup; a
+separate subjective speaker-silence report was not received in this reset turn.
+
+The Control board remained up, briefly logged missing PONGs while the Atom
+rebooted, and then matched the new Atom session's replies. After three
+post-reset matches, the Atom logged its bad-CRC and partial probes sent. The
+Control parser logged `reason=5` (`SC_FRAME_BAD_CRC`) and `truncated frame
+discarded`; valid PONG matching continued afterward (`seq=67 total=64`). No
+panic, watchdog or reboot was observed on the still-running Control board.
+Both directed malformed/truncated-probe and independent-reset recovery paths
+therefore pass on target. A sustained intentional link-loss test and external
+LED-strip observation remain pending.

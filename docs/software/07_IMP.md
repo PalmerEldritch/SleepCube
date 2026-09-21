@@ -123,32 +123,24 @@ Exit criteria:
 
 **Goal:** Establish robust bidirectional controller communication independent of product semantics.
 
-**Status:** Software bring-up complete; hardware gate pending on
-`feat/m3-uart-transport`. The Waveshare GPIO16/GPIO17 ↔ Atom Grove GPIO2/GPIO1
-crossed-TX/RX mapping with common ground and no shared 5 V is frozen in the ICD.
-ADR-0007 fixes bounded COBS/CRC-16 framing. Both projects include a shared
-codec and independent transport-only PING/PONG task; the Waveshare M3 build
-retains UI/lighting but disables legacy local audio. Host parser tests and
-clean ESP32-S3/ESP32-C6 builds pass. The user confirmed the jumpers are
-connected and both boards have separate USB power. The Atom image was flashed
-with hash verification and the user reported application start; its M3 task
-logs periodic PINGs and expected missing PONGs while the Waveshare still runs
-old firmware. Electrical transfer, malformed-frame containment
-on target, and UI/light coexistence remain unverified. See
-`verification/2026-09-21_M3_uart_transport.md`.
+**Status:** Core transport gate passes; sustained peer-unavailable and external
+light observations pending on `feat/m3-uart-transport`. The Waveshare
+GPIO16/GPIO17 ↔ Atom Grove GPIO2/GPIO1 crossed-TX/RX mapping with common ground
+and no shared 5 V is frozen in the ICD. ADR-0007 fixes bounded COBS/CRC-16
+framing. Both projects include a shared codec and independent transport-only
+PING/PONG task. The Waveshare M3 image retains UI/lighting but disables legacy
+local audio. Host parser tests and clean ESP32-S3/ESP32-C6 builds pass.
 
-The first Waveshare download-mode attempt lost USB enumeration (kernel error
-`-71`) before any write. A subsequent RESET restored its stable USB identity;
-the M3 UI/light-safe image then flashed with hash verification. Both boards
-have now exchanged and matched at least 21 diagnostic PING/PONGs each. The
-one-time malformed/truncated probes, full boot logs, UI/light continuity and
-reset/link-loss gates remain pending; M3 is not complete.
-The user has reported the Waveshare screen normal with M3 active. External
-lighting remains unverified because no LED strip is connected.
-An independent Waveshare reset has since passed transport recovery; its
-bad-CRC and truncated probes were rejected by the still-running Atom and
-subsequent PONGs matched. The reciprocal Audio → Control probe direction,
-independent Atom reset and link-loss gate remain pending.
+Both targets flashed with hash verification and each matched at least 21
+diagnostic PONGs. Independent resets of each controller recovered the link;
+bad-CRC and truncated probes in both directions were rejected with subsequent
+valid matches. The complete Atom application log showed valid card/content and
+silent `STOPPED`/`READY`. The user reported the Waveshare screen normal, but no
+external LED strip is connected, so physical light continuity is unverified.
+A sustained peer-unavailable test is the remaining M3 fault-containment check.
+The first Waveshare BOOT/RESET attempt caused a recoverable USB enumeration
+error `-71`; a plain RESET restored it before flashing. See
+`verification/2026-09-21_M3_uart_transport.md`.
 
 Deliverables:
 

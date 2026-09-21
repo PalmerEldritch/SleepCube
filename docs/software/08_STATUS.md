@@ -7,13 +7,13 @@
 
 ## 1. Current milestone
 
-**M2 standalone audio service complete; M3 UART transport software ready for target bring-up**
+**M2 standalone audio service complete; M3 core UART transport verified on target**
 
 Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 framing,
-transport-only firmware and host builds/tests are ready. The Atom M3 image has
-been hash-verified on flash and its diagnostic task is running. The Waveshare
-also flashed after RESET restored USB enumeration. Basic bidirectional UART
-PING/PONG passes; malformed-frame, reset and link-loss gates remain pending.**
+transport-only firmware and host builds/tests are ready. Both images flashed
+with hash verification. Bidirectional PING/PONG, deliberate malformed/truncated
+frames in both directions, and independent-reset recovery pass on target.
+Sustained peer-unavailability and external LED-strip observation remain open.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -330,14 +330,14 @@ Verified for M3 software preparation on 2026-09-21:
   passed hash verification. After manual reset the user reported application
   startup. A no-reset monitor caught periodic M3 PINGs and missing PONGs as
   expected with the unflashed Waveshare; the complete boot log and silent/card
-  validation still need recapture.
+  validation were captured on the later independent Atom reset below.
 - after RESET recovered its USB port, the Waveshare M3 image from source commit
   `86d8e3e` flashed to ESP32-C6FH8 v0.2/8 MB with verified bootloader,
   partition table and application hashes;
 - independent no-reset USB monitors captured at least 21 matched PONGs and
   peer PING echoes on each board. Basic crossed-pin bidirectional UART transfer
-  works; the deliberately malformed/truncated probes occurred before capture
-  and have not been directly verified on target.
+  works; the first malformed/truncated probes occurred before this capture,
+  but both directed probes were later captured during independent resets.
 - the user reported the Waveshare screen normal while M3 transport was active.
   No external LED strip is connected, so external-light behavior is not
   verified. Later monitor counters reached at least 118 on both boards but did
@@ -346,16 +346,22 @@ Verified for M3 software preparation on 2026-09-21:
   sequence restarted at 1, both boards resumed matched PONGs, and the
   still-running Atom rejected Control's bad-CRC and time-expired partial
   probes before matching subsequent valid replies. No Atom panic/reboot was
-  observed. The reciprocal Audio → Control probes remain unverified.
+  observed;
+- a subsequent independent Atom RESET was captured with complete application
+  identity/configuration, valid card/content, auto-clear I2S and silent
+  `STOPPED`/`READY` logs. The still-running Waveshare rejected the Atom's
+  bad-CRC and truncated probes, then matched subsequent valid PONGs. No
+  Control panic/reboot was observed. Atom restored persisted volume 100%; no
+  separate subjective speaker-silence report was received in that turn.
 
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
   and unsupported-format fault cases;
-- UART electrical connection and GPIO assignment on target;
-- transport framing/integrity behaviour on target (host parser tests pass);
 - semantic protocol behaviour;
-- reset, link-loss and reconciliation behaviour between controllers;
+- sustained peer-unavailability and semantic reconciliation behavior between
+  controllers;
+- external LED-strip continuity with M3 active (no strip is connected);
 - integrated two-controller system behaviour.
 
 ## 4. Architectural decisions in force
@@ -430,22 +436,20 @@ lines are connected to the powered other board.
 
 ## 6. Next recommended task
 
-**Continue M3 with fault-probe, boot, UI/light and reset/link-loss evidence.**
+**Finish the M3 peer-unavailable check and record remaining hardware gaps.**
 
 The exact next task is:
 
-1. Ask the user to confirm that the Waveshare screen and external lighting
-   still behave normally, and that the Atom remains silent while stopped.
-2. With both monitors attached, ask the user to reset the Atom once while
-   keeping the Waveshare running. Capture its complete boot/application log,
-   including card/content validation. Verify Audio → Control bad-CRC/truncated
-   probe rejection and subsequent matched PONG recovery. Keep UART jumpers
-   connected. The reciprocal Control → Audio direction already passed.
-3. Verify both boot orders and a brief link-loss/reconnection safely; power
-   both boards down before physically changing UART jumpers if necessary.
-4. Confirm no panic/watchdog/reboot and retained UI/light function, then
-   record exact logs/counts in the M3 report. Do not begin M4 until the M3
-   physical gate passes or a blocker is documented.
+1. With both monitors attached, ask the user to hold Waveshare RESET for about
+   eight seconds while the Atom remains powered, then release it. This
+   simulates a sustained nonresponding peer without hot-unplugging UART wiring.
+   Verify the Atom logs missing PONGs but remains stable and resumes matching
+   after Control restarts. Do not hold the Atom reset button for this test.
+2. Ask whether the Atom speaker remained silent after its last reset; the log
+   says `STOPPED`/silent, but subjective confirmation is pending.
+3. Record exact counts/results in the M3 report, and explicitly carry forward
+   external LED-strip continuity as unverified because no strip is connected.
+   Do not claim full UI/light integration or M4 semantic protocol behavior.
 
 ## 7. Session closeout record
 
@@ -492,6 +496,13 @@ The exact next task is:
   and timed-out partial probes were rejected by the Atom; subsequent PONGs
   matched. The exact next task is an independent Atom reset with both monitors
   attached, to verify the reciprocal probes and full Audio boot/card log.
+- The user then reset the Atom while Waveshare stayed up. The complete delayed
+  Atom application log showed valid FAT mount/content and silent
+  `STOPPED`/`READY` startup. Control rejected Audio's bad-CRC and truncated
+  probes and resumed matched PONGs. Both directed fault-injection tests pass.
+  The exact next task is a sustained peer-unavailable test by holding
+  Waveshare RESET about eight seconds, then confirming recovery without
+  touching UART jumpers. External LED-strip behavior remains unverified.
 
 ### 2026-09-16 — M1 diagnostic implementation
 
