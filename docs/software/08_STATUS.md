@@ -10,8 +10,9 @@
 **M2 standalone audio service complete; M3 UART transport software ready for target bring-up**
 
 Status: **M1 and M2 pass. Work is on `feat/m3-uart-transport`; M3 framing,
-transport-only firmware and host builds/tests are ready, but M3 has not yet been
-flashed or verified across the physical UART.**
+transport-only firmware and host builds/tests are ready. The Atom M3 image has
+been hash-verified on flash but awaits manual post-flash reset; no physical
+UART result exists yet.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -44,7 +45,9 @@ connection. ADR-0007 specifies bounded COBS/CRC-16 framing. Both firmwares now
 build with a shared codec and a UART1 diagnostic PING/PONG task. The user
 confirmed the jumpers are connected and both boards have separate USB power,
 but the hookup and link have not been electrically verified. M3 images have not
-yet been flashed. See `verification/2026-09-21_M3_uart_transport.md`.
+yet been boot-verified. The Atom M3 image was flashed with hash verification on
+2026-09-21 and awaits the user's manual post-flash reset. See
+`verification/2026-09-21_M3_uart_transport.md`.
 
 Repository organization now reflects the two-controller architecture:
 
@@ -312,6 +315,10 @@ Verified for M3 software preparation on 2026-09-21:
 - both USB Serial/JTAG devices enumerate, with the Atom matched to its prior
   stable USB ID; the user confirmed the jumper hookup but the UART electrical
   path and absence of a cross-board power rail still need direct confirmation.
+- the Atom M3 image from source commit `5894e14` was flashed to ESP32-S3 v0.2
+  with embedded 8 MB flash; bootloader, partition table and application writes
+  passed hash verification. Application boot remains unobserved pending the
+  user's manual post-flash reset.
 
 Not yet verified for the new architecture:
 
@@ -397,9 +404,9 @@ The exact next task is:
    header orientation before any flash/power-cycle step. Identify the Atom by
    stable USB serial ID `44:1B:F6:F4:FE:C8` (currently `/dev/ttyACM1`) and the
    Waveshare by `AC:EB:E6:1E:67:C4` (currently `/dev/ttyACM0`).
-2. Ask the user to hold the Atom reset button for about two seconds to enter
-   download mode; flash the prepared M3 Atom image only after their go-ahead.
-   Ask them to press reset again after flash, then capture its USB boot log.
+2. The Atom M3 image is already hash-verified on flash. Ask the user to press
+   Atom reset once to leave download mode, then capture its USB boot log and
+   confirm silent standalone startup.
 3. Flash the Waveshare M3 UI/light-safe image using its identified port and
    board-specific procedure; capture both consoles. Verify repeated PING/PONG
    each way, deliberate bad-CRC/truncated-frame rejection and recovery, silent
@@ -423,11 +430,14 @@ The exact next task is:
   old local audio backend; M2 Atom playback remains standalone.
 - Host tests and both 8 MB target builds pass. User confirmed three UART
   jumpers and separate USB power; USB IDs were mapped. Neither M3 image has
-  yet been flashed, and no physical PING/PONG, fault-injection, reset or UI/light
-  coexistence test has yet been performed. `AUD-ISS-001` remains open.
-- Exact next task: confirm no 5 V jumper, prompt user for Atom manual download
-  mode, then flash and monitor the Atom image before flashing/monitoring the
-  Waveshare image and completing the M3 hardware gate described in section 6.
+  yet been boot-verified, and no physical PING/PONG, fault-injection, reset or
+  UI/light coexistence test has yet been performed. `AUD-ISS-001` remains open.
+- Subsequently flashed the Atom image from commit `5894e14` after user download-
+  mode go-ahead. ESP32-S3 v0.2/8 MB identity and all write hashes verified.
+  Application boot remains pending the user's manual post-flash reset.
+- Exact next task: confirm no 5 V jumper, ask user to press Atom reset once,
+  capture its boot log, then flash/monitor the Waveshare image and complete the
+  M3 hardware gate described in section 6.
 
 ### 2026-09-16 — M1 diagnostic implementation
 

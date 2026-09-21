@@ -100,7 +100,8 @@ close the associated R00 requirements.
 | M2-FUP-001 | 10 W/4 ohm TEBM compatibility and intended sleep-music follow-up | PASS WITH OPEN ISSUE `AUD-ISS-001` — clean TEBM tone playback at 25%/50% and materially improved music at approximately 30 cm; no click, pop, dropout or overdrive. Signal-correlated noise was later reported on three different speakers and remains unresolved | `verification/2026-09-18_TEBM_music_followup.md`, `issues/AUD-ISS-001-playback-noise.md` |
 | M3-UT-001 | Shared COBS/CRC parser and resynchronization host tests | PASS — maximum-payload round trip; bad COBS/version/length/CRC, incomplete/overlong frames, timeout and delimiter recovery | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-BLD-001 | Separate ESP32-S3 Audio and ESP32-C6 Control transport builds | PASS — both 8 MB USB-console builds; Control M3 defaults preserve UI/light and disable old local audio | `verification/2026-09-21_M3_uart_transport.md` |
-| M3-IT-001 | Physical bidirectional PING/PONG, malformed/truncated injection and post-error recovery | PENDING — images not yet flashed; user confirmed jumper hookup but no target logs captured | `verification/2026-09-21_M3_uart_transport.md` |
+| M3-FLS-001 | First M3 Atom flash/image identity | PASS — ESP32-S3 v0.2/8 MB identified; bootloader, partition table and application writes hash-verified; boot still pending manual reset | `verification/2026-09-21_M3_uart_transport.md` |
+| M3-IT-001 | Physical bidirectional PING/PONG, malformed/truncated injection and post-error recovery | PENDING — Atom image flashed but neither application boot nor any UART target log captured; Waveshare image not yet flashed | `verification/2026-09-21_M3_uart_transport.md` |
 
 Open developmental issue `AUD-ISS-001` is not a failure of the M3 UART gate.
 It is not closed by the M2 validation-tone/PCM results or by successful

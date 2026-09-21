@@ -1,7 +1,8 @@
 # M3 UART transport bring-up — development record
 
 **Date:** 2026-09-21
-**Status:** Software/host gate passes; two-controller hardware gate pending.
+**Status:** Software/host gate passes; Atom image flashed, boot and two-controller
+hardware gate pending.
 
 ## Scope and configuration
 
@@ -75,6 +76,18 @@ metadata can change the images after this software-preparation build.
 5. Independently reset each controller and test both boot orders and a brief
    UART disconnection/reconnection without changing the Atom's finite session
    behavior. Record exact counts and logs before declaring M3 complete.
+
+## Atom flash — 2026-09-21
+
+After the user confirmed the jumper hookup and put the Atom in download mode,
+the M3 Audio image from source commit `5894e14` was flashed through stable USB
+ID `44:1B:F6:F4:FE:C8` (then `/dev/ttyACM1`). `esptool` identified ESP32-S3
+revision v0.2 with embedded 8 MB flash. Bootloader, partition table and the
+338,656-byte application image all completed hash verification. The exact
+post-commit application SHA-256 before flash was
+`6b20cb050b048461687745a7e93fee26e24629511731f91f1bb72bc3d5af9bf3`.
+The tool reported `Hard resetting via RTS pin`, but the Atom's required manual
+post-flash reset and application boot observation have **not** yet occurred.
 
 No on-target UART, malformed-frame, reset, link-loss, UI or listening result is
 claimed by this report yet. `AUD-ISS-001` is separate and remains open.

@@ -130,9 +130,10 @@ ADR-0007 fixes bounded COBS/CRC-16 framing. Both projects include a shared
 codec and independent transport-only PING/PONG task; the Waveshare M3 build
 retains UI/lighting but disables legacy local audio. Host parser tests and
 clean ESP32-S3/ESP32-C6 builds pass. The user confirmed the jumpers are
-connected and both boards have separate USB power. Neither board has yet been
-flashed with M3, so electrical transfer, malformed-frame containment on target,
-and UI/light coexistence remain unverified. See
+connected and both boards have separate USB power. No M3 application boot has
+yet been observed; the Atom image was flashed with hash verification but awaits
+its manual post-flash reset. Electrical transfer, malformed-frame containment
+on target, and UI/light coexistence remain unverified. See
 `verification/2026-09-21_M3_uart_transport.md`.
 
 Deliverables:
