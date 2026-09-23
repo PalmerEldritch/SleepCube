@@ -45,16 +45,35 @@ static void sc_app_core_task(void *arg)
                 break;
             case SC_APP_EVT_UI_AUDIO_TOGGLE:
                 // Touch UI semantics: single-tap toggles music playback.
-                ESP_ERROR_CHECK_WITHOUT_ABORT(sc_audio_service_toggle_playback());
+                if (sc_audio_service_toggle_playback() != ESP_OK) {
+                    ESP_LOGW(TAG, "audio toggle unavailable or already pending");
+                }
                 break;
             case SC_APP_EVT_UI_AUDIO_STOP:
-                ESP_ERROR_CHECK_WITHOUT_ABORT(sc_audio_service_set_playback(false));
+                if (sc_audio_service_set_playback(false) != ESP_OK) {
+                    ESP_LOGW(TAG, "audio stop unavailable or already pending");
+                }
                 break;
             case SC_APP_EVT_UI_VOLUME_STEP:
-                ESP_ERROR_CHECK_WITHOUT_ABORT(sc_audio_service_change_volume((int)event.value));
+                (void)sc_audio_service_change_volume((int)event.value);
+                break;
+            case SC_APP_EVT_UI_VOLUME_SET:
+                (void)sc_audio_service_set_volume_percent((uint8_t)event.value);
                 break;
             case SC_APP_EVT_UI_LIGHT_STEP:
                 ESP_ERROR_CHECK_WITHOUT_ABORT(sc_light_service_change_brightness((int)event.value));
+                break;
+            case SC_APP_EVT_AUDIO_AVAILABILITY_CHANGED:
+                ESP_LOGI(TAG, "authoritative audio %s",
+                         event.value != 0 ? "available" : "unavailable");
+                break;
+            case SC_APP_EVT_AUDIO_STATE_CHANGED:
+                sc_ui_service_audio_state_changed(event.value != 0);
+                ESP_ERROR_CHECK_WITHOUT_ABORT(
+                    sc_light_service_audio_sway(event.value != 0));
+                break;
+            case SC_APP_EVT_AUDIO_VOLUME_CHANGED:
+                sc_ui_service_audio_volume_changed((uint8_t)event.value);
                 break;
             default:
                 break;
@@ -77,16 +96,16 @@ esp_err_t sc_app_core_start(void)
         return ESP_FAIL;
     }
 
-#if CONFIG_SC_ENABLE_AUDIO
-    ESP_RETURN_ON_ERROR(sc_audio_service_start(), TAG, "audio service start failed");
-#else
-    ESP_LOGI(TAG, "audio service disabled");
-#endif
-
 #if CONFIG_SC_ENABLE_LIGHT
     ESP_RETURN_ON_ERROR(sc_light_service_start(), TAG, "light service start failed");
 #else
     ESP_LOGI(TAG, "light service disabled");
+#endif
+
+#if CONFIG_SC_ENABLE_AUDIO || CONFIG_SC_AUDIO_REMOTE_LINK
+    ESP_RETURN_ON_ERROR(sc_audio_service_start(), TAG, "audio service start failed");
+#else
+    ESP_LOGI(TAG, "audio service disabled");
 #endif
 
 #if CONFIG_SC_ENABLE_UI

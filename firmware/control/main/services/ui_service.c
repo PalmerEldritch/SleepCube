@@ -52,3 +52,21 @@ esp_err_t sc_ui_service_start(void)
 #endif
     return ESP_OK;
 }
+
+void sc_ui_service_audio_state_changed(bool playback_active)
+{
+#if CONFIG_SC_UI_BACKEND_LCD_TOUCH
+    sc_lvgl_display_audio_state_changed(playback_active);
+#else
+    (void)playback_active;
+#endif
+}
+
+void sc_ui_service_audio_volume_changed(uint8_t volume_percent)
+{
+#if CONFIG_SC_UI_BACKEND_LCD_TOUCH
+    sc_lvgl_display_audio_volume_changed(volume_percent);
+#else
+    (void)volume_percent;
+#endif
+}

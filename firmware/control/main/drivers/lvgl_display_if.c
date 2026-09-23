@@ -325,9 +325,7 @@ static void sc_rest_surface_event_cb(lv_event_t *e)
             sc_enter_slider_mode();
         }
     } else if (code == LV_EVENT_CLICKED) {
-        const bool audio_enabled_next = !sc_audio_service_get_playback_enabled();
         sc_emit_event(SC_APP_EVT_UI_AUDIO_TOGGLE, 0);
-        sc_trigger_audio_toggle_pulse(audio_enabled_next);
     } else if ((code == LV_EVENT_RELEASED) || (code == LV_EVENT_PRESS_LOST)) {
         s_rest_press_tracking = false;
     }
@@ -378,8 +376,14 @@ static void sc_slider_event_cb(lv_event_t *e)
     lv_indev_get_point(indev, &point);
     const uint8_t percent = sc_zone_point_to_percent(zone, &point);
     if (role == SC_SLIDER_ROLE_VOLUME) {
-        (void)sc_audio_service_set_volume_percent(percent);
-        lv_slider_set_value(s_volume_slider, percent, LV_ANIM_OFF);
+        const bool available = sc_audio_service_is_available();
+        if (available) {
+            sc_emit_event(SC_APP_EVT_UI_VOLUME_SET, percent);
+        }
+        const uint8_t displayed = available
+                                      ? percent
+                                      : sc_audio_service_get_volume_percent();
+        lv_slider_set_value(s_volume_slider, displayed, LV_ANIM_OFF);
     } else {
         s_screen_brightness_percent = percent;
         (void)sc_light_service_set_brightness_percent(percent);
@@ -577,6 +581,26 @@ void sc_lvgl_display_create_ambient_screen(void)
     ESP_LOGI(TAG, "lvgl ambient screen created");
 }
 
+void sc_lvgl_display_audio_state_changed(bool playback_active)
+{
+    if (!s_started || !lvgl_port_lock(20)) {
+        return;
+    }
+    sc_trigger_audio_toggle_pulse(playback_active);
+    lvgl_port_unlock();
+}
+
+void sc_lvgl_display_audio_volume_changed(uint8_t volume_percent)
+{
+    if (!s_started || !lvgl_port_lock(20)) {
+        return;
+    }
+    if (s_volume_slider != NULL) {
+        lv_slider_set_value(s_volume_slider, volume_percent, LV_ANIM_OFF);
+    }
+    lvgl_port_unlock();
+}
+
 bool sc_lvgl_display_bus_lock(uint32_t timeout_ms)
 {
     if (!s_started) {
@@ -602,6 +626,16 @@ esp_err_t sc_lvgl_display_init(void)
 
 void sc_lvgl_display_create_ambient_screen(void)
 {
+}
+
+void sc_lvgl_display_audio_state_changed(bool playback_active)
+{
+    (void)playback_active;
+}
+
+void sc_lvgl_display_audio_volume_changed(uint8_t volume_percent)
+{
+    (void)volume_percent;
 }
 
 bool sc_lvgl_display_bus_lock(uint32_t timeout_ms)

@@ -14,6 +14,12 @@ esp_err_t sc_lvgl_display_init(void);
  */
 void sc_lvgl_display_create_ambient_screen(void);
 
+/** Apply authoritative remote audio state to transient UI feedback. */
+void sc_lvgl_display_audio_state_changed(bool playback_active);
+
+/** Apply an authoritative remote volume confirmation to the visible slider. */
+void sc_lvgl_display_audio_volume_changed(uint8_t volume_percent);
+
 /**
  * @brief Acquire the LVGL/display-side lock before shared SPI storage access.
  *

@@ -13,18 +13,18 @@ static const char *TAG = "main";
 static void log_request_result(const char *name, esp_err_t result)
 {
     if (result == ESP_OK) {
-        ESP_LOGI(TAG, "M4 console queued %s", name);
+        ESP_LOGI(TAG, "semantic console queued %s", name);
     } else {
-        ESP_LOGW(TAG, "M4 console rejected %s: %s", name,
+        ESP_LOGW(TAG, "semantic console rejected %s: %s", name,
                  esp_err_to_name(result));
     }
 }
 
-static void m4_console_task(void *argument)
+static void semantic_console_task(void *argument)
 {
     (void)argument;
     ESP_LOGI(TAG,
-             "M4 console: p=PLAY 30s, s=STOP, 1/2/3/4=25/50/75/100%%, "
+             "semantic console: p=PLAY 30s, s=STOP, 1/2/3/4=25/50/75/100%%, "
              "q=GET_STATUS, r=replay last command");
     for (;;) {
         const int command = getchar();
@@ -69,14 +69,15 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "SleepCube P0 app starting");
     ESP_ERROR_CHECK(sc_settings_store_init());
-    ESP_ERROR_CHECK(sc_app_core_start());
     const esp_err_t link_result = sc_audio_link_start_control(16, 17);
     if (link_result != ESP_OK) {
         ESP_LOGE(TAG, "semantic audio UART unavailable: %s; UI/light continue",
                  esp_err_to_name(link_result));
-        return;
     }
-    if (xTaskCreate(m4_console_task, "m4_console", 3072, NULL, 3, NULL) != pdPASS) {
-        ESP_LOGE(TAG, "M4 diagnostic console task unavailable");
+    ESP_ERROR_CHECK(sc_app_core_start());
+    if (link_result == ESP_OK &&
+        xTaskCreate(semantic_console_task, "semantic_console", 3072,
+                    NULL, 3, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "semantic diagnostic console task unavailable");
     }
 }

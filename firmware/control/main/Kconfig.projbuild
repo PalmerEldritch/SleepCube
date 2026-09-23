@@ -17,6 +17,15 @@ config SC_ENABLE_AUDIO
     bool "Enable audio service"
     default y
 
+config SC_AUDIO_REMOTE_LINK
+    bool "Use Audio Controller semantic-link backend"
+    depends on !SC_ENABLE_AUDIO
+    default n
+    help
+        Replaces the disabled Waveshare-local audio backend with the remote
+        Audio Controller facade. Audio commands and confirmed state use the
+        semantic UART client; storage, decoding and I2S remain remote.
+
 choice SC_AUDIO_I2S_MODE
     prompt "Audio TX bus mode"
     depends on SC_ENABLE_AUDIO
