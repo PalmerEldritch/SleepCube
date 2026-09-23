@@ -228,13 +228,15 @@ Exit criteria:
 
 **Goal:** Close system-level safety/recovery requirements.
 
-**Status (2026-09-23): IN PROGRESS.** Implementation `709512c` adds periodic
-bounded GET_STATUS health probes, neutral/unavailable presentation after link
-timeout, configurable finite product PLAY duration and bounded persisted-setting
-repair. Reproducible timer-test overlay `ab214fe` is tracked separately from the
-1,800-second product defaults. Strict host tests and clean Audio, M6 Control and
-retained legacy Control builds pass. Hardware flash and the M6 physical gate are
-pending; see `verification/2026-09-23_M6_session_fault_integration.md`.
+**Status (2026-09-23): PASS.** Implementation `709512c` adds periodic bounded
+GET_STATUS health probes, neutral/unavailable presentation after link timeout,
+configurable finite product PLAY duration and bounded persisted-setting repair.
+The reproducible timer overlay is tracked separately from the 1,800-second
+product defaults, and final diagnostic-label correction `9e28ab7` makes both
+durations explicit in logs. Strict tests and clean builds pass. Physical
+timer-expiry, UART-loss/recovery, Control-reset deadline survival, distributed
+power-cycle persistence and final product restore all pass; see
+`verification/2026-09-23_M6_session_fault_integration.md`.
 
 Deliverables:
 
@@ -321,19 +323,19 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Begin M6 by consolidating existing M2/M4/M5 fault evidence and closing the
-remaining release-level session/fault gaps:
+Begin M7 with a requirement-by-requirement UX and lighting review against
+`03_UX.md`, then execute the retained product UI on the completed distributed
+M6 baseline:
 
-1. verify product-facade reconciliation when a finite session reaches
-   TIMER_EXPIRED, including stopped UI feedback and unchanged brightness;
-2. define and verify the Control degraded-state policy after sustained UART
-   timeout/physical link loss, without weakening Audio's independent deadline;
-3. exercise malformed traffic and both controller-reset paths through the M5
-   product facade, reusing M4 evidence where the behavior is unchanged;
-4. finalize and verify persisted volume/brightness behavior across normal power
-   cycles and invalid stored values.
+1. verify confirmed/requested/unavailable presentation, including recovery and
+   timeout transitions, against the normative UX rows;
+2. perform the dark-room ambient-light and transition-quality observations;
+3. measure or otherwise capture the remaining UI/light responsiveness evidence
+   practical in M7, without changing the stable M6 UART/audio contract;
+4. document any intentional UX refinement before implementation, preserving
+   independent brightness and the authoritative Audio-state model.
 
 Keep the `AUD-ISS-001` audio-noise disposition explicit. Its next diagnostic
 remains an audition of the exact hash-matched canonical mono WAV on a
-known-clean reference output; it
-must be fixed, mitigated or explicitly accepted before R00 release.
+known-clean reference output; it must be fixed, mitigated or explicitly
+accepted before R00 release.

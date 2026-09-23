@@ -7,17 +7,19 @@
 
 ## 1. Current milestone
 
-**M6 session/fault integration in progress; hardware gate next**
+**M6 session/fault integration complete; M7 UX/lighting refinement next**
 
-Status: **M1 through M5 pass. M6 implementation `709512c` adds one-second
+Status: **M1 through M6 pass. M6 implementation `709512c` adds one-second
 bounded status health probes so quiet UART loss becomes unavailable/degraded,
 retains UI/lighting operation, and recovers through HELLO/GET_STATUS without
 PLAY replay. It also makes the finite product duration configurable with an
 explicit 1,800-second production default and validates/repairs bounded stored
-settings. Commit `ab214fe` adds a reproducible 30-second timer-test overlay.
-Strict host tests and clean M6 Control, Audio and retained legacy Control builds
-pass. Exact committed product and timer-test images are ready; no M6 image has
-yet been flashed and no new hardware behavior is claimed.**
+settings. Commit `ab214fe` adds the reproducible 30-second timer overlay and
+`9e28ab7` clarifies diagnostic versus product duration logging. Strict tests,
+clean builds, physical timer expiry, one-direction UART loss/recovery, Control
+reset during playback, and normal power-cycle persistence all pass. The final
+deployed state is Control `9e28ab7` with the 1,800-second product profile and
+Audio `d373b1a`, reconciled silent/STOPPED at brightness 42% and volume 63%.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -450,13 +452,42 @@ Verified for M5 software and target hardware on 2026-09-23:
 - detailed evidence is in
   `docs/software/verification/2026-09-23_M5_control_audio_facade.md`.
 
+Verified for M6 software and target hardware on 2026-09-23:
+
+- one-second GET_STATUS probes detect a quiet broken return path after three
+  bounded 250 ms attempts, select neutral/unavailable audio presentation, and
+  leave display, lighting and brightness control responsive;
+- the 30-second accelerated finite-session path reached TIMER_EXPIRED, performed
+  its five-second fade and became silent/STOPPED in approximately 30.1 seconds
+  total. The visual stop transition began with the fade and selected brightness
+  returned unchanged after the intentional transient dip;
+- with Atom GPIO1 TX → Waveshare GPIO17 RX physically disconnected during
+  playback, Audio independently reached the original deadline and stopped.
+  Reconnection used HELLO/GET_STATUS to reconcile TIMER_EXPIRED/STOPPED without
+  replaying PLAY;
+- resetting only Control during a separate active session did not restart,
+  change level, cancel or extend Audio playback. The new Control session
+  reconciled after Audio stopped at the existing deadline;
+- a normal dual-controller power cycle restored Control brightness 42% and
+  Audio volume 63%, mounted/validated content, and remained silent/STOPPED with
+  no automatic playback;
+- final Control `9e28ab7` is 603,680 bytes, SHA-256
+  `a601dab0f8c9308e790419bf83c3afa97c361b9d2a4456ff5c65954c785adda1`;
+  its hash-verified flash and boot log show ESP32-C6/8 MB and
+  `product UI=1800s`. Deployed Audio `d373b1a` is 341,680 bytes, SHA-256
+  `917469ceab5145273ebaac7577bc70d3bedaf01cd2c02c91483ded2f22a18411`;
+- detailed evidence and limitations are in
+  `docs/software/verification/2026-09-23_M6_session_fault_integration.md`.
+
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
   and unsupported-format fault cases;
-- M6 product-facade reconciliation at TIMER_EXPIRED and the final degraded-state
-  policy under sustained physical UART link loss;
-- final persisted volume/brightness power-cycle and invalid-value behavior.
+- hardware injection of an invalid Control brightness NVS value; policy unit
+  tests cover the bounds and retained M2 target evidence covers invalid Audio
+  volume;
+- release-level latency/timing measurements and the remaining M7 dark-room UX
+  and lighting observations.
 
 ## 4. Architectural decisions in force
 
@@ -533,25 +564,49 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Execute the M6 physical integration gate.**
+**Begin M7 UX and lighting integration refinement.**
 
 The exact next task is:
 
-1. Put Atom `/dev/ttyACM1` in manual download mode and flash exact Audio image
-   `ab214fe`; reset it once afterward to start the application.
-2. Automatically flash the exact 30-second timer-test Control image to Waveshare
-   `/dev/ttyACM0`, then verify product-facade TIMER_EXPIRED feedback and
-   unchanged brightness.
-3. Exercise UART-signal-only loss/reconnect during playback and a separate
-   Control reset during playback, observing Audio's independent deadline and
-   status-only recovery.
-4. Set non-default volume/brightness, restore the exact 1,800-second product
-   Control image, normally power-cycle both controllers, and confirm restored
-   settings with playback stopped.
-5. Record results in the M6 verification report and VVM. Keep `AUD-ISS-001`
-   open and outside the M6 claim.
+1. Trace the current M6 UI/light implementation against every non-deferred
+   `03_UX.md` row and identify the smallest remaining M7 evidence/code gaps.
+2. Run the retained product UI through requested, confirmed, stopped,
+   unavailable and recovered audio states, preserving the authoritative M6
+   state model and independent brightness behavior.
+3. Execute the dark-room ambient-light, slider and transition observations and
+   record any intentional UX refinements before changing code.
+4. Add M7 evidence to the VVM and verification records. Keep `AUD-ISS-001` open
+   for its separate R00 fix/mitigation/accepted-limitation disposition.
 
 ## 7. Session closeout record
+
+### 2026-09-23 — M6 hardware completion
+
+- Flashed Audio `d373b1a` and the 30-second M6 Control timer profile with
+  hash-verified writes; target logs showed both 8 MB devices, valid content and
+  silent STOPPED startup.
+- Verified product-UI timer expiry through STOPPING/TIMER_EXPIRED and a smooth
+  five-second fade to silent STOPPED. The user confirmed synchronized stop
+  feedback and unchanged selected brightness after the normal transient effect.
+- Removed only Atom TX → Waveshare RX during active playback. Control detected
+  loss through bounded status retries while brightness remained responsive;
+  Audio stopped independently. Reconnection reconciled authoritative STOPPED
+  state without replay.
+- Reset only Control during another active session. Audio retained its original
+  deadline and level; restarted Control reconciled without restarting or
+  extending playback.
+- Stored brightness 42% and volume 63%, restored the normal 1,800-second
+  product profile, and power-cycled both controllers. Both settings returned,
+  playback remained stopped, and the user confirmed silent startup and normal
+  display/LED operation.
+- Corrected the diagnostic duration label in `9e28ab7`, rebuilt both Control
+  profiles, and flashed the final 603,680-byte product image (SHA-256
+  `a601dab0f8c9308e790419bf83c3afa97c361b9d2a4456ff5c65954c785adda1`).
+  Final boot explicitly reports diagnostic PLAY 30 s versus product UI 1,800 s,
+  restores brightness 42%, and reconciles STOPPED/volume 63%/no fault.
+- Updated the M6 report, VVM, implementation plan and this handoff. M6 passes;
+  exact next work is the M7 UX/lighting review in section 6. `AUD-ISS-001`
+  remains open and is not affected by this result.
 
 ### 2026-09-23 — M6 software and build preparation
 
