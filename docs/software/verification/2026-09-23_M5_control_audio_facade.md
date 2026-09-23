@@ -101,22 +101,18 @@ Commit `31d8221` makes authoritative STOPPING end the presented-playing state
 and trigger feedback at fade onset, while retaining the pending STOP command
 until authoritative STOPPED. This prevents a rapid second tap from starting a
 new session during the fade. The correction clean-builds, flashed with hash
-verification, booted and reconciled to STOPPED/50%/no fault. Its physical timing
-retest remains pending.
+verification, booted and reconciled to STOPPED/50%/no fault. The user then
+confirmed that the corrected stop response begins with the audio fade.
 
-User observation is still required for the corrected STOP timing, volume
-behavior, and brightness responsiveness while Audio is unavailable. No M5
-completion claim is made yet.
+User observation is still required for volume behavior and brightness
+responsiveness while Audio is unavailable. No M5 completion claim is made yet.
 
 ## Remaining M5 gate
 
 1. Confirm current startup is silent and display/GPIO8 lighting look normal.
-2. Short-tap the rest view: verify one finite remote PLAY, confirmed visual
-   response and clean audible start; short-tap again and verify the corrected
-   visual response begins with the clean STOP fade rather than after it.
-3. Long-press into adjustment mode, move volume through clearly separated
+2. Long-press into adjustment mode, move volume through clearly separated
    values, and verify remote confirmed loudness follows without artifacts or UI
    stalls. Verify brightness remains responsive.
-4. Reset the Atom while Control remains running. Verify the speaker stops safely,
+3. Reset the Atom while Control remains running. Verify the speaker stops safely,
    the display/light tasks remain responsive, an audio request while unavailable
    does not show false playing state, and status reconciles after Audio reboot.

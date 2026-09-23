@@ -18,8 +18,9 @@ touch evidence exposed STOP feedback delayed until the one-second fade ended;
 `31d8221` now triggers presentation on authoritative STOPPING while retaining
 the pending request until STOPPED. That exact corrected image is flashed and
 its boot log shows UI/light startup plus authoritative STOPPED/50%/no-fault
-reconciliation without PLAY. Corrected timing, volume and Audio-unavailable
-UI/light observations remain before M5 can pass.**
+reconciliation without PLAY. The user confirmed PLAY feedback synchronized to
+the tap and corrected STOP feedback synchronized to fade onset. Volume and
+Audio-unavailable UI/light observations remain before M5 can pass.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -519,14 +520,12 @@ The exact next task is:
 
 1. Confirm silent startup and normal display/GPIO8 light presentation on the
    currently running `31d8221` image.
-2. Short-tap PLAY then STOP and confirm one authoritative visual transition per
-   accepted state plus clean audible fades.
-3. Exercise volume drag and brightness adjustment; confirm coalesced remote
+2. Exercise volume drag and brightness adjustment; confirm coalesced remote
    volume follows and UI/light tasks do not stall.
-4. Reset Audio while Control remains running; verify safe silence, responsive
+3. Reset Audio while Control remains running; verify safe silence, responsive
    brightness/UI, no false playing presentation while unavailable, and status
    reconciliation after Audio reboot.
-5. Record the result in
+4. Record the result in
    `verification/2026-09-23_M5_control_audio_facade.md`; only then mark M5 pass
    and make M6 the next task. Keep `AUD-ISS-001` outside the M5 claim.
 
@@ -552,8 +551,8 @@ The exact next task is:
   `0ca8ebb10880ab66a9926870da082460826ae6cee5e3098da2e68fe676b7e324`.
 - Confirmed USB identities, flashed only the Waveshare with hash verification,
   and captured final app `31d8221` boot through STOPPED/50% authoritative
-  reconciliation. Corrected timing, volume and Audio-unavailable observations
-  remain.
+  reconciliation. User retest confirms PLAY feedback at tap and corrected STOP
+  feedback at fade onset. Volume and Audio-unavailable observations remain.
 - Exact next action is the four-step physical gate in section 6 and the M5
   verification record. Do not claim M5 complete yet.
 
