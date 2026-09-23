@@ -19,9 +19,9 @@ is resolved, and validated audio transition durations are frozen as R00
 criteria. M8 preparation adds exact request/response timing logs, a tested log
 analyzer, a tracked 3,600-second Control overlay, reproducible Control build
 instructions and pre-playback truncated-WAV rejection. Strict host tests and
-pre-commit clean product/trace/endurance/Audio builds pass. Exact committed
-images must be rebuilt before flashing. Neither controller is currently
-enumerated, so no M8 target result is claimed yet. The currently deployed
+clean product/trace/endurance/Audio builds pass. Exact checkpoint `e4d31cc`
+images have been rebuilt and hash-recorded for flashing. Neither controller is
+currently enumerated, so no M8 target result is claimed yet. The currently deployed
 hardware remains the M7 Control product `65ffc61` with Audio `d373b1a`, last
 confirmed silent/STOPPED at volume 63% with normal display/LED operation.**
 
@@ -665,12 +665,14 @@ final product/persistence restore described in the M8 verification record.
   actual file before playback is available; truncated content is now rejected
   with an actionable error.
 - Strict C11/UBSan frame, semantic-protocol and settings-policy regressions pass.
-  Pre-commit clean ESP32-C6/8 MB product, trace and endurance builds plus the
-  ESP32-S3/8 MB Audio build pass without observed project-code warnings.
+  Clean ESP32-C6/8 MB product, trace and endurance builds plus the ESP32-S3/8 MB
+  Audio build pass without observed project-code warnings. All four were
+  rebuilt at exact checkpoint `e4d31cc`; sizes and SHA-256 identities are in the
+  M8 verification record.
 - Neither controller was enumerated during preparation. No target timing,
   reset, content-fault, endurance, persistence or audio-noise result is claimed.
-  Exact committed images must be rebuilt before the first hardware gate in
-  section 6.
+  The first hardware gate in section 6 is ready to begin when both controllers
+  are connected.
 
 ### 2026-09-23 — M7 hardware completion
 

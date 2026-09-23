@@ -117,10 +117,21 @@ change the frozen semantic contract.
   flash, monitoring and timing-analysis procedures.
 
 Strict C11/UBSan frame, semantic-protocol and settings-policy regressions pass.
-The timing-analyzer unit suite passes. Pre-commit ESP-IDF v6.0 clean builds pass
-for ESP32-C6/8 MB product, trace and endurance profiles; a clean ESP32-S3/8 MB
-Audio build is recorded after completion below. Exact committed image hashes
-will be recorded before flashing.
+The timing-analyzer unit suite passes. ESP-IDF v6.0 clean builds pass for the
+ESP32-C6/8 MB product, trace and endurance profiles and the ESP32-S3/8 MB Audio
+profile. They were rebuilt after checkpoint commit `e4d31cc` so every image
+embeds that exact application version:
+
+| Image | Size | SHA-256 |
+| --- | ---: | --- |
+| Control product | 604,288 bytes | `518e26225fef7253c1b28959ab7fd09651345a6dca4f9f36b964fc593b77b384` |
+| Control M8 timing trace | 604,976 bytes | `735b4bb778201fbf71da6810d909d553640abfa5923fd889c70579b54ba726d5` |
+| Control M8 3,600-second endurance | 604,288 bytes | `ee3d3930dde79ba657954454c5339ae4cd6e9faf45387027a73b84dc04cc8cf9` |
+| Audio product | 341,952 bytes | `fc95fcdfca352c096ae796fa1ac56c01a2b3fce4a3b2099b4560c0a834e0abb7` |
+
+No project-code warning was observed. Component-manager registry checks were
+skipped because the build host had no registry connection; all dependencies
+were already resolved locally and each build completed successfully.
 
 ## Remaining physical sequence
 

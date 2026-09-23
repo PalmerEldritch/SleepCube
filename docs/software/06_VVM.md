@@ -147,6 +147,9 @@ close the associated R00 requirements.
 | M7-HWT-001 | Rest gestures, adjustment interaction, confirmed audio presentation and coordinated lighting | PASS — PLAY/STOP responses are synchronized; moved gestures are suppressed; 1,020 ms long press, approximately 3 s return, direct sliders, preserved values and normal rest presentation pass | `verification/2026-09-23_M7_ux_lighting.md` |
 | M7-MAN-001 | Dark-room display/strip behavior and low-output correction | PASS — display retains its full range; corrected strip remains a stable modulated warm white at minimum and through STOP response, with accepted low-count animation coarseness and no colorful quantization | `verification/2026-09-23_M7_ux_lighting.md` |
 | M7-FI-001 | Audio return-path loss, unavailable controls and recovery | PASS — brightness remains responsive, volume retains 63% and ignores input, rest remains neutral and silent, and reconnection recovers authoritative STOPPED without reset or replay | `verification/2026-09-23_M7_ux_lighting.md` |
+| M8-AUD-001 | Complete SRS/UX/ICD coverage and release-sensitive evidence audit | PASS — all 55 active SRS, 24 UX and 29 ICD IDs are mapped; remaining target gates are explicitly identified | `verification/2026-09-23_M8_system_validation.md` |
+| M8-UT-001 | Timing-analyzer, frame, semantic-protocol and settings-policy host regressions | PASS — three timing-analyzer cases plus strict C11/UBSan protocol and policy suites pass | `verification/2026-09-23_M8_system_validation.md` |
+| M8-BLD-001 | Exact committed product, timing, endurance and Audio target builds | PASS — commit `e4d31cc` clean-builds for ESP32-C6/8 MB and ESP32-S3/8 MB; image sizes and SHA-256 identities are recorded | `verification/2026-09-23_M8_system_validation.md` |
 
 Open developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport
 or M5 facade gates. It is not closed by the M2 validation-tone/PCM results or
