@@ -7,26 +7,18 @@
 
 ## 1. Current milestone
 
-**M5 Control audio-facade migration in progress; physical UI/fault gate next**
+**M5 Control audio-facade migration complete; M6 session/fault integration next**
 
-Status: **M1 through M4 pass. M5 implementation commit `1f6e326` replaces the
-disabled local Control audio backend with a non-blocking semantic-link facade,
-routes touch/confirmed state through `app_core`, and moves audio/light
-coordination out of `audio_service`. Strict inherited host tests, the retained
-local-backend compatibility build and clean ESP32-C6/8 MB builds pass. Initial
-touch evidence exposed STOP feedback delayed until the one-second fade ended;
-`31d8221` now triggers presentation on authoritative STOPPING while retaining
-the pending request until STOPPED. That exact corrected image is flashed and
-its boot log shows UI/light startup plus authoritative STOPPED/50%/no-fault
-reconciliation without PLAY. The user confirmed PLAY feedback synchronized to
-the tap, corrected STOP feedback synchronized to fade onset, and remote volume
-following adjustment without artifacts. Brightness behavior is smooth and
-synchronized across the display and GPIO8 strip. The
-Audio-unavailable containment gate also passes: Atom reset stopped output, an
-audio tap produced no false PLAY state, and brightness remained responsive.
-Atom restart was silent; Control negotiated new Audio session `508b7be2` and
-reconciled through GET_STATUS to STOPPED/51%/no fault without replay. One final
-post-recovery PLAY/STOP regression remains before M5 can pass.**
+Status: **M1 through M5 pass. M5 final Control application `31d8221` replaces
+the disabled local audio backend with a non-blocking semantic-link facade,
+routes touch and authoritative state through `app_core`, and keeps lighting
+independent. Strict host tests and clean ESP32-C6/8 MB builds pass. Physical
+tests confirm synchronized PLAY feedback, STOP feedback at fade onset, remote
+volume without artifacts, smooth display/GPIO8 brightness, safe behavior while
+Audio is unavailable, and silent Audio restart followed by GET_STATUS
+reconciliation to new session `508b7be2` without replay. The final recovered
+PLAY/STOP cycle was clean and synchronized. M6 now owns the remaining
+release-level session/fault and persistence closure.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -436,14 +428,36 @@ Verified on M4 target hardware on 2026-09-23:
   was fixed with `clearerr(stdin)` in `3908d18`; attaching only after boot and
   issuing GET_STATUS then passed.
 
+Verified for M5 software and target hardware on 2026-09-23:
+
+- remote-facade implementation `1f6e326` and STOP-presentation correction
+  `31d8221` build for the ESP32-C6/8 MB product configuration; inherited strict
+  framing/semantic tests pass and the retained local backend still compiles;
+- final Control image `31d8221` is 603,152 bytes with SHA-256
+  `0ca8ebb10880ab66a9926870da082460826ae6cee5e3098da2e68fe676b7e324`;
+  flash writes were hash-verified and the settings partition was preserved;
+- rest-view taps issue finite PLAY/STOP through the facade. PLAY feedback follows
+  the accepted STARTING state; STOP feedback follows authoritative STOPPING at
+  fade onset, while the command remains pending until STOPPED;
+- adjustment-view volume changes are serialized, authoritatively confirmed and
+  audibly artifact-free; display and GPIO8 LED-strip brightness follows the
+  right-hand slider smoothly and in sync;
+- placing Audio in download mode during playback stopped output safely. An
+  unavailable rest-view tap produced no false PLAY feedback while UI and
+  brightness remained responsive;
+- Audio restarted silent and did not resume playback. Control negotiated new
+  session `508b7be2`, reconciled STOPPED/51%/no fault through GET_STATUS without
+  replay, and the subsequent PLAY/STOP regression was clean and synchronized;
+- detailed evidence is in
+  `docs/software/verification/2026-09-23_M5_control_audio_facade.md`.
+
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
   and unsupported-format fault cases;
-- a complete early Control boot log after native USB re-enumeration; later
-  transport startup/recovery was proven from both controller logs;
-- M5 touch UI/audio-service integration and Audio-absent UI/light behavior
-  through the product facade.
+- M6 product-facade reconciliation at TIMER_EXPIRED and the final degraded-state
+  policy under sustained physical UART link loss;
+- final persisted volume/brightness power-cycle and invalid-value behavior.
 
 ## 4. Architectural decisions in force
 
@@ -486,8 +500,8 @@ was invalid because the jack directly shares the filterless differential
 Class-D output; severe high-pitched noise occurred and that test should not be
 repeated with those headphones. The exact mono asset has not yet been confirmed
 clean or noisy on a known-clean reference output. The root cause is unresolved;
-the issue does not block M3 but requires an explicit fix, mitigation or accepted
-limitation before R00 release. The available 1 GB FAT16 card has
+the issue did not block M3–M5 but requires an explicit fix, mitigation or
+accepted limitation before R00 release. The available 1 GB FAT16 card has
 enough capacity for the selected PCM policy; FAT mount compatibility and
 fixed-low-CS operation pass on the intended hardware.
 
@@ -520,21 +534,24 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Complete the M5 physical UI and Audio-unavailable gate.**
+**Begin M6 session and fault integration.**
 
 The exact next task is:
 
-1. Confirm silent startup and normal display/GPIO8 light presentation on the
-   currently running `31d8221` image.
-2. Run one post-recovery PLAY/STOP cycle and confirm clean audio plus
-   synchronized authoritative visual feedback.
-3. Record the result in
-   `verification/2026-09-23_M5_control_audio_facade.md`; only then mark M5 pass
-   and make M6 the next task. Keep `AUD-ISS-001` outside the M5 claim.
+1. Inventory the M6 acceptance rows against existing M2/M4/M5 evidence so
+   already-proven reset and deadline behavior is not needlessly repeated.
+2. Verify a product-facade 1,800-second TIMER_EXPIRED transition returns the UI
+   to stopped feedback without changing selected brightness.
+3. Define and exercise sustained UART timeout/physical-link-loss degraded-state
+   behavior while confirming Audio's independent finite deadline remains intact.
+4. Finalize persisted volume/brightness power-cycle and invalid-value behavior,
+   then update the VVM with any remaining malformed-message/reset fault cases.
+5. Keep `AUD-ISS-001` open and explicit; M5 does not resolve audio-spectrum
+   noise.
 
 ## 7. Session closeout record
 
-### 2026-09-23 — M5 software, flash and boot preparation
+### 2026-09-23 — M5 implementation and hardware completion
 
 - Created `feat/m5-control-audio-facade` from the completed M4 baseline and
   committed the facade/UI migration as `1f6e326`.
@@ -560,10 +577,10 @@ The exact next task is:
   the GPIO8 strip change smoothly and in sync. Atom reset stopped active output;
   unavailable audio input produced no false PLAY response and brightness stayed
   responsive. Atom restarted silent, and Control reconciled to new Audio session
-  `508b7be2` at STOPPED/51%/no fault without replay. One final PLAY/STOP
-  regression remains.
-- Exact next action is the four-step physical gate in section 6 and the M5
-  verification record. Do not claim M5 complete yet.
+  `508b7be2` at STOPPED/51%/no fault without replay. The final recovered
+  PLAY/STOP regression was clean and audio/light feedback followed both taps.
+- M5 passes both exit criteria. Exact next action is the five-step M6 entry task
+  in section 6. `AUD-ISS-001` remains open and outside the M5 claim.
 
 ### 2026-09-23 — M4 semantic protocol software preparation
 

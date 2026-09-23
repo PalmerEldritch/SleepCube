@@ -113,10 +113,13 @@ close the associated R00 requirements.
 | M4-MAN-001 | Semantic playback transitions and retained UI/light coexistence | PASS — timeout/manual-stop/reset behavior was audibly clean and ended silent; display and GPIO8 LED strip remained operational throughout | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
 | M5-BLD-001 | Control-side remote facade, authoritative UI events and M5 target configuration | PASS — strict inherited protocol tests pass; final correction `31d8221` clean-builds for ESP32-C6/8 MB with local audio disabled; retained local backend also compiles | `verification/2026-09-23_M5_control_audio_facade.md` |
 | M5-FLS-001 | M5 Waveshare flash, boot and initial authoritative reconciliation | PASS — final app `31d8221` writes are hash-verified; UI/light start and remote STOPPED/50%/no-fault state reconciles without automatic PLAY | `verification/2026-09-23_M5_control_audio_facade.md` |
+| M5-IT-001 | Product touch PLAY/STOP/volume through the remote facade and authoritative feedback | PASS — finite PLAY and STOP complete without timeout; volume changes are serialized, confirmed and audibly artifact-free; corrected STOP response begins at authoritative STOPPING/fade onset | `verification/2026-09-23_M5_control_audio_facade.md` |
+| M5-FI-001 | Audio unavailable during active playback and post-restart reconciliation | PASS — Atom reset stops output; unavailable tap produces no false PLAY; display/GPIO8 brightness remains responsive; new Audio session reconciles to STOPPED without replay | `verification/2026-09-23_M5_control_audio_facade.md` |
+| M5-MAN-001 | Retained rest/adjustment UX and cross-domain presentation | PASS — PLAY/STOP audio and light feedback are synchronized; loudness follows the volume slider without artifacts; display and GPIO8 strip follow brightness smoothly and in sync | `verification/2026-09-23_M5_control_audio_facade.md` |
 
-Open developmental issue `AUD-ISS-001` is not a failure of the M3 or M4 UART gate.
-It is not closed by the M2 validation-tone/PCM results or by successful
-two-controller transport tests. Before R00 release, record either a verified
+Open developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport
+or M5 facade gates. It is not closed by the M2 validation-tone/PCM results or
+by successful two-controller transport tests. Before R00 release, record either a verified
 fix/mitigation or an explicit accepted limitation supported by representative
 sleep-music listening; see `issues/AUD-ISS-001-playback-noise.md`.
 

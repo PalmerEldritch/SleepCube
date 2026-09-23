@@ -1,8 +1,9 @@
 # M5 Control audio-facade migration — development record
 
 **Date:** 2026-09-23
-**Status:** IN PROGRESS — software/build/flash/boot synchronization pass; touch,
-listening and Audio-unavailable UI/light observations pending.
+**Status:** PASS — software/build, flash/boot, touch audio, authoritative
+feedback, volume, brightness independence, Audio-unavailable containment and
+post-restart recovery gates complete.
 
 ## Scope
 
@@ -125,11 +126,20 @@ The recovery half also passes. The user restarted the Atom and reported silent
 startup with no automatic playback. Control then negotiated the new Audio
 session `508b7be2`, issued GET_STATUS, and reconciled to authoritative
 `STOPPED`, 51%, zero remaining and no fault before marking audio available.
-There was no PLAY replay. A final post-recovery PLAY/STOP regression remains
-before the M5 completion claim.
+There was no PLAY replay.
 
-## Remaining M5 gate
+The final recovered PLAY/STOP regression passed. Control logged one finite
+PLAY(1800s), accepted in approximately 70 ms and confirmed STARTING, followed
+by PLAYING. STOP was accepted in approximately 60 ms, confirmed STOPPING at fade
+onset, and reached STOPPED approximately 1.04 seconds later. No retry, timeout,
+queue failure, fault, panic or reboot occurred. The user confirmed that audio
+started and stopped correctly and that audio/light feedback was synchronized
+with both taps.
 
-1. Confirm current startup is silent and display/GPIO8 lighting look normal.
-2. Run one post-recovery PLAY/STOP cycle and verify audio plus confirmed visual
-   feedback remain clean and synchronized.
+## Exit result
+
+M5 passes both milestone exit criteria: the retained rest/adjustment UI controls
+remote Audio through the facade, and lighting remains responsive with Audio
+unavailable. M6 still owns release-level timer-expiry reconciliation, degraded
+link policy, broader fault injection and persisted-setting finalization.
+`AUD-ISS-001` remains open and is not changed by this milestone.

@@ -194,7 +194,7 @@ Exit criteria:
 
 **Goal:** Replace local audio backend while preserving existing UI/application API where practical.
 
-**Status (2026-09-23): IN PROGRESS.** Base implementation `1f6e326` and STOP
+**Status (2026-09-23): COMPLETE.** Base implementation `1f6e326` and STOP
 feedback timing correction `31d8221` clean-build; `31d8221` is flashed on the
 Waveshare. Boot synchronization reconciles authoritative STOPPED state with UI
 and GPIO8 lighting active, the corrected STOP response is confirmed at fade
@@ -202,8 +202,9 @@ onset, remote volume follows adjustment without artifacts, and linked brightness
 control is smooth across the display and GPIO8 strip. Audio-unavailable UI/light
 containment also passes: Atom reset stopped output, unavailable audio input
 showed no false PLAY state, and brightness remained responsive. Post-restart
-reconciliation to a new Audio session now also passes without replay. One final
-post-recovery PLAY/STOP regression remains before M5 can pass; see
+reconciliation to a new Audio session now also passes without replay. The
+post-recovery PLAY/STOP regression confirms clean audio and synchronized visual
+feedback. Both M5 exit criteria pass; see
 `verification/2026-09-23_M5_control_audio_facade.md`.
 
 Deliverables:
@@ -312,19 +313,19 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Begin M5 at the existing Control-side `audio_service` seam:
+Begin M6 by consolidating existing M2/M4/M5 fault evidence and closing the
+remaining release-level session/fault gaps:
 
-1. replace the disabled local backend with a non-blocking facade over the proven
-   `sc_audio_link_control_*` client while preserving application-facing calls
-   where practical;
-2. route touch PLAY/STOP and volume requests to the Audio Controller, and feed
-   authoritative status/events back to `app_core` and the displayed state;
-3. move any audio/light cross-domain presentation coordination into `app_core`
-   so lighting remains independent of UART availability;
-4. verify the existing rest/adjustment UI against remote audio, then exercise
-   Audio reset/unavailability without blocking display or GPIO8 lighting.
+1. verify product-facade reconciliation when a finite session reaches
+   TIMER_EXPIRED, including stopped UI feedback and unchanged brightness;
+2. define and verify the Control degraded-state policy after sustained UART
+   timeout/physical link loss, without weakening Audio's independent deadline;
+3. exercise malformed traffic and both controller-reset paths through the M5
+   product facade, reusing M4 evidence where the behavior is unchanged;
+4. finalize and verify persisted volume/brightness behavior across normal power
+   cycles and invalid stored values.
 
-Keep M6 release fault policy and the `AUD-ISS-001` audio-noise disposition out
-of the M5 facade migration. The issue's next diagnostic remains an audition of
-the exact hash-matched canonical mono WAV on a known-clean reference output; it
+Keep the `AUD-ISS-001` audio-noise disposition explicit. Its next diagnostic
+remains an audition of the exact hash-matched canonical mono WAV on a
+known-clean reference output; it
 must be fixed, mitigated or explicitly accepted before R00 release.
