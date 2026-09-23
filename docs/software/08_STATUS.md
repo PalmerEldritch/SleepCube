@@ -11,7 +11,8 @@
 
 Status: **M1, M2 and M3 pass. M4 software is implemented on
 `feat/m4-semantic-audio-protocol`: the semantic ICD and ADR-0008 are frozen,
-host protocol tests pass, and both 8 MB target images build cleanly. No M4 image
+host protocol tests pass, and both 8 MB target images build cleanly from
+implementation commit `66f36e5`. No M4 image
 has been flashed, so remote PLAY/STOP/volume, both boot orders and independent
 reset recovery remain unverified. The external LED strip is now physically
 connected to Waveshare 5 V, GND and GPIO8, but its M4 coexistence observation is
@@ -387,6 +388,10 @@ Verified for M4 software preparation on 2026-09-23:
 - the implementation preserves one Audio playback owner and one UART owner per
   controller; UI/light tasks do not perform UART waits, and no audio samples or
   low-level Audio operations cross the protocol;
+- final clean images embed application version `66f36e5`: Audio is 341,568
+  bytes with SHA-256 `1e34bce1d611b95bb84648190a973ee6dcde90613f001db1146ad897a3cc4aab`,
+  and Control is 600,064 bytes with SHA-256
+  `766a31a6f3b05890d89b9e2f9289d1b26375481c884d2fd2b1eb24aa745195ca`;
 - detailed scope, commands and pending hardware procedure are in
   `docs/software/verification/2026-09-23_M4_semantic_audio_protocol.md`.
 
@@ -480,9 +485,9 @@ lines are connected to the powered other board.
 
 The exact next task is:
 
-1. Commit/rebuild the prepared M4 source, record final image hashes, then ask
-   the user to place the Atom in download mode before flashing. Press Atom reset
-   after its flash; flash Control without its settings partition.
+1. Ask the user to place the Atom in download mode, then flash the recorded
+   `66f36e5` Audio image. Press Atom reset after its flash; then flash the
+   recorded Control image without its settings partition.
 2. Capture silent Audio boot plus Control HELLO/INFO/GET_STATUS reconciliation.
    Confirm display and the now-connected GPIO8 LED strip remain responsive.
 3. From the Control USB console, test 30-second PLAY, deliberate duplicate
@@ -512,6 +517,9 @@ The exact next task is:
   existing touch audio behavior is intentionally not migrated before M5.
 - Strict host framing and semantic tests pass. Clean ESP-IDF v6.0 builds pass
   for ESP32-S3/8 MB and ESP32-C6/8 MB with no observed project-code warning.
+- Committed the implementation as `66f36e5`, rebuilt both targets cleanly so
+  that version is embedded, and recorded exact final image sizes and SHA-256
+  hashes in the M4 verification report.
 - No image has been flashed and no M4 hardware behavior is claimed. Exact next
   task is the five-step hardware gate in section 6. The connected LED strip and
   `AUD-ISS-001` remain explicit evidence items.

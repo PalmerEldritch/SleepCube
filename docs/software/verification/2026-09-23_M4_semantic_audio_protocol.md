@@ -82,10 +82,17 @@ idf.py -B /tmp/sleepcube-m4-control-build \
   set-target esp32c6 build
 ```
 
-The preparation builds produced a 341,568-byte Audio image and 600,064-byte
-Control image without a project-code compiler warning. Final post-commit image
-sizes, hashes and application-version identity shall be recorded immediately
-before flashing.
+Final clean builds from implementation commit `66f36e5` produced the following
+images without a project-code compiler warning:
+
+| Controller | Application version | Image | Bytes | SHA-256 |
+|---|---|---|---:|---|
+| Audio / ESP32-S3 | `66f36e5` | `SleepCube_audio_controller.bin` | 341,568 | `1e34bce1d611b95bb84648190a973ee6dcde90613f001db1146ad897a3cc4aab` |
+| Control / ESP32-C6 | `66f36e5` | `SleepCube_P0.bin` | 600,064 | `766a31a6f3b05890d89b9e2f9289d1b26375481c884d2fd2b1eb24aa745195ca` |
+
+These immutable external build directories are the source for the coordinated
+hardware flash; the subsequent documentation-only evidence commit does not
+alter either image.
 
 ## Pending hardware exit gate
 
