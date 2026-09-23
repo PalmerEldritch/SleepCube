@@ -26,6 +26,16 @@ config SC_AUDIO_REMOTE_LINK
         Audio Controller facade. Audio commands and confirmed state use the
         semantic UART client; storage, decoding and I2S remain remote.
 
+config SC_REMOTE_PLAY_DURATION_SECONDS
+    int "Remote playback session duration (seconds)"
+    depends on SC_AUDIO_REMOTE_LINK
+    range 1 3600
+    default 1800
+    help
+        Finite session duration sent with normal product PLAY requests. R00
+        production builds use 1800 seconds. Shorter values may be selected in
+        temporary verification builds without changing the wire contract.
+
 choice SC_AUDIO_I2S_MODE
     prompt "Audio TX bus mode"
     depends on SC_ENABLE_AUDIO

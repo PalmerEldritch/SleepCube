@@ -52,6 +52,12 @@ esp_err_t sc_audio_settings_init(uint8_t *volume_percent)
         ESP_LOGW(TAG, "saved volume=%u%% is invalid; clamped to %u%%",
                  saved_volume, SC_VOLUME_MAX_PERCENT);
         saved_volume = SC_VOLUME_MAX_PERCENT;
+        const esp_err_t repair_result =
+            sc_audio_settings_save_volume(saved_volume);
+        if (repair_result != ESP_OK) {
+            ESP_LOGW(TAG, "clamped volume could not be repaired in NVS: %s",
+                     esp_err_to_name(repair_result));
+        }
     }
     *volume_percent = saved_volume;
     ESP_LOGI(TAG, "loaded saved volume=%u%%", *volume_percent);

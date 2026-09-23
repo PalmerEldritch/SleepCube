@@ -64,8 +64,12 @@ static void sc_app_core_task(void *arg)
                 ESP_ERROR_CHECK_WITHOUT_ABORT(sc_light_service_change_brightness((int)event.value));
                 break;
             case SC_APP_EVT_AUDIO_AVAILABILITY_CHANGED:
-                ESP_LOGI(TAG, "authoritative audio %s",
-                         event.value != 0 ? "available" : "unavailable");
+                if (event.value != 0) {
+                    ESP_LOGI(TAG, "authoritative audio available");
+                } else {
+                    ESP_LOGW(TAG,
+                             "authoritative audio unavailable; presentation neutral, lighting retained");
+                }
                 break;
             case SC_APP_EVT_AUDIO_STATE_CHANGED:
                 sc_ui_service_audio_state_changed(event.value != 0);

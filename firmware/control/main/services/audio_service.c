@@ -13,6 +13,7 @@
 #if CONFIG_SC_ENABLE_AUDIO
 #include "audio_diag_console.h"
 #include "audio_player.h"
+#include "settings_policy.h"
 #include "settings_store.h"
 #elif CONFIG_SC_AUDIO_REMOTE_LINK
 #include "sc_audio_link.h"
@@ -49,6 +50,13 @@ esp_err_t sc_audio_service_start(void)
     if (load_err != ESP_OK) {
         ESP_LOGW(TAG, "volume load failed, using default: %s", esp_err_to_name(load_err));
         initial_volume = SC_AUDIO_DEFAULT_VOLUME_PCT;
+    }
+    const uint8_t validated_volume = sc_settings_bound_u8(
+        initial_volume, 0U, 100U);
+    if (validated_volume != initial_volume) {
+        ESP_LOGW(TAG, "saved local volume=%u%% is invalid; clamped to %u%%",
+                 (unsigned)initial_volume, (unsigned)validated_volume);
+        initial_volume = validated_volume;
     }
 
     ESP_LOGI(TAG, "starting legacy local audio playback service");
@@ -376,7 +384,7 @@ esp_err_t sc_audio_service_set_playback(bool enable)
 
     const esp_err_t error = enable
                                 ? sc_audio_link_control_play(
-                                      SC_AUDIO_LINK_DEFAULT_PLAY_SECONDS)
+                                      CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS)
                                 : sc_audio_link_control_stop();
     if (error != ESP_OK) {
         portENTER_CRITICAL(&s_remote_lock);
@@ -384,8 +392,12 @@ esp_err_t sc_audio_service_set_playback(bool enable)
         portEXIT_CRITICAL(&s_remote_lock);
         return error;
     }
-    ESP_LOGI(TAG, "remote %s requested",
-             enable ? "PLAY(1800s)" : "STOP");
+    if (enable) {
+        ESP_LOGI(TAG, "remote PLAY(%ds) requested",
+                 CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS);
+    } else {
+        ESP_LOGI(TAG, "remote STOP requested");
+    }
     return ESP_OK;
 }
 

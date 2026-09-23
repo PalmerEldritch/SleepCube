@@ -6,6 +6,7 @@ set(SC_SRCS
     "services/ui_service.c"
     "drivers/lvgl_display_if.c"
     "hal/hw_profile.c"
+    "hal/settings_policy.c"
     "hal/settings_store.c"
     "trace/sc_trace.c"
 )

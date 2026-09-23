@@ -6,8 +6,6 @@
 #include "esp_err.h"
 #include "sc_audio_protocol.h"
 
-#define SC_AUDIO_LINK_DEFAULT_PLAY_SECONDS 1800U
-
 /** Start the Audio endpoint. The supplied backend must remain valid. */
 esp_err_t sc_audio_link_start_audio(int tx_gpio,
                                     int rx_gpio,
@@ -30,4 +28,3 @@ esp_err_t sc_audio_link_control_replay_last(void);
 
 bool sc_audio_link_control_is_synchronized(void);
 esp_err_t sc_audio_link_control_get_status(sc_audio_status_t *status);
-

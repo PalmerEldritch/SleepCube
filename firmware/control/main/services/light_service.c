@@ -9,6 +9,7 @@
 #include "freertos/task.h"
 #include "esp_check.h"
 #include "esp_log.h"
+#include "settings_policy.h"
 #include "settings_store.h"
 
 #if CONFIG_SC_ENABLE_LIGHT
@@ -324,6 +325,20 @@ esp_err_t sc_light_service_start(void)
     if (load_err != ESP_OK) {
         ESP_LOGW(TAG, "brightness load failed, using default: %s", esp_err_to_name(load_err));
         persisted_brightness = (uint8_t)SC_LIGHT_DEFAULT_BRIGHTNESS_PCT;
+    }
+    const uint8_t validated_brightness = sc_settings_bound_u8(
+        persisted_brightness, SC_LIGHT_BRIGHTNESS_MIN_PCT, 100U);
+    if (validated_brightness != persisted_brightness) {
+        ESP_LOGW(TAG, "saved brightness=%u%% is invalid; clamped to %u%%",
+                 (unsigned)persisted_brightness,
+                 (unsigned)validated_brightness);
+        const esp_err_t repair_err = sc_settings_store_save_u8(
+            SC_LIGHT_SETTINGS_KEY_BRIGHTNESS, validated_brightness);
+        if (repair_err != ESP_OK) {
+            ESP_LOGW(TAG, "brightness repair save failed: %s",
+                     esp_err_to_name(repair_err));
+        }
+        persisted_brightness = validated_brightness;
     }
 
     s_rgb_buf = (uint8_t *)malloc((size_t)CONFIG_SC_LED_COUNT * 3U);

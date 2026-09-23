@@ -1,0 +1,12 @@
+# M6 product session/fault integration image. This remains a production-like
+# 30-minute configuration; temporary hardware verification may override the
+# finite duration in an out-of-tree sdkconfig without changing tracked files.
+CONFIG_IDF_TARGET="esp32c6"
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="8MB"
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+# CONFIG_SC_ENABLE_AUDIO is not set
+CONFIG_SC_AUDIO_REMOTE_LINK=y
+CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS=1800
+CONFIG_SC_ENABLE_LIGHT=y
+CONFIG_SC_ENABLE_UI=y

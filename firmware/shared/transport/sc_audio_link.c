@@ -22,6 +22,7 @@
 #define SC_LINK_RESPONSE_TIMEOUT_MS 250U
 #define SC_LINK_MAX_ATTEMPTS 3U
 #define SC_LINK_RECONNECT_MS 1000U
+#define SC_LINK_STATUS_POLL_MS 1000U
 
 typedef enum {
     CONTROL_REQUEST_STATUS = 0,
@@ -448,6 +449,7 @@ static void control_task(void *argument)
     uint8_t attempts = 0U;
     uint32_t deadline_ms = 0U;
     uint32_t reconnect_due_ms = 0U;
+    uint32_t status_poll_due_ms = 0U;
     uint32_t rejected = 0U;
 
     ESP_LOGI(TAG,
@@ -516,6 +518,7 @@ static void control_task(void *argument)
             if (send_new_pending(&pending, &pending_valid, &attempts,
                                  &deadline_ms)) {
                 need_status = false;
+                status_poll_due_ms = timestamp_ms + SC_LINK_STATUS_POLL_MS;
             }
         } else if (!pending_valid && s_control.synchronized) {
             control_request_t request;
@@ -526,6 +529,13 @@ static void control_task(void *argument)
                 } else {
                     ESP_LOGW(TAG, "diagnostic request unavailable type=%d",
                              (int)request.type);
+                }
+            } else if ((int32_t)(timestamp_ms - status_poll_due_ms) >= 0) {
+                sc_audio_make_get_status(&pending, next_sequence());
+                if (send_new_pending(&pending, &pending_valid, &attempts,
+                                     &deadline_ms)) {
+                    status_poll_due_ms = timestamp_ms +
+                                         SC_LINK_STATUS_POLL_MS;
                 }
             }
         }
