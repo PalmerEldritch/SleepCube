@@ -255,17 +255,23 @@ Exit criteria:
 
 **Goal:** Preserve/refine the existing mature UI/light behaviour against the new distributed state model.
 
-**Status (2026-09-23): IN PROGRESS.** The requirement/code audit is complete.
-Implementation `727285d` prevents a moved/cancelled rest-view gesture from
-falling through as a short-tap audio toggle, adds touch-to-application timing
-markers, and provides separate tracked M7 product and trace build profiles.
-Strict host regressions and clean ESP32-C6/8 MB builds pass. Physical touch,
-slider, synchronization and initial dark-room checks pass. The dark-room pass
-identified unstable strip chromaticity below the empirically clean 26% selected
-level and during the low-brightness STOP dip. Correction `f776eb6` adds LED-only
-26% selected and 17% post-effect floors while retaining the display's complete
-range; its target retest plus unavailable/recovery observations remain before
-the M7 exit criterion can be claimed.
+**Status (2026-09-23): PASS.** Implementation `727285d` prevents a
+moved/cancelled rest-view gesture from falling through as a short-tap audio
+toggle, adds focused timing markers, and provides separate product and trace
+profiles. Dark-room testing then identified unstable strip chromaticity below
+the empirically clean 26% selected level and during the low-brightness STOP
+dip. Correction `f776eb6` adds LED-only 26% selected and 17% post-effect floors
+while retaining the display's complete range and the stored user value.
+
+Strict host regressions and clean ESP32-C6/8 MB product/trace builds pass.
+Physical short tap, moved-gesture suppression, 1,020 ms long press,
+approximately three-second return, direct controls, confirmed-state response,
+dark-room behavior and Audio-unavailable/recovery checks pass. The corrected
+strip stays warm white at minimum output and through the STOP dip; low-output
+animation coarseness is accepted as a hardware-resolution characteristic. The
+exact product image was restored with trace disabled and confirmed silent with
+normal display/LED operation. Evidence is in
+`verification/2026-09-23_M7_ux_lighting.md`.
 
 Deliverables:
 
@@ -335,19 +341,19 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Begin M7 with a requirement-by-requirement UX and lighting review against
-`03_UX.md`, then execute the retained product UI on the completed distributed
-M6 baseline:
+Begin M8 with a requirement-by-requirement audit of every non-deferred SRS and
+ICD/VVM row, recording the exact missing release evidence before another target
+run. Prioritize:
 
-1. verify confirmed/requested/unavailable presentation, including recovery and
-   timeout transitions, against the normative UX rows;
-2. perform the dark-room ambient-light and transition-quality observations;
-3. measure or otherwise capture the remaining UI/light responsiveness evidence
-   practical in M7, without changing the stable M6 UART/audio contract;
-4. document any intentional UX refinement before implementation, preserving
-   independent brightness and the authoritative Audio-state model.
+1. the evidence-backed disposition of `AUD-ISS-001`, beginning with an audition
+   of the exact hash-matched canonical mono WAV on a known-clean reference
+   output;
+2. retained-log measurements for the 100 ms touch-event and 250 ms
+   command-confirmation limits;
+3. any remaining repeated reset, link-loss, power-cycle, content-fault and
+   endurance permutations identified by the audit;
+4. reproducible release-candidate build/flash instructions and final VVM
+   closure.
 
-Keep the `AUD-ISS-001` audio-noise disposition explicit. Its next diagnostic
-remains an audition of the exact hash-matched canonical mono WAV on a
-known-clean reference output; it must be fixed, mitigated or explicitly
-accepted before R00 release.
+The audio-noise issue must be fixed, mitigated or explicitly accepted before
+R00 release; M7's UX/lighting pass does not close it.

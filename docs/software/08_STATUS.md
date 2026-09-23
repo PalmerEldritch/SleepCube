@@ -7,30 +7,24 @@
 
 ## 1. Current milestone
 
-**M7 UX/lighting refinement implemented and build-verified; physical gate next**
+**M7 UX/lighting refinement complete; M8 system validation next**
 
-Status: **M1 through M6 pass. M7 is in progress. Implementation `727285d`
-closes the identified rest-gesture cancellation gap, adds focused UI timing
-trace points, and tracks separate normal-product and test-only trace profiles.
-Strict frame, semantic-protocol and settings-policy host tests pass. Both M7
-profiles clean-build for ESP32-C6/8 MB from the exact commit without observed
-project warnings. Its trace image was flashed and passed short-tap PLAY/STOP,
-moved-gesture cancellation, long-press/timeout, slider synchronization and an
-initial dark-room pass. That pass exposed colorful strip quantization below the
-user-confirmed 26% clean level and briefly during the STOP dip. Correction
-`f776eb6` adds LED-only 26% selected and 17% post-effect floors and clean-builds;
-its target retest is pending, so M7 is not yet claimed complete. M6
-implementation `709512c` adds one-second
-bounded status health probes so quiet UART loss becomes unavailable/degraded,
-retains UI/lighting operation, and recovers through HELLO/GET_STATUS without
-PLAY replay. It also makes the finite product duration configurable with an
-explicit 1,800-second production default and validates/repairs bounded stored
-settings. Commit `ab214fe` adds the reproducible 30-second timer overlay and
-`9e28ab7` clarifies diagnostic versus product duration logging. Strict tests,
-clean builds, physical timer expiry, one-direction UART loss/recovery, Control
-reset during playback, and normal power-cycle persistence all pass. The final
-deployed state is Control `9e28ab7` with the 1,800-second product profile and
-Audio `d373b1a`, reconciled silent/STOPPED at brightness 42% and volume 63%.**
+Status: **M1 through M7 pass. Implementation `727285d` closes the rest-gesture
+cancellation gap and adds test-only UI trace points. Correction `f776eb6` adds
+LED-only 26% selected and 17% post-effect output floors after dark-room testing
+identified colorful low-count strip quantization; the display retains its full
+range and the stored selection is unchanged. Strict host regressions and clean
+ESP32-C6/8 MB product/trace builds pass. Physical taps, moved-gesture
+suppression, long press/timeout, sliders, authoritative Audio presentation,
+dark-room behavior and Audio-unavailable/recovery checks all pass. The exact
+final product image reports application `65ffc61`, is 604,032 bytes with
+SHA-256 `52ff3c8015882a2612762835af5071f16d19790b2c18d44d0832e02d43f4bc25`,
+and was restored with trace disabled. It reconciled Audio `d373b1a` to
+silent/STOPPED at volume 63%; the user confirmed normal display and LED
+operation. The last trace run stored a low brightness selection of approximately
+13%, which the product restores while applying the LED-only stability floor.
+The superseded M6 final image was Control `9e28ab7`; its timer, link-loss, reset
+and persistence evidence remains applicable.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -126,6 +120,14 @@ state, always requests a finite 1,800-second session, suppresses duplicate
 playback intent and coalesces volume drag traffic. Confirmed state returns to
 the UI and drives any audio-related light response through `app_core`; light
 startup and brightness remain independent of audio synchronization.
+
+M6 adds periodic bounded status-health probes, neutral unavailable-state
+presentation, settings validation/repair and explicit 1,800-second product plus
+30-second timer-test profiles. M7 `sdkconfig.m7.defaults` is now the normal
+product profile; its separate trace overlay is test-only. Rest-view movement
+cancels the entire gesture, while LED output uses 26% selected and 17%
+post-effect stability floors when enabled. These floors do not alter the stored
+brightness, the display range or commanded shutdown behavior.
 
 Implemented migration seam:
 
@@ -490,6 +492,34 @@ Verified for M6 software and target hardware on 2026-09-23:
 - detailed evidence and limitations are in
   `docs/software/verification/2026-09-23_M6_session_fault_integration.md`.
 
+Verified for M7 software and target hardware on 2026-09-23:
+
+- `727285d` suppresses short-tap release after significant rest-view movement;
+  two moved gestures logged `gesture_cancel`/`click_suppressed` and caused no
+  playback, slider entry or response pulse;
+- a stationary long press measured 1,020 ms, entered adjustment view smoothly,
+  and returned after approximately three seconds with current values preserved;
+- short-tap PLAY/STOP responses were synchronized with audio start/fade, direct
+  brightness changes kept display/strip coordinated, and authoritative Audio
+  presentation remained correct;
+- initial dark-room testing found a clean full-range display but colorful strip
+  quantization below the user-selected 26% clean level and briefly during the
+  STOP dip. `f776eb6` applies LED-only 26% selected and 17% post-effect floors;
+  corrected testing stayed warm white at minimum and through STOP. Slightly
+  coarser animation at this low physical output is accepted;
+- disconnecting the Audio return path kept rest/brightness responsive, retained
+  confirmed volume 63% while ignoring volume input, and produced neither sound
+  nor false playback. Reconnection reacquired STOPPED/no-fault without Control
+  reset or PLAY replay;
+- strict host regressions pass. Exact `65ffc61` Control product and trace builds
+  are 604,032 bytes / SHA-256
+  `52ff3c8015882a2612762835af5071f16d19790b2c18d44d0832e02d43f4bc25`
+  and 604,704 bytes / SHA-256
+  `2d438044bccf83e80936f6ff211cfb80e80c4cafc76204e7342f2d5755e243ef`;
+- the product image was restored with trace disabled and reconciled
+  silent/STOPPED. The user confirmed normal display and LED operation. Full
+  evidence is in `docs/software/verification/2026-09-23_M7_ux_lighting.md`.
+
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
@@ -497,8 +527,8 @@ Not yet verified for the new architecture:
 - hardware injection of an invalid Control brightness NVS value; policy unit
   tests cover the bounds and retained M2 target evidence covers invalid Audio
   volume;
-- release-level latency/timing measurements and the remaining M7 dark-room UX
-  and lighting observations.
+- release-level 100 ms touch-event and 250 ms command-confirmation measurements;
+- the complete M8 audit of remaining non-deferred SRS/ICD permutations.
 
 ## 4. Architectural decisions in force
 
@@ -564,6 +594,12 @@ The following implementation choices remain intentionally open:
 - root cause and release disposition of `AUD-ISS-001`, including exact-mono
   reference audition and representative listening after any mitigation.
 
+M7's LED output floors are intentional closed tuning, not an open blocker. At
+the corrected minimum, external-strip modulation can appear slightly coarser
+because of low digital channel counts; the user accepted that characteristic
+after confirming stable warm-white color. The display still uses the complete
+selected brightness range.
+
 Observed M3 setup issue: the Waveshare USB Serial/JTAG endpoint failed to
 enumerate after manual BOOT/RESET (kernel error `-71`), then returned after a
 plain RESET. The ESP-IDF automatic-reset flash succeeded. This did not indicate
@@ -575,19 +611,50 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Execute the M7 physical UX and lighting gate.**
+**Begin M8 system-validation evidence closure.**
 
 The exact next task is:
 
-1. Rebuild and flash the Waveshare only with an exact committed `f776eb6` M7
-   trace image; retain the user-selected 26% setting.
-2. Repeat the dark-room ambient and PLAY/STOP check, specifically confirming
-   stable warm-white chromaticity at minimum selection and through the STOP dip.
-3. Repeat unavailable/recovery behavior with brightness usable throughout.
-4. Restore the exact corrected product image, then add M7 evidence to the VVM
-   and verification records. Keep `AUD-ISS-001` open for separate disposition.
+1. Audit every non-deferred SRS and ICD/VVM row and enumerate only the remaining
+   release-evidence gaps before scheduling target work.
+2. Prioritize `AUD-ISS-001`: audition the exact hash-matched canonical mono WAV
+   on a known-clean reference output, then record a verified fix/mitigation or
+   explicit accepted limitation.
+3. Capture release-level evidence for the 100 ms touch-event and 250 ms
+   command-confirmation limits using the retained M7 trace profile as useful.
+4. Execute the remaining reset, link-loss, power-cycle, content-fault and
+   endurance permutations found by the audit, then prepare the reproducible R00
+   release-candidate build/flash record.
 
 ## 7. Session closeout record
+
+### 2026-09-23 — M7 hardware completion
+
+- Flashed and exercised the M7 trace image on the Waveshare while Audio
+  `d373b1a`, the display, GPIO8 strip, storage and speaker remained in the
+  established product setup.
+- Short PLAY/STOP taps, moved-gesture suppression, 1,020 ms stationary long
+  press, approximately three-second adjustment timeout, preserved controls and
+  synchronized visual/audio responses passed. Trace confirmed that cancelled
+  movement emitted no audio-toggle event.
+- The initial dark-room run exposed colorful low-count strip behavior below the
+  empirically clean 26% level and during the low STOP dip. Correction `f776eb6`
+  added LED-only 26% selected and 17% post-effect floors without restricting the
+  display slider or stored setting.
+- Rebuilt exact application `65ffc61`: product is 604,032 bytes, SHA-256
+  `52ff3c8015882a2612762835af5071f16d19790b2c18d44d0832e02d43f4bc25`;
+  trace is 604,704 bytes, SHA-256
+  `2d438044bccf83e80936f6ff211cfb80e80c4cafc76204e7342f2d5755e243ef`.
+- Corrected dark-room retest passed: ambient and STOP response remained stable
+  warm white. Slightly coarser modulation at the minimum was accepted as an LED
+  resolution characteristic.
+- Audio return-path disconnection kept brightness/rest usable and silent,
+  retained confirmed volume 63% and ignored volume changes. Reconnection
+  recovered authoritative STOPPED/no-fault without reset or replay.
+- Restored the exact product image with trace disabled. The user confirmed
+  silent output and normal display/LED operation. M7 is PASS; detailed evidence
+  is in `docs/software/verification/2026-09-23_M7_ux_lighting.md`. The exact
+  next work is the M8 evidence audit in section 6; `AUD-ISS-001` remains open.
 
 ### 2026-09-23 — M7 implementation and build preparation
 
@@ -624,8 +691,9 @@ The exact next task is:
 - Correction `f776eb6` adds configurable LED-only guards: 26% minimum selected
   output and 17% minimum post-effect output after startup. The display retains
   its complete range and the normal ambient modulation remains. Both product
-  and trace profiles clean-build; the exact next action is the corrected
-  dark-room target retest in section 6.
+  and trace profiles clean-build. At this preparation checkpoint the corrected
+  dark-room retest was pending; it was subsequently completed and recorded in
+  the M7 hardware-completion entry above.
 
 ### 2026-09-23 — M6 hardware completion
 

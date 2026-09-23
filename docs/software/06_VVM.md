@@ -73,14 +73,30 @@
 
 | Requirement | Method | Acceptance evidence |
 | --- | --- | --- |
-| UX-UI-002 | MAN | Short tap toggles playback request |
-| UX-UI-003 | MAN | ~1 s long press enters adjustment view |
-| UX-UI-004 | MAN | Motion cancels long-press recognition |
-| UX-UI-013 | MAN | Adjustment overlay returns to rest after ~3 s inactivity |
-| UX-UI-014 | MAN | Overlay transition is animated rather than abrupt |
-| UX-AUD-002 | FI, MAN | Lost acknowledgement does not falsely show confirmed playing |
-| UX-LGT-001 | MAN | Ambient display modulation is smooth in dark-room observation |
-| UX-STA-002 | FI, MAN | Audio absence does not block rest view/brightness control |
+| UX-UI-001 | HWT, MAN | Product boot and adjustment timeout settle in the ambient rest view |
+| UX-UI-002 | HWT, MAN | Short rest-view taps request PLAY/STOP and confirmed responses follow authoritative Audio state |
+| UX-UI-003 | HWT, LOG | Stationary long press enters adjustment view; M7 trace measured 1,020 ms |
+| UX-UI-004 | HWT, LOG | Significant motion cancels the whole gesture; trace contains `gesture_cancel` and `click_suppressed` with no toggle event |
+| UX-UI-005 | MAN | Rest view remains the useful ambient presentation rather than a menu |
+| UX-UI-006 | HWT, MAN | Confirmed PLAY/STOP state changes produce synchronized, decaying display/strip responses |
+| UX-UI-010 | HWT, MAN | Adjustment view exposes volume and brightness directly without nested menus |
+| UX-UI-011 | HWT, MAN | Spatially distinct controls respond to direct touch/drag interaction |
+| UX-UI-012 | HWT, MAN | Controls open at the last confirmed volume and current selected brightness |
+| UX-UI-013 | HWT, LOG | Adjustment view returns to rest after approximately 3 s inactivity |
+| UX-UI-014 | HWT, MAN | Entry and exit transitions are smooth rather than abrupt |
+| UX-UI-015 | FI, HWT | Brightness remains usable while the Audio return path is disconnected |
+| UX-UI-016 | FI, HWT | During Audio unavailability, volume input is ignored and the last confirmed value remains displayed |
+| UX-AUD-001 | IT, MAN | UI distinguishes authoritatively confirmed PLAYING and STOPPED states |
+| UX-AUD-002 | IT, FI | Transmit/request state alone does not create confirmed-playing presentation |
+| UX-AUD-003 | FI, MAN | Link loss selects neutral/degraded presentation without false playback feedback |
+| UX-AUD-004 | HWT, MAN | M6 timeout returns to STOPPED with only a transient lighting response and unchanged selected brightness |
+| UX-LGT-001 | HWT, MAN | Ambient display and strip modulation is smooth and suitable in dark-room observation |
+| UX-LGT-002 | HWT, MAN | Display and strip track brightness changes together; the strip uses a verified low-output chromatic-stability floor |
+| UX-LGT-003 | MAN | Rest and adjustment operation leave no persistent bright status indicator |
+| UX-LGT-004 | HWT, MAN | PLAY/STOP responses decay; corrected STOP dip remains stable warm white at minimum output |
+| UX-STA-001 | HWT, MAN | Product startup shows the ambient view and remains silent/STOPPED |
+| UX-STA-002 | FI, HWT | Audio absence does not block rest view or brightness control |
+| UX-STA-003 | FI, IT | UART recovery reacquires STOPPED state without Control reset or PLAY replay |
 
 ## 4. Development milestone evidence
 
@@ -122,6 +138,10 @@ close the associated R00 requirements.
 | M6-FI-001 | Physical UART return-path loss during active playback and recovery | PASS — three bounded status attempts detected loss; UI/brightness stayed responsive; Audio stopped on its independent deadline; reconnect reconciled authoritative TIMER_EXPIRED/STOPPED without PLAY replay | `verification/2026-09-23_M6_session_fault_integration.md` |
 | M6-RST-001 | Control reset during active playback through product facade | PASS — Audio continued without restart/level change to its existing deadline; new Control session synchronized to the existing Audio session and STOPPED state without extending or replaying PLAY | `verification/2026-09-23_M6_session_fault_integration.md` |
 | M6-SET-001 | Distributed volume/brightness persistence and stopped startup | PASS — after normal dual-controller power cycle, Control restored brightness 42%, Audio restored volume 63%, and both reconciled stopped with silent output; invalid-bound behavior is additionally covered by M6-UT-001 and retained M2 target evidence | `verification/2026-09-23_M6_session_fault_integration.md` |
+| M7-BLD-001 | Gesture hardening, LED-floor correction, strict host regression and product/trace Control builds | PASS — strict C11/UBSan frame, semantic-protocol and settings-policy tests pass; exact `65ffc61` ESP32-C6/8 MB product and trace images clean-build at 604,032 and 604,704 bytes | `verification/2026-09-23_M7_ux_lighting.md` |
+| M7-HWT-001 | Rest gestures, adjustment interaction, confirmed audio presentation and coordinated lighting | PASS — PLAY/STOP responses are synchronized; moved gestures are suppressed; 1,020 ms long press, approximately 3 s return, direct sliders, preserved values and normal rest presentation pass | `verification/2026-09-23_M7_ux_lighting.md` |
+| M7-MAN-001 | Dark-room display/strip behavior and low-output correction | PASS — display retains its full range; corrected strip remains a stable modulated warm white at minimum and through STOP response, with accepted low-count animation coarseness and no colorful quantization | `verification/2026-09-23_M7_ux_lighting.md` |
+| M7-FI-001 | Audio return-path loss, unavailable controls and recovery | PASS — brightness remains responsive, volume retains 63% and ignores input, rest remains neutral and silent, and reconnection recovers authoritative STOPPED without reset or replay | `verification/2026-09-23_M7_ux_lighting.md` |
 
 Open developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport
 or M5 facade gates. It is not closed by the M2 validation-tone/PCM results or
