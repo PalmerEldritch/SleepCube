@@ -7,16 +7,16 @@
 
 ## 1. Current milestone
 
-**M4 semantic audio protocol implemented; two-controller hardware gate next**
+**M4 semantic audio protocol complete; M5 UI/audio-service migration next**
 
-Status: **M1, M2 and M3 pass. M4 software is implemented on
+Status: **M1 through M4 pass. M4 is complete on
 `feat/m4-semantic-audio-protocol`: the semantic ICD and ADR-0008 are frozen,
-host protocol tests pass, and both 8 MB target images build cleanly from
-implementation commit `66f36e5`. No M4 image
-has been flashed, so remote PLAY/STOP/volume, both boot orders and independent
-reset recovery remain unverified. The external LED strip is now physically
-connected to Waveshare 5 V, GND and GPIO8, but its M4 coexistence observation is
-also pending.**
+host protocol tests and both 8 MB target builds pass, and the physical
+two-controller gate verifies bounded PLAY/STOP/volume/status, duplicate
+suppression, finite timeout, both boot orders and both independent reset
+directions. Silent recovery, the Waveshare display and the external GPIO8 LED
+strip also pass. Final Control firmware includes USB-console reset recovery fix
+`3908d18`; touch-to-remote-audio migration remains M5.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -388,25 +388,43 @@ Verified for M4 software preparation on 2026-09-23:
 - the implementation preserves one Audio playback owner and one UART owner per
   controller; UI/light tasks do not perform UART waits, and no audio samples or
   low-level Audio operations cross the protocol;
-- final clean images embed application version `66f36e5`: Audio is 341,568
-  bytes with SHA-256 `1e34bce1d611b95bb84648190a973ee6dcde90613f001db1146ad897a3cc4aab`,
-  and Control is 600,064 bytes with SHA-256
-  `766a31a6f3b05890d89b9e2f9289d1b26375481c884d2fd2b1eb24aa745195ca`;
-- detailed scope, commands and pending hardware procedure are in
+- deployed Audio embeds `94c7b4a`, is 341,568 bytes and has SHA-256
+  `5cf5a22a2abbbe6605de9a2e8e09732c827f157a6f1880247ba81988b31c3de3`;
+  final Control embeds console-recovery fix `3908d18`, is 600,144 bytes and has
+  SHA-256 `353472dc9b1065abbf5d2ad314eb5b10021b70f9a7069c6c6828c67a2e277697`;
+- detailed scope, commands and hardware evidence are in
   `docs/software/verification/2026-09-23_M4_semantic_audio_protocol.md`.
+
+Verified on M4 target hardware on 2026-09-23:
+
+- Atom booted silent, mounted/validated canonical content and reached READY;
+  Control synchronized with HELLO/INFO/GET_STATUS and issued no automatic PLAY;
+- remote PLAY, STOP, 25/50/75/100% volume, GET_STATUS and authoritative events
+  passed with no command timeout or playback fault;
+- an exact duplicate PLAY returned DUPLICATE while remaining time continued to
+  fall, and the single session ended at its original deadline through a smooth
+  five-second fade and TIMER_EXPIRED;
+- explicit STOP produced a clean one-second fade; the user reported no click,
+  pop, dropout or other transition artifact;
+- resetting Control during PLAY did not interrupt, restart or extend Audio;
+  restarted Control used HELLO/GET_STATUS and did not replay PLAY;
+- resetting Audio during PLAY stopped output safely; Control detected the new
+  Audio session, abandoned old command context and reconciled to silent STOPPED
+  without its own reset or an automatic PLAY;
+- Audio-first and Control-first startup both pass; display and GPIO8 LED strip
+  remained operational through command and reset activity;
+- a sticky stdio EOF found in the USB development harness after Control reset
+  was fixed with `clearerr(stdin)` in `3908d18`; attaching only after boot and
+  issuing GET_STATUS then passed.
 
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
   and unsupported-format fault cases;
-- on-target semantic PLAY/STOP/SET_VOLUME and authoritative transition events;
-- semantic link-session/retry behavior in both boot orders and across each
-  independent controller reset;
-- external LED-strip continuity with the M4 semantic task active (the strip is
-  now connected but has not been observed with M4 firmware);
 - a complete early Control boot log after native USB re-enumeration; later
-  display initialization and transport startup/recovery logs were captured;
-- integrated two-controller system behaviour.
+  transport startup/recovery was proven from both controller logs;
+- M5 touch UI/audio-service integration and Audio-absent UI/light behavior
+  through the product facade.
 
 ## 4. Architectural decisions in force
 
@@ -476,27 +494,28 @@ Observed M3 setup issue: the Waveshare USB Serial/JTAG endpoint failed to
 enumerate after manual BOOT/RESET (kernel error `-71`), then returned after a
 plain RESET. The ESP-IDF automatic-reset flash succeeded. This did not indicate
 an M3 UART or firmware failure, but boot/download-mode handling should be
-watched in future flashes. Do not hot-unplug one controller while its UART
-lines are connected to the powered other board.
+watched in future flashes. M4 confirmed that the Waveshare can enter download
+mode automatically for flashing; no manual BOOT/RESET preparation is required.
+Do not hot-unplug one controller while its UART lines are connected to the
+powered other board.
 
 ## 6. Next recommended task
 
-**Run the M4 two-controller hardware gate from the committed images.**
+**Begin M5 Waveshare audio-service migration.**
 
 The exact next task is:
 
-1. Ask the user to place the Atom in download mode, then flash the recorded
-   `66f36e5` Audio image. Press Atom reset after its flash; then flash the
-   recorded Control image without its settings partition.
-2. Capture silent Audio boot plus Control HELLO/INFO/GET_STATUS reconciliation.
-   Confirm display and the now-connected GPIO8 LED strip remain responsive.
-3. From the Control USB console, test 30-second PLAY, deliberate duplicate
-   replay, timeout/TIMER_EXPIRED, manual STOP, all four volume levels and status.
-4. Verify both boot orders, Control reset during playback (no extension/replay)
-   and Audio reset during playback (silent stopped restart/new-session
-   reconciliation). Record evidence in the M4 verification report.
-5. Keep M5 UI/facade integration, M6 release fault behavior and
-   `AUD-ISS-001` outside any M4 completion claim.
+1. Refactor the retained Control `audio_service` into a non-blocking facade over
+   `sc_audio_link_control_*`, preserving its application-facing API where
+   practical and removing disabled-local-backend warnings.
+2. Route touch PLAY/STOP and volume requests through the semantic client, then
+   feed authoritative remote state/events back into `app_core` and the UI.
+3. Remove direct audio-service-to-light-service coordination; keep cross-domain
+   presentation in `app_core` while lighting continues independently.
+4. Verify the existing rest/adjustment UX against real remote Audio, then reset
+   or make Audio unavailable and confirm UI/light tasks remain responsive.
+5. Keep release-level fault policy in M6 and `AUD-ISS-001` disposition outside
+   the M5 migration claim.
 
 ## 7. Session closeout record
 
@@ -523,6 +542,27 @@ The exact next task is:
 - No image has been flashed and no M4 hardware behavior is claimed. Exact next
   task is the five-step hardware gate in section 6. The connected LED strip and
   `AUD-ISS-001` remain explicit evidence items.
+
+### 2026-09-23 — M4 two-controller hardware completion
+
+- Flashed Audio and Control with hash verification; Atom required manual
+  download-mode/post-flash reset, while Waveshare automatic bootloader entry
+  worked and its settings partition was preserved.
+- Verified silent Audio READY, HELLO/INFO/GET_STATUS, remote PLAY/STOP, all four
+  volume levels, status/events, exact duplicate suppression and the original
+  finite timeout. User listening checks found clean start/manual-stop/timeout
+  fades and silent stopped output.
+- Verified Control reset during playback without interruption, replay or
+  deadline extension, and Audio reset during playback with safe stop, new
+  session detection and status-only reconciliation. Both boot orders pass.
+- Found the M4 USB development console retained stdio EOF if the monitor was
+  absent during Control boot. Added `clearerr(stdin)`, clean-built and deployed
+  fix `3908d18`, then verified post-boot monitor attach and GET_STATUS.
+- User confirmed the Waveshare display and GPIO8 LED strip stayed operational
+  through the command/reset tests. No panic, watchdog, playback fault or UART
+  command timeout was observed.
+- M4 passes. Exact next task is the five-step M5 facade/UI migration in section
+  6. `AUD-ISS-001` remains open and is not closed by protocol success.
 
 ### 2026-09-21 — M3 framing and transport software preparation
 

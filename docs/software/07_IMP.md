@@ -167,12 +167,12 @@ Exit criteria:
 
 **Goal:** Implement the normative ICD contract.
 
-**Status:** In progress on `feat/m4-semantic-audio-protocol`. The semantic
-type/payload catalog and ADR-0008 session/idempotency/retry model are frozen.
-The shared endpoint/client, Audio playback-owner adapter, bounded Control retry
-task and development console are implemented. Protocol host tests and clean
-ESP32-S3/ESP32-C6 builds pass. On-target two-controller command, boot-order and
-independent-reset verification remains before the M4 exit gate can pass.
+**Status:** Complete on `feat/m4-semantic-audio-protocol` (2026-09-23). The
+semantic catalog and ADR-0008 are frozen; host tests and clean ESP32-S3/ESP32-C6
+builds pass. On target, bounded PLAY/STOP/SET_VOLUME/status, exact duplicate
+suppression, finite timeout, both boot orders, both independent reset directions,
+silent recovery, and display/GPIO8-light coexistence pass. The USB development
+console reset-recovery defect found during the gate is fixed in `3908d18`.
 
 Deliverables:
 
@@ -300,21 +300,19 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Complete the M3 physical/framing design freeze while awaiting or after receiving
-the jumper cables:
+Begin M5 at the existing Control-side `audio_service` seam:
 
-1. confirm the candidate crossed wiring as Waveshare GPIO16 TX to Atom GPIO2 RX,
-   Atom GPIO1 TX to Waveshare GPIO17 RX, plus common ground and no 5 V
-   inter-controller connection;
-2. record the final electrical/pin contract in `05_ICD.md` and remove the stale
-   GPIO7/GPIO8 candidate from `04_SAS.md`;
-3. evaluate and accept the required protocol framing/integrity ADR, then replace
-   the representation TBD in ICD-PRO-006;
-4. implement and host-test only the M3 serializer/parser and malformed/truncated
-   frame handling before first two-controller UART validation.
+1. replace the disabled local backend with a non-blocking facade over the proven
+   `sc_audio_link_control_*` client while preserving application-facing calls
+   where practical;
+2. route touch PLAY/STOP and volume requests to the Audio Controller, and feed
+   authoritative status/events back to `app_core` and the displayed state;
+3. move any audio/light cross-domain presentation coordination into `app_core`
+   so lighting remains independent of UART availability;
+4. verify the existing rest/adjustment UI against remote audio, then exercise
+   Audio reset/unavailability without blocking display or GPIO8 lighting.
 
-Keep PLAY/STOP/volume semantics and UI integration in M4. The close-field music
-noise tracked in `issues/AUD-ISS-001-playback-noise.md` is a later audio-tuning
-follow-up and does not block M3. Its next diagnostic is an audition of the exact
-hash-matched canonical mono WAV on a known-clean reference output. It must be
-fixed, mitigated or explicitly accepted with evidence before R00 release.
+Keep M6 release fault policy and the `AUD-ISS-001` audio-noise disposition out
+of the M5 facade migration. The issue's next diagnostic remains an audition of
+the exact hash-matched canonical mono WAV on a known-clean reference output; it
+must be fixed, mitigated or explicitly accepted before R00 release.

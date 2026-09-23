@@ -107,9 +107,12 @@ close the associated R00 requirements.
 | M3-LNK-001 | Sustained nonresponding Control peer and recovery | PASS — Atom logged nine missed PONG rounds while Waveshare was held in reset, remained stable, and resumed matches after Control restart; no physical open-circuit test claimed | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-MAN-001 | Retained Waveshare UI and external-light observation with M3 transport active | PARTIAL — user reports screen normal; no external LED strip was connected during M3, so external-light behavior was unverified | `verification/2026-09-21_M3_uart_transport.md` |
 | M4-UT-001 | Semantic payloads, finite bounds, session identity, idempotency and events | PASS — host tests cover HELLO/INFO, GET_STATUS, PLAY/STOP/SET_VOLUME, invalid durations/volume, duplicate PLAY suppression, ID reuse/stale/session rejection, reset reconciliation, malformed/unsupported input and TIMER_EXPIRED encoding | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
-| M4-BLD-001 | Separate semantic Audio and UI/light-safe Control target builds | PASS — clean ESP32-S3 and ESP32-C6/8 MB builds from tracked defaults; target hardware execution remains pending | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
+| M4-BLD-001 | Separate semantic Audio and UI/light-safe Control target builds | PASS — clean ESP32-S3 and ESP32-C6/8 MB builds from tracked defaults; final deployed Control image includes reset-safe USB harness fix `3908d18` | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
+| M4-IT-001 | Physical semantic commands, status/events, finite timeout and idempotency | PASS — PLAY/STOP, 25/50/75/100% volume and status correlated; exact PLAY replay returned DUPLICATE without deadline extension; TIMER_EXPIRED reached silent STOPPED | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
+| M4-RST-001 | Both boot orders and independent Control/Audio reset during playback | PASS — Control reset did not interrupt or extend Audio deadline; Audio reset stopped safely, changed session identity, and Control reconciled without replay; both boot orders synchronized by HELLO/GET_STATUS | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
+| M4-MAN-001 | Semantic playback transitions and retained UI/light coexistence | PASS — timeout/manual-stop/reset behavior was audibly clean and ended silent; display and GPIO8 LED strip remained operational throughout | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
 
-Open developmental issue `AUD-ISS-001` is not a failure of the M3 UART gate.
+Open developmental issue `AUD-ISS-001` is not a failure of the M3 or M4 UART gate.
 It is not closed by the M2 validation-tone/PCM results or by successful
 two-controller transport tests. Before R00 release, record either a verified
 fix/mitigation or an explicit accepted limitation supported by representative
@@ -121,7 +124,9 @@ SRS-AUD-010 endurance requirement.
 
 ## 5. ICD coverage
 
-All normative `ICD-*` requirements shall receive direct protocol unit or integration coverage when the final framing is frozen. M3 may use temporary bring-up tests; M4 completion requires an updated matrix with concrete frame-level test cases.
+The M4 host and physical evidence above covers the frozen semantic protocol,
+framing, idempotency, bounded timeout and reset-recovery contract. Release-level
+fault permutations and UI integration remain subject to the SRS/UX rows above.
 
 ## 6. R00 release gate
 
