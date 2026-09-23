@@ -58,18 +58,18 @@ Both executables report pass. The retained legacy local-backend configuration
 also clean-builds after the facade refactor.
 
 ESP-IDF v6.0 commit `662a3be354759d9487bf4b1a629fadb766cb1800`
-clean-built implementation commit `1f6e326` from tracked defaults:
+clean-built final timing-correction commit `31d8221` from tracked defaults:
 
 ```sh
 cd firmware/control
-idf.py -B /tmp/sleepcube-m5-final-1f6e326-build \
-  -D SDKCONFIG=/tmp/sleepcube-m5-final-1f6e326-sdkconfig \
+idf.py -B /tmp/sleepcube-m5-final-31d8221-build \
+  -D SDKCONFIG=/tmp/sleepcube-m5-final-31d8221-sdkconfig \
   -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.m5.defaults' \
   set-target esp32c6 build
 ```
 
-The 603,088-byte `SleepCube_P0.bin` targets ESP32-C6/8 MB, has SHA-256
-`ba5faa5d821dbb4a8628374d491db099d188d52495d99bf1b1c00ef1b56aaa84`,
+The 603,152-byte `SleepCube_P0.bin` targets ESP32-C6/8 MB, has SHA-256
+`0ca8ebb10880ab66a9926870da082460826ae6cee5e3098da2e68fe676b7e324`,
 and reports a valid image checksum and validation hash. No project-code compiler
 warning was observed.
 
@@ -83,7 +83,7 @@ verification. The settings partition was not written.
 
 The automatic post-flash reset produced a complete Control boot log with:
 
-- ESP32-C6 revision v0.2, 8 MB flash and application version `1f6e326`;
+- ESP32-C6 revision v0.2, 8 MB flash and application version `31d8221`;
 - UI and GPIO8/28-pixel light services started independently;
 - remote semantic audio facade started with legacy local audio disabled;
 - HELLO/INFO/GET_STATUS completed after one HELLO retry;
@@ -91,15 +91,29 @@ The automatic post-flash reset produced a complete Control boot log with:
   fault; and
 - no automatic PLAY, panic, watchdog or reboot loop in the captured interval.
 
-User observation is still required for silent startup, display/light appearance,
-touch PLAY/STOP and volume behavior, clean audio transitions, and brightness
-responsiveness while Audio is unavailable. No M5 completion claim is made yet.
+The first `1f6e326` touch check found PLAY audio/visual response well synchronized
+to the tap, but STOP visual feedback followed the completed one-second audio
+fade. Logs showed STOP accepted in approximately 60 ms, immediate authoritative
+`STOPPING`, then `STOPPED` approximately 1.02 seconds later. The facade had
+intentionally treated STOPPING as active, so presentation waited for STOPPED.
+
+Commit `31d8221` makes authoritative STOPPING end the presented-playing state
+and trigger feedback at fade onset, while retaining the pending STOP command
+until authoritative STOPPED. This prevents a rapid second tap from starting a
+new session during the fade. The correction clean-builds, flashed with hash
+verification, booted and reconciled to STOPPED/50%/no fault. Its physical timing
+retest remains pending.
+
+User observation is still required for the corrected STOP timing, volume
+behavior, and brightness responsiveness while Audio is unavailable. No M5
+completion claim is made yet.
 
 ## Remaining M5 gate
 
 1. Confirm current startup is silent and display/GPIO8 lighting look normal.
 2. Short-tap the rest view: verify one finite remote PLAY, confirmed visual
-   response and clean audible start; short-tap again and verify a clean STOP.
+   response and clean audible start; short-tap again and verify the corrected
+   visual response begins with the clean STOP fade rather than after it.
 3. Long-press into adjustment mode, move volume through clearly separated
    values, and verify remote confirmed loudness follows without artifacts or UI
    stalls. Verify brightness remains responsive.

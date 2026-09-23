@@ -13,11 +13,13 @@ Status: **M1 through M4 pass. M5 implementation commit `1f6e326` replaces the
 disabled local Control audio backend with a non-blocking semantic-link facade,
 routes touch/confirmed state through `app_core`, and moves audio/light
 coordination out of `audio_service`. Strict inherited host tests, the retained
-local-backend compatibility build and the clean ESP32-C6/8 MB M5 build pass.
-The exact M5 image is flashed on the Waveshare and its boot log shows UI/light
-startup plus authoritative STOPPED/50%/no-fault reconciliation without PLAY.
-User-observed touch/listening and Audio-unavailable UI/light gates remain before
-M5 can pass.**
+local-backend compatibility build and clean ESP32-C6/8 MB builds pass. Initial
+touch evidence exposed STOP feedback delayed until the one-second fade ended;
+`31d8221` now triggers presentation on authoritative STOPPING while retaining
+the pending request until STOPPED. That exact corrected image is flashed and
+its boot log shows UI/light startup plus authoritative STOPPED/50%/no-fault
+reconciliation without PLAY. Corrected timing, volume and Audio-unavailable
+UI/light observations remain before M5 can pass.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -516,7 +518,7 @@ powered other board.
 The exact next task is:
 
 1. Confirm silent startup and normal display/GPIO8 light presentation on the
-   currently running `1f6e326` image.
+   currently running `31d8221` image.
 2. Short-tap PLAY then STOP and confirm one authoritative visual transition per
    accepted state plus clean audible fades.
 3. Exercise volume drag and brightness adjustment; confirm coalesced remote
@@ -541,11 +543,17 @@ The exact next task is:
 - Routed touch and confirmed-state events through `app_core`; removed direct
   audio-service-to-light-service ownership and speculative tap feedback.
 - Strict host framing/semantic tests pass. Both M5 remote and retained legacy
-  Control configurations build; the clean M5 image is 603,088 bytes with
-  SHA-256 `ba5faa5d821dbb4a8628374d491db099d188d52495d99bf1b1c00ef1b56aaa84`.
+  Control configurations build. Initial touch evidence showed STOP feedback
+  waited for the one-second fade to finish; logs isolated this to presentation
+  treating STOPPING as active.
+- Added correction `31d8221`: STOPPING now triggers confirmed stop presentation,
+  but the pending STOP remains held until STOPPED to reject a tap during fade.
+  Its clean image is 603,152 bytes with SHA-256
+  `0ca8ebb10880ab66a9926870da082460826ae6cee5e3098da2e68fe676b7e324`.
 - Confirmed USB identities, flashed only the Waveshare with hash verification,
-  and captured app `1f6e326` boot through STOPPED/50% authoritative
-  reconciliation. Touch/listening and Audio-unavailable observations remain.
+  and captured final app `31d8221` boot through STOPPED/50% authoritative
+  reconciliation. Corrected timing, volume and Audio-unavailable observations
+  remain.
 - Exact next action is the four-step physical gate in section 6 and the M5
   verification record. Do not claim M5 complete yet.
 
