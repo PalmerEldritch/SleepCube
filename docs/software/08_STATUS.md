@@ -19,8 +19,9 @@ touch evidence exposed STOP feedback delayed until the one-second fade ended;
 the pending request until STOPPED. That exact corrected image is flashed and
 its boot log shows UI/light startup plus authoritative STOPPED/50%/no-fault
 reconciliation without PLAY. The user confirmed PLAY feedback synchronized to
-the tap and corrected STOP feedback synchronized to fade onset. Volume and
-Audio-unavailable UI/light observations remain before M5 can pass.**
+the tap, corrected STOP feedback synchronized to fade onset, and remote volume
+following adjustment without artifacts. Brightness and Audio-unavailable
+UI/light observations remain before M5 can pass.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -520,8 +521,8 @@ The exact next task is:
 
 1. Confirm silent startup and normal display/GPIO8 light presentation on the
    currently running `31d8221` image.
-2. Exercise volume drag and brightness adjustment; confirm coalesced remote
-   volume follows and UI/light tasks do not stall.
+2. Exercise right-hand brightness adjustment and confirm UI/light tasks do not
+   stall.
 3. Reset Audio while Control remains running; verify safe silence, responsive
    brightness/UI, no false playing presentation while unavailable, and status
    reconciliation after Audio reboot.
@@ -552,7 +553,9 @@ The exact next task is:
 - Confirmed USB identities, flashed only the Waveshare with hash verification,
   and captured final app `31d8221` boot through STOPPED/50% authoritative
   reconciliation. User retest confirms PLAY feedback at tap and corrected STOP
-  feedback at fade onset. Volume and Audio-unavailable observations remain.
+  feedback at fade onset. Remote volume changes are confirmed in Audio logs and
+  the user heard the selected loudness follow without artifacts. Brightness and
+  Audio-unavailable observations remain.
 - Exact next action is the four-step physical gate in section 6 and the M5
   verification record. Do not claim M5 complete yet.
 

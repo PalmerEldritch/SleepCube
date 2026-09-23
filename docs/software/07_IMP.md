@@ -196,9 +196,10 @@ Exit criteria:
 
 **Status (2026-09-23): IN PROGRESS.** Base implementation `1f6e326` and STOP
 feedback timing correction `31d8221` clean-build; `31d8221` is flashed on the
-Waveshare. Boot synchronization reconciles authoritative STOPPED/50% state with
-UI and GPIO8 lighting active, and the corrected STOP response is confirmed at
-fade onset. Volume and Audio-unavailable UI/light observations remain before M5 can pass; see
+Waveshare. Boot synchronization reconciles authoritative STOPPED state with UI
+and GPIO8 lighting active, the corrected STOP response is confirmed at fade
+onset, and remote volume follows adjustment without artifacts. Brightness and
+Audio-unavailable UI/light observations remain before M5 can pass; see
 `verification/2026-09-23_M5_control_audio_facade.md`.
 
 Deliverables:

@@ -104,15 +104,21 @@ new session during the fade. The correction clean-builds, flashed with hash
 verification, booted and reconciled to STOPPED/50%/no fault. The user then
 confirmed that the corrected stop response begins with the audio fade.
 
-User observation is still required for volume behavior and brightness
-responsiveness while Audio is unavailable. No M5 completion claim is made yet.
+The adjustment-view volume gate also passes. The user reported that loudness
+followed the selected levels without audible artifacts. Audio-side logs show
+each accepted value was bounded, ramped over 250 ms and reported back through
+authoritative STATUS; the facade reduced continuous touch traffic to serialized
+requests with no UART timeout or queue failure. The final confirmed value was
+56% after the exploratory drag.
+
+User observation is still required for brightness responsiveness while Audio
+is available and unavailable. No M5 completion claim is made yet.
 
 ## Remaining M5 gate
 
 1. Confirm current startup is silent and display/GPIO8 lighting look normal.
-2. Long-press into adjustment mode, move volume through clearly separated
-   values, and verify remote confirmed loudness follows without artifacts or UI
-   stalls. Verify brightness remains responsive.
+2. Long-press into adjustment mode and verify right-hand brightness adjustment
+   remains smooth and responsive.
 3. Reset the Atom while Control remains running. Verify the speaker stops safely,
    the display/light tasks remain responsive, an audio request while unavailable
    does not show false playing state, and status reconciles after Audio reboot.
