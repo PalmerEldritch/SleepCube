@@ -53,6 +53,10 @@ static void m4_console_task(void *argument)
                                sc_audio_link_control_replay_last());
             break;
         case EOF:
+            /* USB Serial/JTAG may not be open yet, or may re-enumerate after a
+             * physical reset.  stdio records EOF on the FILE object, so clear
+             * it before retrying or the development console remains stuck. */
+            clearerr(stdin);
             vTaskDelay(pdMS_TO_TICKS(100));
             break;
         default:
