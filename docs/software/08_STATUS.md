@@ -24,7 +24,9 @@ following adjustment without artifacts. Brightness behavior is smooth and
 synchronized across the display and GPIO8 strip. The
 Audio-unavailable containment gate also passes: Atom reset stopped output, an
 audio tap produced no false PLAY state, and brightness remained responsive.
-Post-restart authoritative reconciliation remains before M5 can pass.**
+Atom restart was silent; Control negotiated new Audio session `508b7be2` and
+reconciled through GET_STATUS to STOPPED/51%/no fault without replay. One final
+post-recovery PLAY/STOP regression remains before M5 can pass.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -524,8 +526,8 @@ The exact next task is:
 
 1. Confirm silent startup and normal display/GPIO8 light presentation on the
    currently running `31d8221` image.
-2. Restart Audio from download mode; verify silent boot, status-only
-   reconciliation without replay and a subsequent PLAY/STOP cycle.
+2. Run one post-recovery PLAY/STOP cycle and confirm clean audio plus
+   synchronized authoritative visual feedback.
 3. Record the result in
    `verification/2026-09-23_M5_control_audio_facade.md`; only then mark M5 pass
    and make M6 the next task. Keep `AUD-ISS-001` outside the M5 claim.
@@ -557,7 +559,9 @@ The exact next task is:
   the user heard the selected loudness follow without artifacts. Brightness and
   the GPIO8 strip change smoothly and in sync. Atom reset stopped active output;
   unavailable audio input produced no false PLAY response and brightness stayed
-  responsive. Post-restart recovery observation remains.
+  responsive. Atom restarted silent, and Control reconciled to new Audio session
+  `508b7be2` at STOPPED/51%/no fault without replay. One final PLAY/STOP
+  regression remains.
 - Exact next action is the four-step physical gate in section 6 and the M5
   verification record. Do not claim M5 complete yet.
 

@@ -121,11 +121,15 @@ subsequent rest-view tap produced no false PLAY indication, and the Waveshare
 display plus GPIO8 strip brightness controls remained responsive. No automatic
 retry or uncontrolled output was observed.
 
-User observation is still required for automatic authoritative reconciliation
-after the Audio application restarts. No M5 completion claim is made yet.
+The recovery half also passes. The user restarted the Atom and reported silent
+startup with no automatic playback. Control then negotiated the new Audio
+session `508b7be2`, issued GET_STATUS, and reconciled to authoritative
+`STOPPED`, 51%, zero remaining and no fault before marking audio available.
+There was no PLAY replay. A final post-recovery PLAY/STOP regression remains
+before the M5 completion claim.
 
 ## Remaining M5 gate
 
 1. Confirm current startup is silent and display/GPIO8 lighting look normal.
-2. Restart the Atom from download mode. Verify it boots silent, Control
-   reconciles without replaying PLAY, and one subsequent PLAY/STOP cycle works.
+2. Run one post-recovery PLAY/STOP cycle and verify audio plus confirmed visual
+   feedback remain clean and synchronized.

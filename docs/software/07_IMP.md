@@ -202,7 +202,8 @@ onset, remote volume follows adjustment without artifacts, and linked brightness
 control is smooth across the display and GPIO8 strip. Audio-unavailable UI/light
 containment also passes: Atom reset stopped output, unavailable audio input
 showed no false PLAY state, and brightness remained responsive. Post-restart
-reconciliation remains before M5 can pass; see
+reconciliation to a new Audio session now also passes without replay. One final
+post-recovery PLAY/STOP regression remains before M5 can pass; see
 `verification/2026-09-23_M5_control_audio_facade.md`.
 
 Deliverables:
