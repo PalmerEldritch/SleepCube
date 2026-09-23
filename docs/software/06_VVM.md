@@ -116,6 +116,8 @@ close the associated R00 requirements.
 | M5-IT-001 | Product touch PLAY/STOP/volume through the remote facade and authoritative feedback | PASS — finite PLAY and STOP complete without timeout; volume changes are serialized, confirmed and audibly artifact-free; corrected STOP response begins at authoritative STOPPING/fade onset | `verification/2026-09-23_M5_control_audio_facade.md` |
 | M5-FI-001 | Audio unavailable during active playback and post-restart reconciliation | PASS — Atom reset stops output; unavailable tap produces no false PLAY; display/GPIO8 brightness remains responsive; new Audio session reconciles to STOPPED without replay | `verification/2026-09-23_M5_control_audio_facade.md` |
 | M5-MAN-001 | Retained rest/adjustment UX and cross-domain presentation | PASS — PLAY/STOP audio and light feedback are synchronized; loudness follows the volume slider without artifacts; display and GPIO8 strip follow brightness smoothly and in sync | `verification/2026-09-23_M5_control_audio_facade.md` |
+| M6-UT-001 | Persisted-setting bounds plus retained protocol safety regression | PASS — strict C11/UBSan frame, semantic protocol and Control setting-policy tests pass, including out-of-range brightness boundaries | `verification/2026-09-23_M6_session_fault_integration.md` |
+| M6-BLD-001 | M6 production, timer-test, Audio and retained legacy Control configurations | PASS — clean committed `ab214fe` builds pass for ESP32-C6/8 MB and ESP32-S3/8 MB; product defaults remain 1,800 s and the explicit test overlay is 30 s | `verification/2026-09-23_M6_session_fault_integration.md` |
 
 Open developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport
 or M5 facade gates. It is not closed by the M2 validation-tone/PCM results or

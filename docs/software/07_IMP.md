@@ -228,6 +228,14 @@ Exit criteria:
 
 **Goal:** Close system-level safety/recovery requirements.
 
+**Status (2026-09-23): IN PROGRESS.** Implementation `709512c` adds periodic
+bounded GET_STATUS health probes, neutral/unavailable presentation after link
+timeout, configurable finite product PLAY duration and bounded persisted-setting
+repair. Reproducible timer-test overlay `ab214fe` is tracked separately from the
+1,800-second product defaults. Strict host tests and clean Audio, M6 Control and
+retained legacy Control builds pass. Hardware flash and the M6 physical gate are
+pending; see `verification/2026-09-23_M6_session_fault_integration.md`.
+
 Deliverables:
 
 - timer-expiry state reconciliation;

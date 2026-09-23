@@ -99,6 +99,12 @@ Audio link ──status/events──> audio_service/app_core ──> UI + lighti
 
 `audio_service` remains the application-facing audio abstraction, but its backend changes from local player/I2S calls to the remote audio link.
 
+While synchronized, the Control-side link owner performs periodic bounded
+status probes in addition to processing events and application commands. A
+probe timeout marks audio state unavailable/unknown, but does not block
+`app_core`, UI or lighting. Recovery repeats the normal HELLO/GET_STATUS
+sequence and never reconstructs a PLAY request.
+
 Cross-domain behaviour such as an audio-start visual pulse shall be coordinated by `app_core` (or a dedicated product-state layer), not by making `audio_service` call `light_service` directly.
 
 ## 5. Audio-side layering
@@ -133,6 +139,10 @@ The Audio Controller is authoritative for:
 - fault.
 
 The Control Controller may retain a requested state while awaiting confirmation, but shall distinguish requested state from confirmed remote state where this affects UX or fault handling.
+
+Loss of synchronization clears the confirmed-playing presentation to neutral;
+it does not claim that the Audio Controller is stopped. Audio state is presented
+again only after authoritative reconciliation.
 
 ### 6.2 Session state
 

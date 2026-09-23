@@ -7,18 +7,17 @@
 
 ## 1. Current milestone
 
-**M5 Control audio-facade migration complete; M6 session/fault integration next**
+**M6 session/fault integration in progress; hardware gate next**
 
-Status: **M1 through M5 pass. M5 final Control application `31d8221` replaces
-the disabled local audio backend with a non-blocking semantic-link facade,
-routes touch and authoritative state through `app_core`, and keeps lighting
-independent. Strict host tests and clean ESP32-C6/8 MB builds pass. Physical
-tests confirm synchronized PLAY feedback, STOP feedback at fade onset, remote
-volume without artifacts, smooth display/GPIO8 brightness, safe behavior while
-Audio is unavailable, and silent Audio restart followed by GET_STATUS
-reconciliation to new session `508b7be2` without replay. The final recovered
-PLAY/STOP cycle was clean and synchronized. M6 now owns the remaining
-release-level session/fault and persistence closure.**
+Status: **M1 through M5 pass. M6 implementation `709512c` adds one-second
+bounded status health probes so quiet UART loss becomes unavailable/degraded,
+retains UI/lighting operation, and recovers through HELLO/GET_STATUS without
+PLAY replay. It also makes the finite product duration configurable with an
+explicit 1,800-second production default and validates/repairs bounded stored
+settings. Commit `ab214fe` adds a reproducible 30-second timer-test overlay.
+Strict host tests and clean M6 Control, Audio and retained legacy Control builds
+pass. Exact committed product and timer-test images are ready; no M6 image has
+yet been flashed and no new hardware behavior is claimed.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -534,22 +533,45 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Begin M6 session and fault integration.**
+**Execute the M6 physical integration gate.**
 
 The exact next task is:
 
-1. Inventory the M6 acceptance rows against existing M2/M4/M5 evidence so
-   already-proven reset and deadline behavior is not needlessly repeated.
-2. Verify a product-facade 1,800-second TIMER_EXPIRED transition returns the UI
-   to stopped feedback without changing selected brightness.
-3. Define and exercise sustained UART timeout/physical-link-loss degraded-state
-   behavior while confirming Audio's independent finite deadline remains intact.
-4. Finalize persisted volume/brightness power-cycle and invalid-value behavior,
-   then update the VVM with any remaining malformed-message/reset fault cases.
-5. Keep `AUD-ISS-001` open and explicit; M5 does not resolve audio-spectrum
-   noise.
+1. Put Atom `/dev/ttyACM1` in manual download mode and flash exact Audio image
+   `ab214fe`; reset it once afterward to start the application.
+2. Automatically flash the exact 30-second timer-test Control image to Waveshare
+   `/dev/ttyACM0`, then verify product-facade TIMER_EXPIRED feedback and
+   unchanged brightness.
+3. Exercise UART-signal-only loss/reconnect during playback and a separate
+   Control reset during playback, observing Audio's independent deadline and
+   status-only recovery.
+4. Set non-default volume/brightness, restore the exact 1,800-second product
+   Control image, normally power-cycle both controllers, and confirm restored
+   settings with playback stopped.
+5. Record results in the M6 verification report and VVM. Keep `AUD-ISS-001`
+   open and outside the M6 claim.
 
 ## 7. Session closeout record
+
+### 2026-09-23 — M6 software and build preparation
+
+- Created `feat/m6-session-fault-integration` from the completed M5 baseline.
+- Added one-second bounded GET_STATUS health probes so quiet link loss becomes
+  unavailable after the existing three-attempt timeout; recovery uses
+  HELLO/GET_STATUS and never replays PLAY.
+- Finalized the R00 degraded presentation as neutral audio with volume input
+  suppressed while normal ambient UI, lighting and brightness continue.
+- Added the configurable finite Control PLAY duration, retained 1,800 seconds
+  in product defaults and added a clearly marked 30-second timer-test overlay.
+- Added tested persisted-setting bounds and repair for Control brightness and
+  Audio volume.
+- Committed implementation as `709512c` and the reproducible timer overlay as
+  `ab214fe`. Strict host tests plus clean M6 Control, Audio and retained legacy
+  Control builds pass. Exact image sizes and hashes are in the M6 report.
+- Hardware remains unmodified at this checkpoint. Confirmed USB identities are
+  Waveshare `/dev/ttyACM0` (`AC:EB:E6:1E:67:C4`) and Atom `/dev/ttyACM1`
+  (`44:1B:F6:F4:FE:C8`). Exact next action is the five-step physical gate in
+  section 6, beginning with manual Atom download mode.
 
 ### 2026-09-23 — M5 implementation and hardware completion
 

@@ -258,6 +258,12 @@ not reconstruct or automatically reissue the timed-out state-changing command.
 After compatibility is restored it requests status. UI and lighting work shall
 not wait on this retry loop.
 
+While synchronized and with no request in flight, the R00 Control client issues
+a `GET_STATUS` health probe at a one-second interval. A queued application
+request takes priority over starting a new probe. Failure of all three probe
+attempts enters the same unsynchronized/degraded state described above; recovery
+uses HELLO followed by GET_STATUS and does not replay PLAY.
+
 ## 12. M4 validation boundary
 
 Sections 3–11 and ADR-0007/ADR-0008 define semantic version 1. The M4 Control
