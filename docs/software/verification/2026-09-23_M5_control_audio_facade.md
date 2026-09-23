@@ -111,14 +111,17 @@ authoritative STATUS; the facade reduced continuous touch traffic to serialized
 requests with no UART timeout or queue failure. The final confirmed value was
 56% after the exploratory drag.
 
-User observation is still required for brightness responsiveness while Audio
-is available and unavailable. No M5 completion claim is made yet.
+The normal linked brightness gate passes: the user reports that the right-hand
+slider changes the display and GPIO8 LED strip smoothly, in sync, and without a
+responsiveness problem.
+
+User observation is still required for brightness and UI behavior while Audio
+is unavailable and for recovery after Audio reboot. No M5 completion claim is
+made yet.
 
 ## Remaining M5 gate
 
 1. Confirm current startup is silent and display/GPIO8 lighting look normal.
-2. Long-press into adjustment mode and verify right-hand brightness adjustment
-   remains smooth and responsive.
-3. Reset the Atom while Control remains running. Verify the speaker stops safely,
+2. Reset the Atom while Control remains running. Verify the speaker stops safely,
    the display/light tasks remain responsive, an audio request while unavailable
    does not show false playing state, and status reconciles after Audio reboot.

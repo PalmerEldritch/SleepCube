@@ -198,8 +198,9 @@ Exit criteria:
 feedback timing correction `31d8221` clean-build; `31d8221` is flashed on the
 Waveshare. Boot synchronization reconciles authoritative STOPPED state with UI
 and GPIO8 lighting active, the corrected STOP response is confirmed at fade
-onset, and remote volume follows adjustment without artifacts. Brightness and
-Audio-unavailable UI/light observations remain before M5 can pass; see
+onset, remote volume follows adjustment without artifacts, and linked brightness
+control is smooth across the display and GPIO8 strip. Audio-unavailable UI/light
+and recovery observations remain before M5 can pass; see
 `verification/2026-09-23_M5_control_audio_facade.md`.
 
 Deliverables:
