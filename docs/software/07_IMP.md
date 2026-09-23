@@ -255,6 +255,18 @@ Exit criteria:
 
 **Goal:** Preserve/refine the existing mature UI/light behaviour against the new distributed state model.
 
+**Status (2026-09-23): IN PROGRESS.** The requirement/code audit is complete.
+Implementation `727285d` prevents a moved/cancelled rest-view gesture from
+falling through as a short-tap audio toggle, adds touch-to-application timing
+markers, and provides separate tracked M7 product and trace build profiles.
+Strict host regressions and clean ESP32-C6/8 MB builds pass. Physical touch,
+slider, synchronization and initial dark-room checks pass. The dark-room pass
+identified unstable strip chromaticity below the empirically clean 26% selected
+level and during the low-brightness STOP dip. Correction `f776eb6` adds LED-only
+26% selected and 17% post-effect floors while retaining the display's complete
+range; its target retest plus unavailable/recovery observations remain before
+the M7 exit criterion can be claimed.
+
 Deliverables:
 
 - confirmed vs requested audio-state presentation;

@@ -7,9 +7,20 @@
 
 ## 1. Current milestone
 
-**M6 session/fault integration complete; M7 UX/lighting refinement next**
+**M7 UX/lighting refinement implemented and build-verified; physical gate next**
 
-Status: **M1 through M6 pass. M6 implementation `709512c` adds one-second
+Status: **M1 through M6 pass. M7 is in progress. Implementation `727285d`
+closes the identified rest-gesture cancellation gap, adds focused UI timing
+trace points, and tracks separate normal-product and test-only trace profiles.
+Strict frame, semantic-protocol and settings-policy host tests pass. Both M7
+profiles clean-build for ESP32-C6/8 MB from the exact commit without observed
+project warnings. Its trace image was flashed and passed short-tap PLAY/STOP,
+moved-gesture cancellation, long-press/timeout, slider synchronization and an
+initial dark-room pass. That pass exposed colorful strip quantization below the
+user-confirmed 26% clean level and briefly during the STOP dip. Correction
+`f776eb6` adds LED-only 26% selected and 17% post-effect floors and clean-builds;
+its target retest is pending, so M7 is not yet claimed complete. M6
+implementation `709512c` adds one-second
 bounded status health probes so quiet UART loss becomes unavailable/degraded,
 retains UI/lighting operation, and recovers through HELLO/GET_STATUS without
 PLAY replay. It also makes the finite product duration configurable with an
@@ -564,21 +575,57 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Begin M7 UX and lighting integration refinement.**
+**Execute the M7 physical UX and lighting gate.**
 
 The exact next task is:
 
-1. Trace the current M6 UI/light implementation against every non-deferred
-   `03_UX.md` row and identify the smallest remaining M7 evidence/code gaps.
-2. Run the retained product UI through requested, confirmed, stopped,
-   unavailable and recovered audio states, preserving the authoritative M6
-   state model and independent brightness behavior.
-3. Execute the dark-room ambient-light, slider and transition observations and
-   record any intentional UX refinements before changing code.
-4. Add M7 evidence to the VVM and verification records. Keep `AUD-ISS-001` open
-   for its separate R00 fix/mitigation/accepted-limitation disposition.
+1. Rebuild and flash the Waveshare only with an exact committed `f776eb6` M7
+   trace image; retain the user-selected 26% setting.
+2. Repeat the dark-room ambient and PLAY/STOP check, specifically confirming
+   stable warm-white chromaticity at minimum selection and through the STOP dip.
+3. Repeat unavailable/recovery behavior with brightness usable throughout.
+4. Restore the exact corrected product image, then add M7 evidence to the VVM
+   and verification records. Keep `AUD-ISS-001` open for separate disposition.
 
 ## 7. Session closeout record
+
+### 2026-09-23 — M7 implementation and build preparation
+
+- Created `feat/m7-ux-lighting-refinement` from the completed M6 baseline and
+  audited every active UX row against the retained Control implementation and
+  M5/M6 distributed-state evidence.
+- Fixed the concrete remaining gesture gap: movement beyond the existing
+  threshold now cancels the complete rest-view gesture, so its release cannot
+  emit an audio-toggle click. Added focused trace points for physical
+  touch-to-event timing, gesture cancellation, long press and UI mode changes.
+- Added tracked `sdkconfig.m7.defaults` for the normal 1,800-second distributed
+  product and `sdkconfig.m7.trace` as a test-only timing overlay. The normal
+  product profile keeps high-volume tracing disabled.
+- Strict C11/UBSan frame, semantic-protocol and settings-policy tests pass.
+  Exact commit `727285d` clean-builds both ESP32-C6/8 MB profiles: product is
+  603,744 bytes, SHA-256
+  `6091ba840f2ff5c1034689944b912bbca714f49d8395cacb42dd0bef8642348d`;
+  trace is 604,432 bytes, SHA-256
+  `98532ed85f2fd223b56e98667a9bcf5ebd2d01ac9aed7f85e10c3b4f3ecc94d3`.
+- Neither controller was enumerated at this checkpoint. No M7 target test or
+  flash was claimed at the initial build checkpoint. Both later enumerated with
+  their established identities and the trace image was hash-verified on flash.
+- The user confirmed synchronized PLAY and STOP response, clean stop fade, two
+  moved gestures suppressed without playback or slider entry, smooth adjustment
+  transitions, about-three-second return, preserved values, coordinated
+  brightness adjustment and a usable low-brightness rest view. Trace measured
+  long press at 1,020 ms and captured `gesture_cancel`/`click_suppressed`
+  without a toggle event.
+- Initial dark-room observation found the display clean through its full range,
+  but the strip developed a colorful low-count quantization effect below the
+  user-selected 26% acceptable level; the normal STOP dip briefly re-entered
+  that region. The user reported warm color, smooth modulation and good sync at
+  and above 26%.
+- Correction `f776eb6` adds configurable LED-only guards: 26% minimum selected
+  output and 17% minimum post-effect output after startup. The display retains
+  its complete range and the normal ambient modulation remains. Both product
+  and trace profiles clean-build; the exact next action is the corrected
+  dark-room target retest in section 6.
 
 ### 2026-09-23 — M6 hardware completion
 
