@@ -115,13 +115,17 @@ The normal linked brightness gate passes: the user reports that the right-hand
 slider changes the display and GPIO8 LED strip smoothly, in sync, and without a
 responsiveness problem.
 
-User observation is still required for brightness and UI behavior while Audio
-is unavailable and for recovery after Audio reboot. No M5 completion claim is
-made yet.
+The Audio-unavailable containment gate passes. Playback was active when the
+Atom was placed in download mode. The speaker stopped on Atom reset, a
+subsequent rest-view tap produced no false PLAY indication, and the Waveshare
+display plus GPIO8 strip brightness controls remained responsive. No automatic
+retry or uncontrolled output was observed.
+
+User observation is still required for automatic authoritative reconciliation
+after the Audio application restarts. No M5 completion claim is made yet.
 
 ## Remaining M5 gate
 
 1. Confirm current startup is silent and display/GPIO8 lighting look normal.
-2. Reset the Atom while Control remains running. Verify the speaker stops safely,
-   the display/light tasks remain responsive, an audio request while unavailable
-   does not show false playing state, and status reconciles after Audio reboot.
+2. Restart the Atom from download mode. Verify it boots silent, Control
+   reconciles without replaying PLAY, and one subsequent PLAY/STOP cycle works.

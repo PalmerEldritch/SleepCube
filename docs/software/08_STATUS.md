@@ -22,7 +22,9 @@ reconciliation without PLAY. The user confirmed PLAY feedback synchronized to
 the tap, corrected STOP feedback synchronized to fade onset, and remote volume
 following adjustment without artifacts. Brightness behavior is smooth and
 synchronized across the display and GPIO8 strip. The
-Audio-unavailable UI/light and recovery gate remains before M5 can pass.**
+Audio-unavailable containment gate also passes: Atom reset stopped output, an
+audio tap produced no false PLAY state, and brightness remained responsive.
+Post-restart authoritative reconciliation remains before M5 can pass.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -522,9 +524,8 @@ The exact next task is:
 
 1. Confirm silent startup and normal display/GPIO8 light presentation on the
    currently running `31d8221` image.
-2. Reset Audio while Control remains running; verify safe silence, responsive
-   brightness/UI, no false playing presentation while unavailable, and status
-   reconciliation after Audio reboot.
+2. Restart Audio from download mode; verify silent boot, status-only
+   reconciliation without replay and a subsequent PLAY/STOP cycle.
 3. Record the result in
    `verification/2026-09-23_M5_control_audio_facade.md`; only then mark M5 pass
    and make M6 the next task. Keep `AUD-ISS-001` outside the M5 claim.
@@ -554,8 +555,9 @@ The exact next task is:
   reconciliation. User retest confirms PLAY feedback at tap and corrected STOP
   feedback at fade onset. Remote volume changes are confirmed in Audio logs and
   the user heard the selected loudness follow without artifacts. Brightness and
-  the GPIO8 strip change smoothly and in sync. Audio-unavailable and recovery
-  observations remain.
+  the GPIO8 strip change smoothly and in sync. Atom reset stopped active output;
+  unavailable audio input produced no false PLAY response and brightness stayed
+  responsive. Post-restart recovery observation remains.
 - Exact next action is the four-step physical gate in section 6 and the M5
   verification record. Do not claim M5 complete yet.
 
