@@ -1,0 +1,4 @@
+# Test-only overlay for M7 touch/event/light timing capture. Apply after
+# sdkconfig.m7.defaults; do not use this high-volume trace mode as the normal
+# product image.
+CONFIG_SC_TRACE_TIMING=y

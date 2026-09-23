@@ -12,6 +12,7 @@
 #include "esp_lvgl_port.h"
 #include "lcd_panel_if.h"
 #include "light_service.h"
+#include "sc_trace.h"
 
 #if CONFIG_SC_BOARD_WAVESHARE_ESP32C6 && CONFIG_SC_UI_BACKEND_LCD_TOUCH
 
@@ -70,6 +71,7 @@ static float s_ambient_phase;
 static float s_audio_toggle_pulse_bias;
 static uint8_t s_screen_brightness_percent = 30U;
 static bool s_rest_press_tracking;
+static bool s_rest_gesture_canceled;
 static bool s_slider_wait_release;
 static bool s_slider_wait_repress;
 static uint32_t s_rest_press_start_ms;
@@ -95,6 +97,7 @@ static void sc_emit_event(sc_app_event_type_t type, int32_t value)
         .type = type,
         .value = value,
     };
+    SC_TRACE_MARK("ui_touch", "evt_emit", (int32_t)type);
     esp_err_t err = sc_app_core_post_event(&evt);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "event post failed: %s", esp_err_to_name(err));
@@ -182,6 +185,7 @@ static void sc_enter_slider_mode(void)
     sc_slider_overlay_fade(true);
     sc_reset_slider_timeout();
     lv_indev_reset(NULL, s_rest_surface);
+    SC_TRACE_MARK("ui_touch", "mode", (int32_t)SC_UI_MODE_SLIDER);
     ESP_LOGI(TAG, "ui mode -> slider");
 }
 
@@ -199,6 +203,7 @@ static void sc_exit_slider_mode(void)
     }
     sc_slider_overlay_fade(false);
     lv_indev_reset(NULL, s_rest_surface);
+    SC_TRACE_MARK("ui_touch", "mode", (int32_t)SC_UI_MODE_REST);
     ESP_LOGI(TAG, "ui mode -> rest");
 }
 
@@ -301,8 +306,10 @@ static void sc_rest_surface_event_cb(lv_event_t *e)
         }
 
         s_rest_press_tracking = true;
+        s_rest_gesture_canceled = false;
         s_rest_press_start_ms = lv_tick_get();
         lv_indev_get_point(indev, &s_rest_press_start_point);
+        SC_TRACE_MARK("ui_touch", "rest_press", 0);
     } else if (code == LV_EVENT_PRESSING) {
         if (!s_rest_press_tracking) {
             return;
@@ -318,15 +325,26 @@ static void sc_rest_surface_event_cb(lv_event_t *e)
         if ((LV_ABS(point.x - s_rest_press_start_point.x) > SC_REST_MOVE_CANCEL_PX) ||
             (LV_ABS(point.y - s_rest_press_start_point.y) > SC_REST_MOVE_CANCEL_PX)) {
             s_rest_press_tracking = false;
+            s_rest_gesture_canceled = true;
+            SC_TRACE_MARK("ui_touch", "gesture_cancel", 1);
             return;
         }
 
         if (lv_tick_elaps(s_rest_press_start_ms) >= SC_REST_LONG_PRESS_MS) {
+            SC_TRACE_MARK("ui_touch", "long_press_ms",
+                          (int32_t)lv_tick_elaps(s_rest_press_start_ms));
             sc_enter_slider_mode();
         }
     } else if (code == LV_EVENT_CLICKED) {
-        sc_emit_event(SC_APP_EVT_UI_AUDIO_TOGGLE, 0);
-    } else if ((code == LV_EVENT_RELEASED) || (code == LV_EVENT_PRESS_LOST)) {
+        if (!s_rest_gesture_canceled) {
+            sc_emit_event(SC_APP_EVT_UI_AUDIO_TOGGLE, 0);
+        } else {
+            SC_TRACE_MARK("ui_touch", "click_suppressed", 1);
+        }
+    } else if (code == LV_EVENT_PRESS_LOST) {
+        s_rest_gesture_canceled = true;
+        s_rest_press_tracking = false;
+    } else if (code == LV_EVENT_RELEASED) {
         s_rest_press_tracking = false;
     }
 }
@@ -521,6 +539,7 @@ void sc_lvgl_display_create_ambient_screen(void)
     lv_obj_set_style_bg_grad_color(lv_scr_act(), lv_color_hex(0xFFE4B8), 0);
     lv_obj_set_style_bg_grad_dir(lv_scr_act(), LV_GRAD_DIR_NONE, 0);
     s_screen_brightness_percent = sc_light_service_get_target_brightness_percent();
+    s_rest_gesture_canceled = false;
     s_slider_wait_release = false;
     s_slider_wait_repress = false;
     s_audio_toggle_pulse_bias = 0.0f;
