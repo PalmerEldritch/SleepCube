@@ -24,8 +24,10 @@ static void semantic_console_task(void *argument)
 {
     (void)argument;
     ESP_LOGI(TAG,
-             "semantic console: p=PLAY 30s, s=STOP, 1/2/3/4=25/50/75/100%%, "
-             "q=GET_STATUS, r=replay last command");
+             "semantic diagnostic console: p=PLAY 30s (product UI=%us), "
+             "s=STOP, 1/2/3/4=25/50/75/100%%, q=GET_STATUS, "
+             "r=replay last command",
+             (unsigned)CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS);
     for (;;) {
         const int command = getchar();
         switch (command) {
