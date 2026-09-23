@@ -194,6 +194,12 @@ Exit criteria:
 
 **Goal:** Replace local audio backend while preserving existing UI/application API where practical.
 
+**Status (2026-09-23): IN PROGRESS.** Implementation commit `1f6e326`
+clean-builds and is flashed on the Waveshare. Boot synchronization reconciles
+authoritative STOPPED/50% state with UI and GPIO8 lighting active. Touch,
+listening and Audio-unavailable UI/light observations remain before M5 can pass;
+see `verification/2026-09-23_M5_control_audio_facade.md`.
+
 Deliverables:
 
 - `audio_link` transport/protocol client;

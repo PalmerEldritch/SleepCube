@@ -111,6 +111,8 @@ close the associated R00 requirements.
 | M4-IT-001 | Physical semantic commands, status/events, finite timeout and idempotency | PASS — PLAY/STOP, 25/50/75/100% volume and status correlated; exact PLAY replay returned DUPLICATE without deadline extension; TIMER_EXPIRED reached silent STOPPED | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
 | M4-RST-001 | Both boot orders and independent Control/Audio reset during playback | PASS — Control reset did not interrupt or extend Audio deadline; Audio reset stopped safely, changed session identity, and Control reconciled without replay; both boot orders synchronized by HELLO/GET_STATUS | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
 | M4-MAN-001 | Semantic playback transitions and retained UI/light coexistence | PASS — timeout/manual-stop/reset behavior was audibly clean and ended silent; display and GPIO8 LED strip remained operational throughout | `verification/2026-09-23_M4_semantic_audio_protocol.md` |
+| M5-BLD-001 | Control-side remote facade, authoritative UI events and M5 target configuration | PASS — strict inherited protocol tests pass; implementation `1f6e326` clean-builds for ESP32-C6/8 MB with local audio disabled; retained local backend also compiles | `verification/2026-09-23_M5_control_audio_facade.md` |
+| M5-FLS-001 | M5 Waveshare flash, boot and initial authoritative reconciliation | PASS — hash-verified writes; app `1f6e326` starts UI/light and reconciles remote STOPPED/50%/no-fault state without automatic PLAY | `verification/2026-09-23_M5_control_audio_facade.md` |
 
 Open developmental issue `AUD-ISS-001` is not a failure of the M3 or M4 UART gate.
 It is not closed by the M2 validation-tone/PCM results or by successful

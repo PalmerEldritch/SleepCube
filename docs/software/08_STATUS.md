@@ -7,16 +7,17 @@
 
 ## 1. Current milestone
 
-**M4 semantic audio protocol complete; M5 UI/audio-service migration next**
+**M5 Control audio-facade migration in progress; physical UI/fault gate next**
 
-Status: **M1 through M4 pass. M4 is complete on
-`feat/m4-semantic-audio-protocol`: the semantic ICD and ADR-0008 are frozen,
-host protocol tests and both 8 MB target builds pass, and the physical
-two-controller gate verifies bounded PLAY/STOP/volume/status, duplicate
-suppression, finite timeout, both boot orders and both independent reset
-directions. Silent recovery, the Waveshare display and the external GPIO8 LED
-strip also pass. Final Control firmware includes USB-console reset recovery fix
-`3908d18`; touch-to-remote-audio migration remains M5.**
+Status: **M1 through M4 pass. M5 implementation commit `1f6e326` replaces the
+disabled local Control audio backend with a non-blocking semantic-link facade,
+routes touch/confirmed state through `app_core`, and moves audio/light
+coordination out of `audio_service`. Strict inherited host tests, the retained
+local-backend compatibility build and the clean ESP32-C6/8 MB M5 build pass.
+The exact M5 image is flashed on the Waveshare and its boot log shows UI/light
+startup plus authoritative STOPPED/50%/no-fault reconciliation without PLAY.
+User-observed touch/listening and Audio-unavailable UI/light gates remain before
+M5 can pass.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -96,7 +97,8 @@ Working/valuable implementation to preserve:
 - persistent light brightness handling;
 - application event queue / `app_core` structure.
 
-The existing local audio stack remains present in the control firmware as legacy implementation pending migration to the Audio Controller.
+The existing local audio stack remains present only as a legacy compatibility
+backend; the normal M5 configuration selects the Audio Controller facade.
 
 For M4, `sdkconfig.m4.defaults` selects the 8 MB ESP32-C6/USB Serial-JTAG build
 with UI and lighting enabled and legacy local audio disabled. A dedicated UART
@@ -104,7 +106,15 @@ owner performs HELLO/GET_STATUS synchronization, correlated semantic requests,
 bounded retries and reset-session detection. A development USB console can
 issue bounded remote commands without yet connecting the product touch UI.
 
-Planned migration seam:
+M5 `sdkconfig.m5.defaults` retains that hardware configuration and selects the
+remote `audio_service` facade. Rest-view and volume UI requests now enter
+`app_core`, then use the semantic client. The facade exposes only reconciled
+state, always requests a finite 1,800-second session, suppresses duplicate
+playback intent and coalesces volume drag traffic. Confirmed state returns to
+the UI and drives any audio-related light response through `app_core`; light
+startup and brightness remain independent of audio synchronization.
+
+Implemented migration seam:
 
 - retain the Control-side `audio_service` application abstraction where practical;
 - replace its local playback/I2S backend with an inter-controller audio-link backend;
@@ -501,23 +511,43 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Begin M5 Waveshare audio-service migration.**
+**Complete the M5 physical UI and Audio-unavailable gate.**
 
 The exact next task is:
 
-1. Refactor the retained Control `audio_service` into a non-blocking facade over
-   `sc_audio_link_control_*`, preserving its application-facing API where
-   practical and removing disabled-local-backend warnings.
-2. Route touch PLAY/STOP and volume requests through the semantic client, then
-   feed authoritative remote state/events back into `app_core` and the UI.
-3. Remove direct audio-service-to-light-service coordination; keep cross-domain
-   presentation in `app_core` while lighting continues independently.
-4. Verify the existing rest/adjustment UX against real remote Audio, then reset
-   or make Audio unavailable and confirm UI/light tasks remain responsive.
-5. Keep release-level fault policy in M6 and `AUD-ISS-001` disposition outside
-   the M5 migration claim.
+1. Confirm silent startup and normal display/GPIO8 light presentation on the
+   currently running `1f6e326` image.
+2. Short-tap PLAY then STOP and confirm one authoritative visual transition per
+   accepted state plus clean audible fades.
+3. Exercise volume drag and brightness adjustment; confirm coalesced remote
+   volume follows and UI/light tasks do not stall.
+4. Reset Audio while Control remains running; verify safe silence, responsive
+   brightness/UI, no false playing presentation while unavailable, and status
+   reconciliation after Audio reboot.
+5. Record the result in
+   `verification/2026-09-23_M5_control_audio_facade.md`; only then mark M5 pass
+   and make M6 the next task. Keep `AUD-ISS-001` outside the M5 claim.
 
 ## 7. Session closeout record
+
+### 2026-09-23 — M5 software, flash and boot preparation
+
+- Created `feat/m5-control-audio-facade` from the completed M4 baseline and
+  committed the facade/UI migration as `1f6e326`.
+- Added tracked M5 defaults selecting ESP32-C6/8 MB, UI/light and remote audio
+  while disabling the legacy local audio backend.
+- Implemented finite PLAY, authoritative state getters, duplicate playback
+  suppression, coalesced volume requests and fail-safe clearing of stale intent.
+- Routed touch and confirmed-state events through `app_core`; removed direct
+  audio-service-to-light-service ownership and speculative tap feedback.
+- Strict host framing/semantic tests pass. Both M5 remote and retained legacy
+  Control configurations build; the clean M5 image is 603,088 bytes with
+  SHA-256 `ba5faa5d821dbb4a8628374d491db099d188d52495d99bf1b1c00ef1b56aaa84`.
+- Confirmed USB identities, flashed only the Waveshare with hash verification,
+  and captured app `1f6e326` boot through STOPPED/50% authoritative
+  reconciliation. Touch/listening and Audio-unavailable observations remain.
+- Exact next action is the four-step physical gate in section 6 and the M5
+  verification record. Do not claim M5 complete yet.
 
 ### 2026-09-23 — M4 semantic protocol software preparation
 
