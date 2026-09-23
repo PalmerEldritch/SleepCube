@@ -164,11 +164,10 @@ static bool remote_state_available(sc_audio_state_t state)
            state == SC_AUDIO_STATE_STOPPING;
 }
 
-static bool remote_state_playback_active(sc_audio_state_t state)
+static bool remote_state_presented_playing(sc_audio_state_t state)
 {
     return state == SC_AUDIO_STATE_STARTING ||
-           state == SC_AUDIO_STATE_PLAYING ||
-           state == SC_AUDIO_STATE_STOPPING;
+           state == SC_AUDIO_STATE_PLAYING;
 }
 
 static bool deadline_reached(TickType_t now, TickType_t deadline)
@@ -196,7 +195,7 @@ static void remote_update_snapshot(void)
     const bool was_available = was_synchronized &&
                                remote_state_available(s_remote.status.state);
     const bool was_active = was_synchronized &&
-                            remote_state_playback_active(s_remote.status.state);
+                            remote_state_presented_playing(s_remote.status.state);
     const uint8_t previous_volume = s_remote.status.volume_percent;
 
     if (!synchronized) {
@@ -208,7 +207,7 @@ static void remote_update_snapshot(void)
         s_remote.synchronized = true;
         s_remote.status = status;
         available = remote_state_available(status.state);
-        playback_active = remote_state_playback_active(status.state);
+        playback_active = remote_state_presented_playing(status.state);
         volume = status.volume_percent;
 
         if (!was_synchronized) {
@@ -222,8 +221,7 @@ static void remote_update_snapshot(void)
             const bool confirmed = s_remote.requested_playback
                                        ? (status.state == SC_AUDIO_STATE_STARTING ||
                                           status.state == SC_AUDIO_STATE_PLAYING)
-                                       : (status.state == SC_AUDIO_STATE_STOPPING ||
-                                          status.state == SC_AUDIO_STATE_STOPPED);
+                                       : status.state == SC_AUDIO_STATE_STOPPED;
             if (confirmed) {
                 s_remote.playback_request_pending = false;
             } else if (deadline_reached(now, s_remote.playback_deadline)) {
@@ -251,7 +249,7 @@ static void remote_update_snapshot(void)
     available = s_remote.synchronized &&
                 remote_state_available(s_remote.status.state);
     if (s_remote.synchronized) {
-        playback_active = remote_state_playback_active(s_remote.status.state);
+        playback_active = remote_state_presented_playing(s_remote.status.state);
         notify_playback = (was_synchronized && was_active != playback_active) ||
                           (!was_synchronized && playback_active);
         volume = s_remote.status.volume_percent;
@@ -348,13 +346,17 @@ esp_err_t sc_audio_service_set_playback(bool enable)
     bool available;
     bool current;
     bool pending;
+    bool stopping;
 
     portENTER_CRITICAL(&s_remote_lock);
     synchronized = s_remote.synchronized;
     available = synchronized && remote_state_available(s_remote.status.state);
-    current = synchronized && remote_state_playback_active(s_remote.status.state);
+    current = synchronized &&
+              remote_state_presented_playing(s_remote.status.state);
     pending = s_remote.playback_request_pending;
-    if (synchronized && available && !pending && current != enable) {
+    stopping = synchronized && s_remote.status.state == SC_AUDIO_STATE_STOPPING;
+    if (synchronized && available && !pending && !stopping &&
+        current != enable) {
         s_remote.playback_request_pending = true;
         s_remote.requested_playback = enable;
         s_remote.playback_deadline = xTaskGetTickCount() +
@@ -367,6 +369,9 @@ esp_err_t sc_audio_service_set_playback(bool enable)
     }
     if (current == enable) {
         return ESP_OK;
+    }
+    if (stopping) {
+        return ESP_ERR_INVALID_STATE;
     }
 
     const esp_err_t error = enable
@@ -390,15 +395,18 @@ esp_err_t sc_audio_service_toggle_playback(void)
     bool available;
     bool active;
     bool pending;
+    bool stopping;
 
     portENTER_CRITICAL(&s_remote_lock);
     synchronized = s_remote.synchronized;
     available = synchronized && remote_state_available(s_remote.status.state);
-    active = synchronized && remote_state_playback_active(s_remote.status.state);
+    active = synchronized &&
+             remote_state_presented_playing(s_remote.status.state);
     pending = s_remote.playback_request_pending;
+    stopping = synchronized && s_remote.status.state == SC_AUDIO_STATE_STOPPING;
     portEXIT_CRITICAL(&s_remote_lock);
 
-    if (!synchronized || !available || pending) {
+    if (!synchronized || !available || pending || stopping) {
         return ESP_ERR_INVALID_STATE;
     }
     return sc_audio_service_set_playback(!active);
@@ -454,7 +462,7 @@ bool sc_audio_service_get_playback_enabled(void)
     bool enabled;
     portENTER_CRITICAL(&s_remote_lock);
     enabled = s_remote.synchronized &&
-              remote_state_playback_active(s_remote.status.state);
+              remote_state_presented_playing(s_remote.status.state);
     portEXIT_CRITICAL(&s_remote_lock);
     return enabled;
 }
