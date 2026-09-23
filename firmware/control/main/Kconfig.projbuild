@@ -208,6 +208,26 @@ config SC_LED_MAX_BRIGHTNESS_PCT
     range 1 100
     default 60
 
+config SC_LED_MIN_SELECTED_BRIGHTNESS_PCT
+    int "Minimum selected LED brightness percent"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 0 100
+    default 26
+    help
+        Applies only to the external LED strip output. The display retains the
+        complete user-brightness range. Keep this above the level where the
+        calibrated warm-white channels visibly separate under quantization.
+
+config SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT
+    int "Minimum post-effect LED brightness percent"
+    depends on SC_LIGHT_BACKEND_LED_STRIP
+    range 0 100
+    default 17
+    help
+        Lower bound after ambient modulation and audio-state pulses once the
+        startup ramp is complete. This prevents a negative pulse from entering
+        the strip's visibly unstable low-count region.
+
 config SC_LIGHT_DEFAULT_BRIGHTNESS_PCT
     int "Default light brightness percent"
     depends on SC_LIGHT_BACKEND_LED_STRIP

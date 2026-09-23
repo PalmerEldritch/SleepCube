@@ -136,6 +136,18 @@ static float s_fluct_speed_d = 0.07f;
 #define SC_LIGHT_PULSE_RELEASE_MIN_MS    (20U)
 #define SC_LIGHT_PULSE_RELEASE_MAX_MS    (8000U)
 
+#ifdef CONFIG_SC_LED_MIN_SELECTED_BRIGHTNESS_PCT
+#define SC_LED_MIN_SELECTED_BRIGHTNESS_PCT CONFIG_SC_LED_MIN_SELECTED_BRIGHTNESS_PCT
+#else
+#define SC_LED_MIN_SELECTED_BRIGHTNESS_PCT 0
+#endif
+
+#ifdef CONFIG_SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT
+#define SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT CONFIG_SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT
+#else
+#define SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT 0
+#endif
+
 static float sc_clampf(float v, float lo, float hi)
 {
     if (v < lo) {
@@ -298,7 +310,16 @@ static void sc_light_service_task(void *arg)
             float fluct_warmth_pct = 0.0f;
             sc_fluctuation_step(dt_s, &fluct_brightness_pct, &fluct_warmth_pct);
 
-            float effective_brightness = (s_brightness_current_pct * startup_scale) + fluct_brightness_pct + audio_sway_pct;
+            const float led_selected_brightness = s_light_enabled
+                                                      ? fmaxf(s_brightness_current_pct,
+                                                              (float)SC_LED_MIN_SELECTED_BRIGHTNESS_PCT)
+                                                      : s_brightness_current_pct;
+            float effective_brightness =
+                (led_selected_brightness * startup_scale) + fluct_brightness_pct + audio_sway_pct;
+            if (s_light_enabled && !s_startup_anim_active) {
+                effective_brightness =
+                    fmaxf(effective_brightness, (float)SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT);
+            }
             effective_brightness = sc_clampf(effective_brightness, 0.0f, 100.0f);
             int warmth_shift = (int)sc_clampf(fluct_warmth_pct, -100.0f, 100.0f);
 
@@ -375,6 +396,9 @@ esp_err_t sc_light_service_start(void)
     }
     ESP_LOGI(TAG, "light service started: led_count=%d gpio=%d enabled=%d target_brightness=%d%%",
              CONFIG_SC_LED_COUNT, CONFIG_SC_LED_STRIP_GPIO, s_light_enabled, s_brightness_target_pct);
+    ESP_LOGI(TAG, "LED low-level guards: selected_floor=%d%% effective_floor=%d%%",
+             SC_LED_MIN_SELECTED_BRIGHTNESS_PCT,
+             SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT);
 #else
     ESP_LOGI(TAG, "light service enabled, but no backend selected");
 #endif
