@@ -7,24 +7,23 @@
 
 ## 1. Current milestone
 
-**M7 UX/lighting refinement complete; M8 system validation next**
+**M8 system validation in progress; tooling and evidence audit prepared**
 
-Status: **M1 through M7 pass. Implementation `727285d` closes the rest-gesture
-cancellation gap and adds test-only UI trace points. Correction `f776eb6` adds
-LED-only 26% selected and 17% post-effect output floors after dark-room testing
-identified colorful low-count strip quantization; the display retains its full
-range and the stored selection is unchanged. Strict host regressions and clean
-ESP32-C6/8 MB product/trace builds pass. Physical taps, moved-gesture
-suppression, long press/timeout, sliders, authoritative Audio presentation,
-dark-room behavior and Audio-unavailable/recovery checks all pass. The exact
-final product image reports application `65ffc61`, is 604,032 bytes with
-SHA-256 `52ff3c8015882a2612762835af5071f16d19790b2c18d44d0832e02d43f4bc25`,
-and was restored with trace disabled. It reconciled Audio `d373b1a` to
-silent/STOPPED at volume 63%; the user confirmed normal display and LED
-operation. The last trace run stored a low brightness selection of approximately
-13%, which the product restores while applying the LED-only stability floor.
-The superseded M6 final image was Control `9e28ab7`; its timer, link-loss, reset
-and persistence evidence remains applicable.**
+Status: **M1 through M7 pass. The M8 audit maps all 55 SRS, 24 UX and 29 ICD
+IDs and identifies four release-sensitive requirement checks: exhaustive
+content faults, quantitative touch timing, quantitative command timing and an
+integrated 60-minute endurance regression. Repeated final-candidate resets and
+power cycles plus `AUD-ISS-001` disposition remain milestone gates. Five SRS
+rows omitted from the earlier VVM are now restored, stale deferred-design text
+is resolved, and validated audio transition durations are frozen as R00
+criteria. M8 preparation adds exact request/response timing logs, a tested log
+analyzer, a tracked 3,600-second Control overlay, reproducible Control build
+instructions and pre-playback truncated-WAV rejection. Strict host tests and
+pre-commit clean product/trace/endurance/Audio builds pass. Exact committed
+images must be rebuilt before flashing. Neither controller is currently
+enumerated, so no M8 target result is claimed yet. The currently deployed
+hardware remains the M7 Control product `65ffc61` with Audio `d373b1a`, last
+confirmed silent/STOPPED at volume 63% with normal display/LED operation.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -129,6 +128,12 @@ cancels the entire gesture, while LED output uses 26% selected and 17%
 post-effect stability floors when enabled. These floors do not alter the stored
 brightness, the display range or commanded shutdown behavior.
 
+M8 retains the M7 product profile. The semantic transport now records exact
+first-transmission/correlated-response timing, and the host analyzer combines
+that with M7 UI trace markers to enforce the 100 ms and 250 ms limits. The
+test-only `sdkconfig.m8.endurance` overlay requests a finite 3,600-second
+session through the normal facade; it is not a product default.
+
 Implemented migration seam:
 
 - retain the Control-side `audio_service` application abstraction where practical;
@@ -158,13 +163,18 @@ The M2 implementation additionally contains:
 - a single playback-owner task with STOPPED/STARTING/PLAYING/STOPPING/FAULT state;
 - one-second start/manual-stop ramps, 250 ms volume ramps, and a five-second
   timeout fade that reaches silence at the finite deadline;
-- a bounded provisional quadratic volume law capped at -12 dBFS, with Audio
+- the bounded R00 quadratic volume law capped at -12 dBFS, with Audio
   Controller NVS persistence and validation;
 - normal 30-minute and separately built finite 60-minute endurance configurations;
 - 60-second frame/byte/loop/deadline heartbeat logging;
 - short-press PLAY/STOP and one-second-hold volume cycling as the M2-only local
   standalone test interface;
 - a deterministic, loop-safe validation-WAV generator.
+
+M8 additionally validates that the WAV data chunk declared by the header fits
+inside the actual file before playback becomes available. A truncated file now
+fails startup validation with an actionable diagnostic instead of deferring the
+read failure until playback.
 
 M4 replaces the M3-only diagnostic with a semantic UART1 endpoint on Atom GPIO1
 TX/GPIO2 RX. It starts before storage/audio initialization and reports
@@ -528,7 +538,8 @@ Not yet verified for the new architecture:
   tests cover the bounds and retained M2 target evidence covers invalid Audio
   volume;
 - release-level 100 ms touch-event and 250 ms command-confirmation measurements;
-- the complete M8 audit of remaining non-deferred SRS/ICD permutations.
+- final-candidate repeated reset/power-cycle checks and integrated 60-minute
+  distributed endurance regression.
 
 ## 4. Architectural decisions in force
 
@@ -590,9 +601,12 @@ source content was required by the SleepCube build.
 The following implementation choices remain intentionally open:
 
 - independent physical inspection of the no-cross-board-power-rail hookup;
-- final product tuning of the provisional M2 volume law and fade timing;
 - root cause and release disposition of `AUD-ISS-001`, including exact-mono
   reference audition and representative listening after any mitigation.
+
+The R00 volume curve and transition timings are no longer open placeholders.
+Any later perceptual retuning is an intentional behavior change that requires
+repeating the affected target evidence.
 
 M7's LED output floors are intentional closed tuning, not an open blocker. At
 the corrected minimum, external-strip modulation can appear slightly coarser
@@ -611,22 +625,52 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Begin M8 system-validation evidence closure.**
+**Execute the first M8 target gate: timing and repeated resets.**
 
 The exact next task is:
 
-1. Audit every non-deferred SRS and ICD/VVM row and enumerate only the remaining
-   release-evidence gaps before scheduling target work.
-2. Prioritize `AUD-ISS-001`: audition the exact hash-matched canonical mono WAV
-   on a known-clean reference output, then record a verified fix/mitigation or
-   explicit accepted limitation.
-3. Capture release-level evidence for the 100 ms touch-event and 250 ms
-   command-confirmation limits using the retained M7 trace profile as useful.
-4. Execute the remaining reset, link-loss, power-cycle, content-fault and
-   endurance permutations found by the audit, then prepare the reproducible R00
-   release-candidate build/flash record.
+1. Connect both controllers and visually confirm the established TX/RX/common
+   ground wiring, with the Grove red 5 V contact disconnected and insulated.
+2. Identify both USB ports by stable serial identity. Flash the exact committed
+   Audio build first (manual Atom download/start procedure), then the exact M8
+   Control trace build (automatic Waveshare download mode).
+3. Capture at least 20 normal touch-event acceptances and 20 acknowledged Audio
+   commands, then run `firmware/control/tools/analyze_m8_timing.py` on the saved
+   log. Observe that lighting remains continuous.
+4. With the same images, perform five independent Control resets and five
+   independent Audio resets, including active playback, recording safe silence,
+   preserved deadlines/reconciliation and no automatic replay.
+
+After that gate, mount the card for the exact-mono reference audition and
+missing/malformed content cases, followed by the distributed 60-minute run and
+final product/persistence restore described in the M8 verification record.
 
 ## 7. Session closeout record
+
+### 2026-09-23 — M8 audit and validation preparation
+
+- Created `feat/m8-system-validation` from completed M7 and audited every active
+  SRS, UX and ICD ID. The VVM now includes all IDs; the detailed disposition and
+  exact remaining physical sequence are in
+  `docs/software/verification/2026-09-23_M8_system_validation.md`.
+- Resolved stale deferred-design text. ADR-0007/ADR-0008 already freeze framing
+  and retry behavior; the repeatedly validated 1 s start/manual-stop, 250 ms
+  volume and 5 s timeout transitions are now explicit R00 criteria.
+- Added exact Control transport request/response timestamps and a standard-
+  library analyzer for touch acceptance, complete user-command acknowledgement
+  and UART RTT. Its three unit tests pass.
+- Added the test-only 3,600-second distributed endurance overlay and Control
+  product/trace/endurance build, flash, monitor and analysis instructions.
+- Hardened Audio startup validation so a declared WAV data chunk must fit the
+  actual file before playback is available; truncated content is now rejected
+  with an actionable error.
+- Strict C11/UBSan frame, semantic-protocol and settings-policy regressions pass.
+  Pre-commit clean ESP32-C6/8 MB product, trace and endurance builds plus the
+  ESP32-S3/8 MB Audio build pass without observed project-code warnings.
+- Neither controller was enumerated during preparation. No target timing,
+  reset, content-fault, endurance, persistence or audio-noise result is claimed.
+  Exact committed images must be rebuilt before the first hardware gate in
+  section 6.
 
 ### 2026-09-23 — M7 hardware completion
 

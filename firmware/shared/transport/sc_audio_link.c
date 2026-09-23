@@ -308,6 +308,7 @@ static bool build_control_request(const control_request_t *request,
 
 static void process_control_frame(const sc_frame_t *frame,
                                   const sc_frame_t *pending,
+                                  uint64_t pending_started_us,
                                   bool *pending_valid,
                                   bool *need_hello,
                                   bool *need_status)
@@ -338,6 +339,15 @@ static void process_control_frame(const sc_frame_t *frame,
                  sc_audio_message_name(frame->type), frame->sequence);
         return;
     }
+
+    const uint64_t response_us = (uint64_t)esp_timer_get_time();
+    const uint64_t latency_us = pending_started_us == 0U
+                                    ? 0U
+                                    : response_us - pending_started_us;
+    ESP_LOGI(TAG,
+             "response=%s seq=%u latency_us=%" PRIu64 " rx_ts_us=%" PRIu64,
+             sc_audio_message_name(pending->type), frame->sequence,
+             latency_us, response_us);
 
     if (frame->type == SC_AUDIO_MSG_ERROR) {
         ESP_LOGE(TAG, "correlated ERROR response to %s seq=%u code=%u",
@@ -421,8 +431,10 @@ static void process_control_frame(const sc_frame_t *frame,
 static bool send_new_pending(sc_frame_t *pending,
                              bool *pending_valid,
                              uint8_t *attempts,
-                             uint32_t *deadline_ms)
+                             uint32_t *deadline_ms,
+                             uint64_t *started_us)
 {
+    const uint64_t request_us = (uint64_t)esp_timer_get_time();
     const esp_err_t error = send_frame(pending);
     if (error != ESP_OK) {
         ESP_LOGE(TAG, "%s tx failed: %s",
@@ -432,6 +444,7 @@ static bool send_new_pending(sc_frame_t *pending,
     *pending_valid = true;
     *attempts = 1U;
     *deadline_ms = now_ms() + SC_LINK_RESPONSE_TIMEOUT_MS;
+    *started_us = request_us;
     ESP_LOGI(TAG, "tx=%s seq=%u attempt=1",
              sc_audio_message_name(pending->type), pending->sequence);
     return true;
@@ -448,6 +461,7 @@ static void control_task(void *argument)
     bool need_status = false;
     uint8_t attempts = 0U;
     uint32_t deadline_ms = 0U;
+    uint64_t pending_started_us = 0U;
     uint32_t reconnect_due_ms = 0U;
     uint32_t status_poll_due_ms = 0U;
     uint32_t rejected = 0U;
@@ -476,7 +490,8 @@ static void control_task(void *argument)
             const sc_frame_result_t result = sc_frame_parser_feed(
                 &parser, bytes[i], timestamp_ms, &frame);
             if (result == SC_FRAME_READY) {
-                process_control_frame(&frame, &pending, &pending_valid,
+                process_control_frame(&frame, &pending, pending_started_us,
+                                      &pending_valid,
                                       &need_hello,
                                       &need_status);
             } else if (result != SC_FRAME_NONE) {
@@ -510,13 +525,13 @@ static void control_task(void *argument)
             sc_audio_make_hello(&pending, next_sequence(),
                                 s_control.control_session_id);
             if (send_new_pending(&pending, &pending_valid, &attempts,
-                                 &deadline_ms)) {
+                                 &deadline_ms, &pending_started_us)) {
                 need_hello = false;
             }
         } else if (!pending_valid && need_status) {
             sc_audio_make_get_status(&pending, next_sequence());
             if (send_new_pending(&pending, &pending_valid, &attempts,
-                                 &deadline_ms)) {
+                                 &deadline_ms, &pending_started_us)) {
                 need_status = false;
                 status_poll_due_ms = timestamp_ms + SC_LINK_STATUS_POLL_MS;
             }
@@ -525,7 +540,7 @@ static void control_task(void *argument)
             if (xQueueReceive(s_control.request_queue, &request, 0) == pdTRUE) {
                 if (build_control_request(&request, &pending)) {
                     send_new_pending(&pending, &pending_valid, &attempts,
-                                     &deadline_ms);
+                                     &deadline_ms, &pending_started_us);
                 } else {
                     ESP_LOGW(TAG, "diagnostic request unavailable type=%d",
                              (int)request.type);
@@ -533,7 +548,7 @@ static void control_task(void *argument)
             } else if ((int32_t)(timestamp_ms - status_poll_due_ms) >= 0) {
                 sc_audio_make_get_status(&pending, next_sequence());
                 if (send_new_pending(&pending, &pending_valid, &attempts,
-                                     &deadline_ms)) {
+                                     &deadline_ms, &pending_started_us)) {
                     status_poll_due_ms = timestamp_ms +
                                          SC_LINK_STATUS_POLL_MS;
                 }

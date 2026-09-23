@@ -7,7 +7,8 @@ service. M4 adds the version-1 semantic UART endpoint while preserving local
 storage, decoding, buffering, gain ramps, authoritative state and independent
 deadline enforcement on this controller. The Waveshare can now request bounded
 PLAY, STOP, SET_VOLUME and status through the contract in
-`../../docs/software/05_ICD.md`; product UI migration remains M5.
+`../../docs/software/05_ICD.md`; the Control product UI consumes that endpoint
+through its remote audio-service facade.
 
 ## Toolchain
 
@@ -147,9 +148,11 @@ volume before reporting `READY` in `STOPPED` state.
 
 Start and manual stop use one-second linear gain ramps. A 250 ms ramp is used
 for volume changes. The timeout fade begins five seconds before the finite
-deadline so output reaches stopped/silent at the deadline. Output gain is
-quadratic over the user percentage and capped at -12 dBFS at 100% while M2
-listening evidence is gathered.
+deadline so output reaches stopped/silent at the deadline. For R00, output gain
+is quadratic over the user percentage and capped at -12 dBFS at 100%. The 1 s
+start/manual-stop transition, 250 ms volume transition and 5 s timeout fade are
+the validated R00 behavior. Any later retuning requires repeating the relevant
+listening and transition evidence.
 
 Playback logs a heartbeat every 60 seconds with state, exact frame/byte counts,
 content-loop count and remaining session time. Any storage/read/I2S failure

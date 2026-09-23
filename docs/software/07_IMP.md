@@ -289,6 +289,17 @@ Exit criteria:
 
 **Goal:** Produce full R00 evidence.
 
+**Status (2026-09-23): IN PROGRESS.** The requirement/ICD audit is complete and
+maps all 55 SRS, 24 UX and 29 ICD IDs. Five previously omitted SRS rows were
+added to the VVM, stale deferred-design text was resolved, and the validated
+audio transition durations are now explicit R00 criteria. M8 tooling adds exact
+Control request/response timestamps, a tested timing-log analyzer, a tracked
+3,600-second distributed-endurance overlay and pre-playback truncated-WAV
+rejection. Product, trace, endurance and Audio profiles clean-build. Target
+timing, reset, content-fault, endurance, persistence and `AUD-ISS-001` evidence
+remain before the exit criterion can be claimed. See
+`verification/2026-09-23_M8_system_validation.md`.
+
 Deliverables:
 
 - complete VVM execution;
@@ -341,19 +352,16 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Begin M8 with a requirement-by-requirement audit of every non-deferred SRS and
-ICD/VVM row, recording the exact missing release evidence before another target
-run. Prioritize:
+Execute the first M8 target gate using the exact committed Audio and Control
+trace images:
 
-1. the evidence-backed disposition of `AUD-ISS-001`, beginning with an audition
-   of the exact hash-matched canonical mono WAV on a known-clean reference
-   output;
-2. retained-log measurements for the 100 ms touch-event and 250 ms
-   command-confirmation limits;
-3. any remaining repeated reset, link-loss, power-cycle, content-fault and
-   endurance permutations identified by the audit;
-4. reproducible release-candidate build/flash instructions and final VVM
-   closure.
+1. confirm TX/RX/common-ground wiring and no cross-board 5 V connection;
+2. capture at least 20 touch acceptance and 20 user-command acknowledgement
+   samples, then evaluate the 100 ms and 250 ms limits with the tracked analyzer;
+3. perform five independent resets of each controller, including playback
+   cases, and verify safe recovery with no automatic PLAY;
+4. retain both logs and update the M8 verification record before moving to the
+   card/content/noise and integrated-endurance gates.
 
 The audio-noise issue must be fixed, mitigated or explicitly accepted before
-R00 release; M7's UX/lighting pass does not close it.
+R00 release; quantitative timing or reset success does not close it.

@@ -115,6 +115,24 @@ esp_err_t sc_wav_reader_open(sc_wav_reader_t *reader, const char *path)
         return ESP_ERR_NOT_SUPPORTED;
     }
 
+    if (fseek(file, 0L, SEEK_END) != 0) {
+        ESP_LOGE(TAG, "cannot determine content file size");
+        fclose(file);
+        memset(reader, 0, sizeof(*reader));
+        return ESP_FAIL;
+    }
+    const long file_size = ftell(file);
+    const uint64_t declared_end = (uint64_t)reader->data_offset +
+                                  (uint64_t)reader->data_size;
+    if (file_size < 0 || declared_end > (uint64_t)(unsigned long)file_size) {
+        ESP_LOGE(TAG,
+                 "truncated WAV data: declared_end=%" PRIu64 " file_size=%ld",
+                 declared_end, file_size);
+        fclose(file);
+        memset(reader, 0, sizeof(*reader));
+        return ESP_ERR_INVALID_SIZE;
+    }
+
     reader->file = file;
     reader->bytes_remaining = reader->data_size;
     if (fseek(reader->file, (long)reader->data_offset, SEEK_SET) != 0) {

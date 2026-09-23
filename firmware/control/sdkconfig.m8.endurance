@@ -1,0 +1,4 @@
+# Test-only M8 overlay. Apply after sdkconfig.m7.defaults to request one finite
+# 60-minute session through the normal product facade. Restore the product
+# profile after endurance verification.
+CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS=3600

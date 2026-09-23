@@ -21,8 +21,10 @@
 | SRS-SYS-001 | INS, HWT | Two independently flashable controller firmwares with defined UART interface |
 | SRS-SYS-002 | INS | Control architecture/state ownership documented and implemented |
 | SRS-SYS-003 | INS, HWT | Audio storage/decode/I2S confined to Audio Controller |
+| SRS-SYS-004 | INS, HWT | Display, touch and external RGB-light drivers/tasks exist only on Control and remain operational during Audio faults |
 | SRS-SYS-005 | FI, HWT | Disconnect/reset Audio Controller; UI and lighting remain usable |
 | SRS-STA-001 | HWT, LOG | Control boot with Audio absent reports unknown/unavailable; no false playing state |
+| SRS-STA-002 | HWT, LOG | Normal startup and power-cycle reconciliation remain silent/STOPPED without issuing PLAY |
 | SRS-STA-003 | HWT | Reset controllers independently in both boot orders |
 | SRS-STA-004 | IT, FI | Reset Audio Controller; Control reacquires status without reset |
 | SRS-STA-005 | HWT | Reset Audio Controller while playing; output returns stopped/safe |
@@ -31,14 +33,17 @@
 | SRS-UI-003 | MAN | Long press enters direct volume/brightness adjustment |
 | SRS-UI-004 | MAN | Adjustment view exits after inactivity timeout |
 | SRS-UI-005 | FI, MAN | Brightness remains adjustable with Audio Controller disconnected |
+| SRS-UI-006 | INS, MAN | Rest tap and one temporary direct-adjustment view cover normal operation without nested menus |
 | SRS-LGT-001 | HWT, MAN | Continuous warm ambient effect rendered on external LEDs |
 | SRS-LGT-002 | MAN | Brightness change visually smooth over full supported range |
+| SRS-LGT-003 | HWT, MAN | Display/backlight and external strip respond together to selected brightness and audio-state effects |
 | SRS-LGT-004 | FI | Audio stop/timeout/reset does not disable lighting engine |
+| SRS-LGT-005 | INS, HWT | Transient visual response is driven by semantic state events; protocol carries no audio samples |
 | SRS-AUD-001 | INS | No control-side remote filesystem/decoder/I2S API exposed through audio service |
 | SRS-AUD-002 | IT | PLAY, STOP and SET_VOLUME operate across UART |
 | SRS-AUD-003 | IT | Control can distinguish unavailable, stopped and playing |
 | SRS-AUD-004 | HWT, MAN | Start/stop produce controlled gain transitions without obvious software-induced pop/click |
-| SRS-AUD-005 | HWT, MAN | Volume transitions are subjectively smooth; quantitative criterion to be added after M2 |
+| SRS-AUD-005 | INS, HWT, MAN | 250 ms volume transition is implemented; 25/50/75/100% and slider changes are artifact-free in target listening |
 | SRS-AUD-006 | HWT | End-of-content behaviour continues intended presentation without user intervention |
 | SRS-AUD-007 | FI, INS | Suspend/disrupt Control-side servicing; active audio buffers remain local to Audio Controller |
 | SRS-AUD-008 | INS, HWT | Canonical 44.1 kHz/16-bit mono PCM WAV mounts, validates and plays from `/sleepcube/audio.wav` |
@@ -155,9 +160,41 @@ SRS-AUD-010 endurance requirement.
 
 ## 5. ICD coverage
 
-The M4 host and physical evidence above covers the frozen semantic protocol,
-framing, idempotency, bounded timeout and reset-recovery contract. Release-level
-fault permutations and UI integration remain subject to the SRS/UX rows above.
+| Requirement | Method | Acceptance evidence |
+| --- | --- | --- |
+| ICD-PHY-001 | INS, HWT | 3.3 V full-duplex UART and common ground wiring supports bidirectional target traffic |
+| ICD-PHY-002 | INS, HWT | Both endpoints configure UART1 for 115200 8N1 and exchange valid frames |
+| ICD-PHY-003 | INS, HWT | GPIO16/17 and GPIO1/2 are distinct from display/touch, GPIO8 strip and I2S pins; concurrent operation passes |
+| ICD-PHY-004 | INS | Final mapping is frozen in `05_ICD.md` and board configuration before integration evidence |
+| ICD-PRO-001 | INS, UT | Type catalog is semantic-only and contains no audio-sample payload path |
+| ICD-PRO-002 | UT, HWT | COBS zero delimiter and message type decode provide unambiguous boundaries/types |
+| ICD-PRO-003 | UT, FI | Version 1 is encoded and incompatible versions are rejected |
+| ICD-PRO-004 | UT, FI | Malformed, incomplete, overlong, bad-CRC and unsupported inputs fail safe |
+| ICD-PRO-005 | UT, IT | Request sequence and command ID correlate acknowledgements and authoritative status |
+| ICD-PRO-006 | UT, INS | Version-1 bounded header/payload/CRC-16 plus COBS framing matches ADR-0007 |
+| ICD-AUD-001 | UT, IT | PLAY includes an accepted finite duration |
+| ICD-AUD-002 | UT | Missing/zero/out-of-range duration is rejected |
+| ICD-AUD-003 | INS, HWT | Audio establishes its local deadline before active playback and expires independently |
+| ICD-AUD-004 | UT, IT | Identical PLAY retry returns `DUPLICATE` without deadline extension |
+| ICD-AUD-010 | IT, HWT | STOP requests the verified controlled fade to STOPPED |
+| ICD-AUD-011 | UT, IT | STOP while stopped is safe and returns an already-satisfied result |
+| ICD-AUD-020 | UT, HWT | Application and protocol use the bounded 0–100 percent logical range |
+| ICD-AUD-021 | UT, FI | Wire values above 100 return `INVALID_ARGUMENT` without clamp/wrap |
+| ICD-AUD-022 | IT, HWT | Result/status reports confirmed applied volume and drives the Control slider |
+| ICD-SYN-001 | IT, HWT | Audio-first and Control-first boot orders synchronize |
+| ICD-SYN-002 | IT, LOG | HELLO/INFO followed by GET_STATUS precedes synchronized presentation |
+| ICD-SYN-003 | HWT | Audio reset during playback starts silent/STOPPED |
+| ICD-SYN-004 | FI, HWT | Control reset does not cancel, restart or extend the Audio deadline |
+| ICD-SYN-005 | FI, HWT | Reconnection and reset recovery issue no automatic PLAY |
+| ICD-FLT-001 | FI, HWT | Three finite 250 ms attempts do not block UI or lighting |
+| ICD-FLT-002 | FI, MAN | Exhausted command/health timeout selects neutral unknown/degraded state |
+| ICD-FLT-003 | UT, FI, LOG | Parse errors include direction/reason/count development diagnostics |
+| ICD-FLT-004 | UT, FI | Unknown type returns `UNSUPPORTED` and does not alter playback |
+| ICD-FLT-005 | FI, HWT | Link loss leaves the Audio-owned finite timer active through stop |
+
+M4–M7 evidence covers the frozen semantic protocol, framing, idempotency,
+bounded timeout, reset recovery and UI integration. M8 repeats selected
+release-candidate fault and timing cases; it does not redefine the ICD.
 
 ## 6. R00 release gate
 

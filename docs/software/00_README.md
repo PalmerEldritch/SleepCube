@@ -66,16 +66,17 @@ At the end of any session that materially changes implementation, architecture, 
 
 Detailed closeout rules are defined in the repository `AGENTS.md`.
 
-## 7. Open design items
+## 7. Resolved design items and remaining release issue
 
-The following remain intentionally open after the M2 storage and volume ADRs:
+The design items left open after M2 are now resolved. ADR-0007 freezes binary
+COBS/CRC framing, ADR-0008 freezes semantic sessions and bounded retry/recovery,
+and the SRS freezes the M1–M7-validated audio transition durations. ADR-0005
+continues to define the R00 content/storage policy and ADR-0006 assigns
+authoritative persisted volume to the Audio Controller.
 
-- exact binary/text representation of the UART protocol;
-- checksum/framing implementation;
-- startup/reconnection retry timing;
-- final perceptual tuning of volume and fade parameters after M2 hardware evidence.
+The bounded quadratic R00 gain curve and transition implementation are recorded
+in the Audio Controller README. Any later product retuning shall be treated as
+an intentional verified behavior change, not an unresolved R00 placeholder.
 
-These shall be resolved through implementation milestones and ADRs before R00 release.
-
-ADR-0005 freezes the R00 audio content/storage policy. ADR-0006 freezes Audio
-Controller ownership of persisted audio volume.
+`AUD-ISS-001` remains the one explicit audio-quality release issue. It must be
+fixed, mitigated or accepted with representative evidence before R00 release.

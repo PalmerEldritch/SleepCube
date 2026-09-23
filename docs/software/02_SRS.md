@@ -50,8 +50,8 @@
 | SRS-AUD-001 | PR-AUD-001 | The Control Controller shall control audio through semantic commands exposed by the Audio Controller and shall not manage remote filesystem, decoder or I2S implementation details. |
 | SRS-AUD-002 | PR-AUD-001 | The Audio Controller shall support start and stop commands and a volume-setting command. |
 | SRS-AUD-003 | PR-AUD-001 | The Audio Controller shall expose enough status for the Control Controller to distinguish at least unavailable/not-ready, stopped and playing states. |
-| SRS-AUD-004 | PR-AUD-002 | Audio start and manual stop shall use controlled gain transitions to avoid abrupt software-induced level changes. |
-| SRS-AUD-005 | PR-AUD-002 | User volume changes shall be applied smoothly enough to avoid objectionable discrete gain transients. |
+| SRS-AUD-004 | PR-AUD-002 | Audio start and manual stop shall use a 1.0 s linear gain transition to avoid abrupt software-induced level changes. |
+| SRS-AUD-005 | PR-AUD-002 | User volume changes shall use a 250 ms gain transition and shall not produce objectionable discrete gain transients. |
 | SRS-AUD-006 | PR-AUD-001 | End-of-content handling shall restart the canonical audio content without requiring user track selection while a finite playback session remains active. |
 | SRS-AUD-007 | PR-AUD-001 | Audio playback shall not depend on the Control Controller continuously servicing audio buffers or file data. |
 | SRS-AUD-008 | PR-AUD-001 | Software R00 audio content shall use RIFF/WAVE linear PCM, mono, signed 16-bit little-endian samples at 44.1 kHz, stored at the canonical Audio Controller content path defined by ADR-0005. |
@@ -65,7 +65,7 @@
 | SRS-SES-002 | PR-SES-001 | The nominal software R00 playback-session duration shall be 30 minutes. |
 | SRS-SES-003 | PR-SES-001, PR-FLT-001 | The Audio Controller shall independently enforce session timeout once playback has begun. |
 | SRS-SES-004 | PR-SES-001 | The Control Controller shall maintain corresponding user-visible session state but shall not be the sole authority preventing indefinite playback. |
-| SRS-SES-005 | PR-SES-002 | At session expiry, the Audio Controller shall perform a gradual fade-out, stop playback and report the resulting state/event to the Control Controller. |
+| SRS-SES-005 | PR-SES-002 | At session expiry, the Audio Controller shall use a 5.0 s fade that reaches silence at the finite deadline, stop playback and report the resulting state/event to the Control Controller. |
 | SRS-SES-006 | PR-SES-002 | Session expiry shall not modify Control Controller lighting state except for any transient visual indication explicitly defined by UX requirements. |
 
 ## 7. Communication
@@ -107,10 +107,17 @@
 | SRS-LGT-010 | PR-LGT-001 | Lighting animation shall remain visually continuous during normal UART traffic and UI interaction. |
 | SRS-AUD-010 | PR-AUD-001 | Audio playback shall sustain the selected content format without buffer underrun during a 60-minute validation run under nominal conditions. |
 
-## 11. Explicitly deferred requirements
+## 11. Resolved design details
 
-The following shall be resolved before software R00 is released but are not yet specified here:
+No normative software requirement is intentionally deferred for R00. Items
+that were open in the initial draft are now resolved as follows:
 
-- exact UART packet representation and integrity mechanism;
-- detailed acknowledgement/retry policy;
-- quantitative audio fade durations and volume law after hardware bring-up.
+- ADR-0007 and `05_ICD.md` define the exact UART framing and integrity mechanism;
+- ADR-0008 and `05_ICD.md` define acknowledgement, idempotency and retry policy;
+- SRS-AUD-004, SRS-AUD-005 and SRS-SES-005 above freeze the M1–M7-validated
+  transition durations. The Audio Controller implementation documentation
+  records the bounded R00 gain curve.
+
+The signal-correlated playback-noise investigation remains tracked separately
+as `issues/AUD-ISS-001-playback-noise.md`; it requires an evidence-backed R00
+disposition but is not an unspecified requirement.

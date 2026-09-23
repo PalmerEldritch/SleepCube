@@ -4,9 +4,9 @@
 
 **First observed:** 2026-09-18
 
-**Updated:** 2026-09-21
+**Updated:** 2026-09-23
 
-**Priority:** Non-blocking for M3 transport work; requires explicit disposition before R00 release
+**Priority:** M8/R00 release blocker until explicitly fixed, mitigated or accepted
 
 ## Symptom and impact
 
