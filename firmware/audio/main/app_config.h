@@ -17,6 +17,9 @@
 #define SC_PLAYBACK_VOLUME_RAMP_MS          250U
 #define SC_PLAYBACK_HEARTBEAT_SECONDS       60U
 
+#define SC_SESSION_DURATION_MIN_SECONDS     1U
+#define SC_SESSION_DURATION_MAX_SECONDS     3600U
+
 #define SC_VOLUME_MIN_PERCENT               0U
 #define SC_VOLUME_MAX_PERCENT               100U
 #define SC_VOLUME_DEFAULT_PERCENT           50U
@@ -27,7 +30,7 @@
 #define SC_BUILD_MODE_NAME                  "M2 60-minute endurance"
 #else
 #define SC_SESSION_DURATION_SECONDS         1800U
-#define SC_BUILD_MODE_NAME                  "M2 normal 30-minute session"
+#define SC_BUILD_MODE_NAME                  "M4 semantic link / 30-minute local default"
 #endif
 
 _Static_assert(SC_PLAYBACK_TIMEOUT_FADE_MS <

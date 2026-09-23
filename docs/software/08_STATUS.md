@@ -1,20 +1,21 @@
 # SleepCube Software Development Status
 
 **Baseline:** R00 (draft)  
-**Last updated:** 2026-09-21
+**Last updated:** 2026-09-23
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M3 UART transport complete; M4 semantic audio protocol is next**
+**M4 semantic audio protocol implemented; two-controller hardware gate next**
 
-Status: **M1, M2 and the M3 transport exit gate pass on
-`feat/m3-uart-transport`. Both images flashed with hash verification.
-Bidirectional PING/PONG, malformed/truncated frames in both directions,
-independent resets and a sustained nonresponding Control peer all recovered on
-target. M4 semantics have not started. External LED-strip output remains
-unverified because no strip is connected.**
+Status: **M1, M2 and M3 pass. M4 software is implemented on
+`feat/m4-semantic-audio-protocol`: the semantic ICD and ADR-0008 are frozen,
+host protocol tests pass, and both 8 MB target images build cleanly. No M4 image
+has been flashed, so remote PLAY/STOP/volume, both boot orders and independent
+reset recovery remain unverified. The external LED strip is now physically
+connected to Waveshare 5 V, GND and GPIO8, but its M4 coexistence observation is
+also pending.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -60,7 +61,8 @@ results, not M4 PLAY/STOP/volume or release-level UI/light evidence.
 The latest Atom boot reported `STOPPED` with persisted volume 100%; M3 never
 issued PLAY, but a future local button PLAY would use that saved level unless
 changed. The user later confirmed that the connected speaker(s) stayed silent
-after reset. No external LED strip is connected.
+after reset. The external LED strip was connected after M3, so no M3 light
+observation is retroactively claimed.
 
 After the Waveshare BOOT/RESET operation, its previously enumerated USB device
 `AC:EB:E6:1E:67:C4` disappeared; the host logged failed re-enumeration with
@@ -95,10 +97,11 @@ Working/valuable implementation to preserve:
 
 The existing local audio stack remains present in the control firmware as legacy implementation pending migration to the Audio Controller.
 
-For the M3 hardware test, `sdkconfig.m3.defaults` selects the 8 MB
-ESP32-C6/USB Serial-JTAG build with UI and lighting enabled and legacy local
-audio disabled. The UART diagnostic runs in its own finite-wait task and does
-not dispatch product audio commands or block the UI/light task.
+For M4, `sdkconfig.m4.defaults` selects the 8 MB ESP32-C6/USB Serial-JTAG build
+with UI and lighting enabled and legacy local audio disabled. A dedicated UART
+owner performs HELLO/GET_STATUS synchronization, correlated semantic requests,
+bounded retries and reset-session detection. A development USB console can
+issue bounded remote commands without yet connecting the product touch UI.
 
 Planned migration seam:
 
@@ -137,11 +140,13 @@ The M2 implementation additionally contains:
   standalone test interface;
 - a deterministic, loop-safe validation-WAV generator.
 
-M3 adds a separate UART1 diagnostic task on Atom GPIO1 TX/GPIO2 RX. It starts
-independently of storage initialization, so a card failure cannot hide link
-diagnostics. It cannot start, stop or change standalone playback. The shared
-framing implementation is under `firmware/shared/protocol/`; the transport
-harness is under `firmware/shared/transport/`.
+M4 replaces the M3-only diagnostic with a semantic UART1 endpoint on Atom GPIO1
+TX/GPIO2 RX. It starts before storage/audio initialization and reports
+NOT_READY or startup FAULT until the playback owner becomes available. Validated
+finite PLAY, STOP and volume requests are queued to that sole owner; synchronized
+snapshots report state, volume, remaining time, stop reason and fault code.
+Shared framing and semantic code live under `firmware/shared/protocol/`; the
+single UART client/endpoint implementation is under `firmware/shared/transport/`.
 
 The failed initial M1 configuration was 44.1 kHz signed 16-bit MSB-aligned mono.
 The confirmed M1 format is 44.1 kHz signed 16-bit Philips-I2S stereo
@@ -369,14 +374,31 @@ Verified for M3 software preparation on 2026-09-21:
   matched replies. Control reinitialized its display and matched replies after
   restart. No UART jumper was physically disconnected.
 
+Verified for M4 software preparation on 2026-09-23:
+
+- the semantic ICD type/payload/status/result catalog and ADR-0008 session,
+  idempotency and bounded retry strategy are frozen;
+- strict host tests pass for HELLO/INFO, status, finite PLAY, STOP, volume,
+  malformed/unsupported input, duplicate suppression, stale/reused IDs,
+  session mismatch, reset reconciliation and timer-expiry events;
+- clean ESP-IDF v6.0 builds pass for Audio ESP32-S3/8 MB and the UI/light-safe
+  Control ESP32-C6/8 MB configuration, with 341,568-byte and 600,064-byte
+  preparation images respectively;
+- the implementation preserves one Audio playback owner and one UART owner per
+  controller; UI/light tasks do not perform UART waits, and no audio samples or
+  low-level Audio operations cross the protocol;
+- detailed scope, commands and pending hardware procedure are in
+  `docs/software/verification/2026-09-23_M4_semantic_audio_protocol.md`.
+
 Not yet verified for the new architecture:
 
 - exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
   and unsupported-format fault cases;
-- semantic protocol behaviour;
-- semantic command, link-session and authoritative-status reconciliation
-  behavior between controllers;
-- external LED-strip continuity with M3 active (no strip is connected);
+- on-target semantic PLAY/STOP/SET_VOLUME and authoritative transition events;
+- semantic link-session/retry behavior in both boot orders and across each
+  independent controller reset;
+- external LED-strip continuity with the M4 semantic task active (the strip is
+  now connected but has not been observed with M4 firmware);
 - a complete early Control boot log after native USB re-enumeration; later
   display initialization and transport startup/recovery logs were captured;
 - integrated two-controller system behaviour.
@@ -392,6 +414,8 @@ Accepted active ADRs:
 - ADR-0006: Audio Controller owns authoritative persisted volume.
 - ADR-0007: bounded COBS/CRC-16 UART framing, 16-bit sequence correlation and
   M3-only diagnostic PING/PONG types.
+- ADR-0008: per-boot semantic sessions, state-changing command IDs, Audio-side
+  duplicate suppression, bounded retries and status-only recovery.
 
 Historical decision:
 
@@ -439,7 +463,6 @@ source content was required by the SleepCube build.
 The following implementation choices remain intentionally open:
 
 - independent physical inspection of the no-cross-board-power-rail hookup;
-- M4 state-changing-command idempotency, retry, timeout and link-session rules;
 - final product tuning of the provisional M2 volume law and fade timing;
 - root cause and release disposition of `AUD-ISS-001`, including exact-mono
   reference audition and representative listening after any mitigation.
@@ -453,22 +476,45 @@ lines are connected to the powered other board.
 
 ## 6. Next recommended task
 
-**Begin M4 with semantic ICD design before remote playback commands.**
+**Run the M4 two-controller hardware gate from the committed images.**
 
 The exact next task is:
 
-1. Define M4 semantic message type IDs, bounded payloads, responses/events,
-   finite PLAY duration, status snapshot and error codes in `05_ICD.md`.
-2. Define link-session identity, duplicate/retry handling, command timeouts
-   and post-reset authoritative status reconciliation. Record any material
-   choice in an ADR without changing ADR-0007 framing silently.
-3. Extend the existing single UART transport/parser task rather than opening
-   a second driver; add host protocol tests before enabling remote PLAY/STOP/
-   SET_VOLUME on the Atom. Keep the Control UI/light tasks nonblocking.
-4. Carry forward external LED-strip continuity and `AUD-ISS-001` as open
-   evidence items; do not claim them from M3 PING/PONG or silent-reset success.
+1. Commit/rebuild the prepared M4 source, record final image hashes, then ask
+   the user to place the Atom in download mode before flashing. Press Atom reset
+   after its flash; flash Control without its settings partition.
+2. Capture silent Audio boot plus Control HELLO/INFO/GET_STATUS reconciliation.
+   Confirm display and the now-connected GPIO8 LED strip remain responsive.
+3. From the Control USB console, test 30-second PLAY, deliberate duplicate
+   replay, timeout/TIMER_EXPIRED, manual STOP, all four volume levels and status.
+4. Verify both boot orders, Control reset during playback (no extension/replay)
+   and Audio reset during playback (silent stopped restart/new-session
+   reconciliation). Record evidence in the M4 verification report.
+5. Keep M5 UI/facade integration, M6 release fault behavior and
+   `AUD-ISS-001` outside any M4 completion claim.
 
 ## 7. Session closeout record
+
+### 2026-09-23 — M4 semantic protocol software preparation
+
+- Created `feat/m4-semantic-audio-protocol` from the completed M3 baseline.
+- Froze message IDs, bounded payloads, states/results, status snapshot and
+  finite 1–3,600 second PLAY domain in the ICD; accepted ADR-0008 for boot
+  sessions, command idempotency, one outstanding request, 250 ms/three-attempt
+  retry and reconciliation without automatic replay.
+- Added the shared semantic codec/server and replaced the M3 PING/PONG task
+  with a single role-specific Audio endpoint or Control client using the same
+  UART/parser boundary.
+- Extended the Audio playback-owner queue with explicit finite PLAY, STOP,
+  volume and synchronized status snapshots. Storage, decode and I2S operations
+  remain private to Audio.
+- Added the UI/light-safe M4 Control defaults and a development USB console;
+  existing touch audio behavior is intentionally not migrated before M5.
+- Strict host framing and semantic tests pass. Clean ESP-IDF v6.0 builds pass
+  for ESP32-S3/8 MB and ESP32-C6/8 MB with no observed project-code warning.
+- No image has been flashed and no M4 hardware behavior is claimed. Exact next
+  task is the five-step hardware gate in section 6. The connected LED strip and
+  `AUD-ISS-001` remain explicit evidence items.
 
 ### 2026-09-21 — M3 framing and transport software preparation
 

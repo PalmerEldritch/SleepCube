@@ -2,12 +2,12 @@
 
 Standalone ESP-IDF firmware for the AtomS3 Lite and ATOMIC Speaker Base.
 
-M2 turns the M1-confirmed output path into a standalone finite-session audio
-service. It reads one canonical PCM WAV asset from the Speaker Base microSD
-card, buffers and loops it locally, applies gain ramps, persists volume on the
-Audio Controller and independently enforces the playback deadline. UART and
-Waveshare audio-command integration remains out of scope until M4. M3 adds an
-independent UART PING/PONG transport diagnostic; it cannot start or alter audio.
+M2 turned the M1-confirmed output path into a standalone finite-session audio
+service. M4 adds the version-1 semantic UART endpoint while preserving local
+storage, decoding, buffering, gain ramps, authoritative state and independent
+deadline enforcement on this controller. The Waveshare can now request bounded
+PLAY, STOP, SET_VOLUME and status through the contract in
+`../../docs/software/05_ICD.md`; product UI migration remains M5.
 
 ## Toolchain
 
@@ -99,7 +99,7 @@ Exit with `Ctrl-]`. Port names are examples; identify the actual port each time.
 Do not combine `flash monitor`, because this board needs the manual post-flash
 reset between those operations.
 
-## M3 two-controller transport diagnostic
+## M4 two-controller semantic validation
 
 M3 uses only Waveshare H1 pin 5 GPIO16 TX → Atom Grove yellow GPIO2 RX,
 Atom Grove white GPIO1 TX → Waveshare H1 pin 7 GPIO17 RX, and H1 pin 6 GND →
@@ -108,22 +108,31 @@ boards by their separate USB-C cables. Check header orientation before power.
 The active framing/pin contract is in `../../docs/software/05_ICD.md`.
 
 Build the Atom image with the normal command above. For the Waveshare, use its
-separate M3 defaults so the existing UI/light service remains present but its
+separate M4 defaults so the existing UI/light service remains present but its
 legacy local audio backend is disabled:
 
 ```sh
 cd ../control
-idf.py -B /tmp/sleepcube-m3-control-safe-build \
-  -D SDKCONFIG=/tmp/sleepcube-m3-control-safe-sdkconfig \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.m3.defaults' \
+idf.py -B /tmp/sleepcube-m4-control-build \
+  -D SDKCONFIG=/tmp/sleepcube-m4-control-sdkconfig \
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.m4.defaults' \
   set-target esp32c6 build
 ```
 
 Identify both USB serial ports by stable `/dev/serial/by-id/` symlinks before
-flashing; `/dev/ttyACM*` numbers can change. The M3 harness logs matched PONGs
-in both directions, then injects one invalid-CRC and one timed-out partial
-packet in each direction. The peer must reject both and continue matching
-subsequent valid PONGs. These diagnostics do not verify M4 audio commands.
+flashing; `/dev/ttyACM*` numbers can change. At startup the Control client
+performs `HELLO` followed by `GET_STATUS`; no PLAY is issued automatically. The
+Control USB console accepts single-character development commands:
+
+- `p`: finite 30-second PLAY;
+- `s`: STOP;
+- `1`, `2`, `3`, `4`: SET_VOLUME to 25, 50, 75 or 100 percent;
+- `q`: GET_STATUS;
+- `r`: resend the last state-changing command ID to verify duplicate rejection.
+
+This console exists only for M4 protocol validation. The touch UI remains
+decoupled until M5. Startup and either-controller reset must remain silent; a
+Control reset shall only reconcile status and shall not restart or extend audio.
 
 ## Standalone controls
 

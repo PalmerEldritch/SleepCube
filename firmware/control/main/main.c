@@ -1,18 +1,78 @@
+#include <stdio.h>
+
 #include "esp_check.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "app_core.h"
 #include "settings_store.h"
-#include "sc_m3_transport.h"
+#include "sc_audio_link.h"
+
+static const char *TAG = "main";
+
+static void log_request_result(const char *name, esp_err_t result)
+{
+    if (result == ESP_OK) {
+        ESP_LOGI(TAG, "M4 console queued %s", name);
+    } else {
+        ESP_LOGW(TAG, "M4 console rejected %s: %s", name,
+                 esp_err_to_name(result));
+    }
+}
+
+static void m4_console_task(void *argument)
+{
+    (void)argument;
+    ESP_LOGI(TAG,
+             "M4 console: p=PLAY 30s, s=STOP, 1/2/3/4=25/50/75/100%%, "
+             "q=GET_STATUS, r=replay last command");
+    for (;;) {
+        const int command = getchar();
+        switch (command) {
+        case 'p':
+            log_request_result("PLAY(30s)", sc_audio_link_control_play(30U));
+            break;
+        case 's':
+            log_request_result("STOP", sc_audio_link_control_stop());
+            break;
+        case '1':
+        case '2':
+        case '3':
+        case '4': {
+            const uint8_t volume = (uint8_t)(command - '0') * 25U;
+            log_request_result("SET_VOLUME",
+                               sc_audio_link_control_set_volume(volume));
+            break;
+        }
+        case 'q':
+            log_request_result("GET_STATUS",
+                               sc_audio_link_control_request_status());
+            break;
+        case 'r':
+            log_request_result("duplicate replay",
+                               sc_audio_link_control_replay_last());
+            break;
+        case EOF:
+            vTaskDelay(pdMS_TO_TICKS(100));
+            break;
+        default:
+            break;
+        }
+    }
+}
 
 void app_main(void)
 {
-    static const char *TAG = "main";
     ESP_LOGI(TAG, "SleepCube P0 app starting");
     ESP_ERROR_CHECK(sc_settings_store_init());
     ESP_ERROR_CHECK(sc_app_core_start());
-    const esp_err_t link_result = sc_m3_transport_start(SC_M3_ROLE_CONTROL, 16, 17);
+    const esp_err_t link_result = sc_audio_link_start_control(16, 17);
     if (link_result != ESP_OK) {
-        ESP_LOGE(TAG, "M3 diagnostic UART unavailable: %s; local UI/light continue",
+        ESP_LOGE(TAG, "semantic audio UART unavailable: %s; UI/light continue",
                  esp_err_to_name(link_result));
+        return;
+    }
+    if (xTaskCreate(m4_console_task, "m4_console", 3072, NULL, 3, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "M4 diagnostic console task unavailable");
     }
 }

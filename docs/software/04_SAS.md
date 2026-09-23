@@ -171,6 +171,14 @@ reconcile UI/audio state
 
 No boot-order dependency shall be required. Either controller may be reset independently.
 
+ADR-0008 realizes this sequence with per-boot 32-bit session identities. Control
+serializes requests through one UART owner task, uses bounded retries, and does
+not automatically replay an uncertain state-changing request after link
+recovery. Audio validates session and command identity before queueing work to
+the playback owner. A Control reset therefore reacquires the live finite session
+without altering it; an Audio reset invalidates stale Control commands and
+returns output to stopped/safe startup.
+
 ## 8. Failure containment
 
 | Failure | Required architectural response |
@@ -188,6 +196,9 @@ No boot-order dependency shall be required. Either controller may be reset indep
 - Audio decoding/output shall not depend on servicing UART at audio sample cadence.
 - State transitions shall be serialized within each controller through a single owning task/state machine or equivalent deterministic mechanism.
 - Shared mutable state between tasks shall be minimized and synchronized explicitly.
+- The UART owner shall serialize requests, retries and response matching; UI,
+  lighting and audio sample production shall communicate with it through
+  non-blocking queues or bounded snapshots.
 
 ## 10. Reference GPIO architecture
 
@@ -195,8 +206,9 @@ The M3 UART link uses Waveshare GPIO16 (TX) and GPIO17 (RX), crossed to the
 AtomS3 Lite Grove GPIO2 (RX, yellow) and GPIO1 (TX, white), plus common ground.
 The Atom Grove 5 V contact is not connected between controllers. Both retain
 independent USB power and USB Serial/JTAG consoles. The final electrical contract
-is in `05_ICD.md`; framing is governed by ADR-0007. GPIO8 on the Waveshare is
-already used by the light strip and must not be repurposed for this link.
+is in `05_ICD.md`; framing is governed by ADR-0007 and semantic recovery by
+ADR-0008. GPIO8 on the Waveshare is already used by the light strip and must
+not be repurposed for this link.
 
 ## 11. Decisions requiring ADRs
 
@@ -208,4 +220,6 @@ Accepted architecture decisions are recorded separately, including:
 - independent Audio Controller timeout enforcement;
 - retention/migration of existing Control Controller UI and lighting implementation.
 
-Future ADR candidates include protocol framing/checksum and degraded-state UX.
+The framing/checksum and semantic session/retry decisions are now captured by
+ADR-0007 and ADR-0008. Degraded-state UX remains a future ADR candidate if M5–M7
+introduce a durable product behavior choice beyond the current SRS/UX text.

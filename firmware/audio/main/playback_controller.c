@@ -28,9 +28,34 @@ typedef struct {
     uint64_t session_frames;
     uint32_t loop_count;
     bool timeout_fade_started;
+    sc_playback_stop_reason_t stop_reason;
 } playback_runtime_t;
 
 static const char *TAG = "playback";
+
+static void update_shared_status(sc_playback_controller_t *controller,
+                                 sc_playback_state_t state,
+                                 sc_playback_stop_reason_t stop_reason,
+                                 int64_t session_deadline_us,
+                                 uint16_t fault_code)
+{
+    if (xSemaphoreTake(controller->status_mutex, portMAX_DELAY) == pdTRUE) {
+        controller->state = state;
+        controller->stop_reason = stop_reason;
+        controller->session_deadline_us = session_deadline_us;
+        controller->fault_code = fault_code;
+        xSemaphoreGive(controller->status_mutex);
+    }
+}
+
+static void update_shared_volume(sc_playback_controller_t *controller,
+                                 uint8_t volume_percent)
+{
+    if (xSemaphoreTake(controller->status_mutex, portMAX_DELAY) == pdTRUE) {
+        controller->volume_percent = volume_percent;
+        xSemaphoreGive(controller->status_mutex);
+    }
+}
 
 static uint32_t frames_for_ms(uint32_t milliseconds)
 {
@@ -93,7 +118,9 @@ static void enter_fault(playback_runtime_t *runtime,
                         const char *operation,
                         esp_err_t error)
 {
-    runtime->controller->state = SC_PLAYBACK_FAULT;
+    update_shared_status(runtime->controller, SC_PLAYBACK_FAULT,
+                         SC_PLAYBACK_STOP_REASON_FAULT, 0,
+                         (uint16_t)error);
     ESP_LOGE(TAG, "%s failed: %s; entering silent FAULT state",
              operation, esp_err_to_name(error));
     sc_audio_output_fail_safe(runtime->controller->output);
@@ -128,7 +155,8 @@ static esp_err_t fill_mono_block(playback_runtime_t *runtime,
     return ESP_OK;
 }
 
-static void begin_playback(playback_runtime_t *runtime)
+static void begin_playback(playback_runtime_t *runtime,
+                           uint32_t duration_seconds)
 {
     esp_err_t result = sc_wav_reader_rewind(runtime->controller->reader);
     if (result != ESP_OK) {
@@ -151,13 +179,15 @@ static void begin_playback(playback_runtime_t *runtime)
 
     const int64_t now_us = esp_timer_get_time();
     runtime->session_deadline_us = now_us +
-        ((int64_t)SC_SESSION_DURATION_SECONDS * 1000000LL);
+        ((int64_t)duration_seconds * 1000000LL);
     runtime->next_heartbeat_us = now_us +
         ((int64_t)SC_PLAYBACK_HEARTBEAT_SECONDS * 1000000LL);
-    runtime->controller->state = SC_PLAYBACK_STARTING;
+    runtime->stop_reason = SC_PLAYBACK_STOP_REASON_BOOT;
+    update_shared_status(runtime->controller, SC_PLAYBACK_STARTING,
+                         runtime->stop_reason, runtime->session_deadline_us, 0U);
     ESP_LOGI(TAG,
              "session start duration=%us volume=%u%% fade_in=%ums deadline_us=%" PRId64,
-             SC_SESSION_DURATION_SECONDS,
+             duration_seconds,
              runtime->controller->volume_percent,
              SC_PLAYBACK_START_FADE_MS,
              runtime->session_deadline_us);
@@ -165,7 +195,8 @@ static void begin_playback(playback_runtime_t *runtime)
 
 static void begin_stop(playback_runtime_t *runtime,
                        uint32_t fade_ms,
-                       const char *reason)
+                       const char *reason,
+                       sc_playback_stop_reason_t stop_reason)
 {
     if (runtime->controller->state == SC_PLAYBACK_STOPPING) {
         return;
@@ -174,9 +205,34 @@ static void begin_stop(playback_runtime_t *runtime,
                runtime->playback_gain_q15,
                0,
                frames_for_ms(fade_ms));
-    runtime->controller->state = SC_PLAYBACK_STOPPING;
+    runtime->stop_reason = stop_reason;
+    update_shared_status(runtime->controller, SC_PLAYBACK_STOPPING,
+                         stop_reason, runtime->session_deadline_us, 0U);
     ESP_LOGI(TAG, "session stop requested reason=%s fade_out=%ums",
              reason, fade_ms);
+}
+
+static void set_volume(playback_runtime_t *runtime, uint8_t next_volume)
+{
+    if (next_volume == runtime->controller->volume_percent) {
+        ESP_LOGI(TAG, "volume already %u%%", next_volume);
+        return;
+    }
+    const esp_err_t result = sc_audio_settings_save_volume(next_volume);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "volume remains %u%% because persistence failed",
+                 runtime->controller->volume_percent);
+        return;
+    }
+
+    update_shared_volume(runtime->controller, next_volume);
+    const int32_t target_gain = volume_to_gain_q15(next_volume);
+    ramp_begin(&runtime->volume_ramp,
+               runtime->volume_gain_q15,
+               target_gain,
+               frames_for_ms(SC_PLAYBACK_VOLUME_RAMP_MS));
+    ESP_LOGI(TAG, "volume=%u%% target_gain_q15=%" PRId32 " ramp=%ums persisted=yes",
+             next_volume, target_gain, SC_PLAYBACK_VOLUME_RAMP_MS);
 }
 
 static void cycle_volume(playback_runtime_t *runtime)
@@ -190,21 +246,7 @@ static void cycle_volume(playback_runtime_t *runtime)
         }
     }
 
-    const esp_err_t result = sc_audio_settings_save_volume(next_volume);
-    if (result != ESP_OK) {
-        ESP_LOGE(TAG, "volume remains %u%% because persistence failed",
-                 runtime->controller->volume_percent);
-        return;
-    }
-
-    runtime->controller->volume_percent = next_volume;
-    const int32_t target_gain = volume_to_gain_q15(next_volume);
-    ramp_begin(&runtime->volume_ramp,
-               runtime->volume_gain_q15,
-               target_gain,
-               frames_for_ms(SC_PLAYBACK_VOLUME_RAMP_MS));
-    ESP_LOGI(TAG, "volume=%u%% target_gain_q15=%" PRId32 " ramp=%ums persisted=yes",
-             next_volume, target_gain, SC_PLAYBACK_VOLUME_RAMP_MS);
+    set_volume(runtime, next_volume);
 }
 
 static void handle_command(playback_runtime_t *runtime,
@@ -218,10 +260,11 @@ static void handle_command(playback_runtime_t *runtime,
     switch (command->type) {
     case SC_PLAYBACK_COMMAND_TOGGLE:
         if (runtime->controller->state == SC_PLAYBACK_STOPPED) {
-            begin_playback(runtime);
+            begin_playback(runtime, SC_SESSION_DURATION_SECONDS);
         } else if (runtime->controller->state == SC_PLAYBACK_STARTING ||
                    runtime->controller->state == SC_PLAYBACK_PLAYING) {
-            begin_stop(runtime, SC_PLAYBACK_MANUAL_STOP_FADE_MS, "manual");
+            begin_stop(runtime, SC_PLAYBACK_MANUAL_STOP_FADE_MS, "manual",
+                       SC_PLAYBACK_STOP_REASON_MANUAL);
         } else {
             ESP_LOGW(TAG, "toggle ignored while state=%s",
                      sc_playback_state_name(runtime->controller->state));
@@ -229,6 +272,24 @@ static void handle_command(playback_runtime_t *runtime,
         break;
     case SC_PLAYBACK_COMMAND_CYCLE_VOLUME:
         cycle_volume(runtime);
+        break;
+    case SC_PLAYBACK_COMMAND_PLAY:
+        if (runtime->controller->state == SC_PLAYBACK_STOPPED) {
+            begin_playback(runtime, command->duration_seconds);
+        } else {
+            ESP_LOGW(TAG, "PLAY ignored while state=%s",
+                     sc_playback_state_name(runtime->controller->state));
+        }
+        break;
+    case SC_PLAYBACK_COMMAND_STOP:
+        if (runtime->controller->state == SC_PLAYBACK_STARTING ||
+            runtime->controller->state == SC_PLAYBACK_PLAYING) {
+            begin_stop(runtime, SC_PLAYBACK_MANUAL_STOP_FADE_MS, "remote",
+                       SC_PLAYBACK_STOP_REASON_MANUAL);
+        }
+        break;
+    case SC_PLAYBACK_COMMAND_SET_VOLUME:
+        set_volume(runtime, command->volume_percent);
         break;
     default:
         ESP_LOGW(TAG, "unknown standalone command=%d", (int)command->type);
@@ -292,12 +353,15 @@ static void update_timing_and_state(playback_runtime_t *runtime)
         (runtime->controller->state == SC_PLAYBACK_STARTING ||
          runtime->controller->state == SC_PLAYBACK_PLAYING)) {
         runtime->timeout_fade_started = true;
-        begin_stop(runtime, SC_PLAYBACK_TIMEOUT_FADE_MS, "session-timeout");
+        begin_stop(runtime, SC_PLAYBACK_TIMEOUT_FADE_MS, "session-timeout",
+                   SC_PLAYBACK_STOP_REASON_TIMER_EXPIRED);
     }
 
     if (runtime->controller->state == SC_PLAYBACK_STARTING &&
         ramp_complete(&runtime->playback_ramp)) {
-        runtime->controller->state = SC_PLAYBACK_PLAYING;
+        update_shared_status(runtime->controller, SC_PLAYBACK_PLAYING,
+                             runtime->stop_reason,
+                             runtime->session_deadline_us, 0U);
         ESP_LOGI(TAG, "state=PLAYING");
     }
 
@@ -308,11 +372,13 @@ static void update_timing_and_state(playback_runtime_t *runtime)
             enter_fault(runtime, "trailing silence write", result);
             return;
         }
-        runtime->controller->state = SC_PLAYBACK_STOPPED;
+        update_shared_status(runtime->controller, SC_PLAYBACK_STOPPED,
+                             runtime->stop_reason, 0, 0U);
         ESP_LOGI(TAG,
                  "state=STOPPED reason=%s frames=%" PRIu64 " bytes=%" PRIu64
                  " loops=%" PRIu32,
-                 runtime->timeout_fade_started ? "session-timeout" : "manual",
+                 runtime->stop_reason == SC_PLAYBACK_STOP_REASON_TIMER_EXPIRED
+                     ? "session-timeout" : "manual",
                  runtime->session_frames,
                  runtime->session_frames * SC_AUDIO_BYTES_PER_FRAME,
                  runtime->loop_count);
@@ -390,8 +456,15 @@ esp_err_t sc_playback_controller_init(sc_playback_controller_t *controller,
     controller->reader = reader;
     controller->state = SC_PLAYBACK_STOPPED;
     controller->volume_percent = initial_volume_percent;
+    controller->stop_reason = SC_PLAYBACK_STOP_REASON_BOOT;
+    controller->status_mutex = xSemaphoreCreateMutex();
+    if (controller->status_mutex == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
     controller->command_queue = xQueueCreate(4, sizeof(sc_playback_command_t));
     if (controller->command_queue == NULL) {
+        vSemaphoreDelete(controller->status_mutex);
+        controller->status_mutex = NULL;
         return ESP_ERR_NO_MEM;
     }
 
@@ -404,6 +477,8 @@ esp_err_t sc_playback_controller_init(sc_playback_controller_t *controller,
     if (created != pdPASS) {
         vQueueDelete(controller->command_queue);
         controller->command_queue = NULL;
+        vSemaphoreDelete(controller->status_mutex);
+        controller->status_mutex = NULL;
         return ESP_ERR_NO_MEM;
     }
 
@@ -427,6 +502,81 @@ esp_err_t sc_playback_controller_send(sc_playback_controller_t *controller,
     if (xQueueSend(controller->command_queue, &message, 0) != pdTRUE) {
         ESP_LOGE(TAG, "command queue full; command=%d rejected", (int)command);
         return ESP_ERR_TIMEOUT;
+    }
+    return ESP_OK;
+}
+
+static esp_err_t send_message(sc_playback_controller_t *controller,
+                              const sc_playback_command_t *message)
+{
+    ESP_RETURN_ON_FALSE(controller != NULL && message != NULL &&
+                            controller->command_queue != NULL,
+                        ESP_ERR_INVALID_STATE, TAG,
+                        "controller is not initialized");
+    if (xQueueSend(controller->command_queue, message, 0) != pdTRUE) {
+        ESP_LOGE(TAG, "command queue full; command=%d rejected",
+                 (int)message->type);
+        return ESP_ERR_TIMEOUT;
+    }
+    return ESP_OK;
+}
+
+esp_err_t sc_playback_controller_play(sc_playback_controller_t *controller,
+                                      uint32_t duration_seconds)
+{
+    ESP_RETURN_ON_FALSE(duration_seconds >= SC_SESSION_DURATION_MIN_SECONDS &&
+                            duration_seconds <= SC_SESSION_DURATION_MAX_SECONDS,
+                        ESP_ERR_INVALID_ARG, TAG, "invalid session duration");
+    const sc_playback_command_t message = {
+        .type = SC_PLAYBACK_COMMAND_PLAY,
+        .duration_seconds = duration_seconds,
+    };
+    return send_message(controller, &message);
+}
+
+esp_err_t sc_playback_controller_stop(sc_playback_controller_t *controller)
+{
+    const sc_playback_command_t message = {.type = SC_PLAYBACK_COMMAND_STOP};
+    return send_message(controller, &message);
+}
+
+esp_err_t sc_playback_controller_set_volume(sc_playback_controller_t *controller,
+                                            uint8_t volume_percent)
+{
+    ESP_RETURN_ON_FALSE(volume_percent <= SC_VOLUME_MAX_PERCENT,
+                        ESP_ERR_INVALID_ARG, TAG, "invalid volume");
+    const sc_playback_command_t message = {
+        .type = SC_PLAYBACK_COMMAND_SET_VOLUME,
+        .volume_percent = volume_percent,
+    };
+    return send_message(controller, &message);
+}
+
+esp_err_t sc_playback_controller_get_snapshot(sc_playback_controller_t *controller,
+                                              sc_playback_snapshot_t *snapshot)
+{
+    ESP_RETURN_ON_FALSE(controller != NULL && snapshot != NULL &&
+                            controller->status_mutex != NULL,
+                        ESP_ERR_INVALID_STATE, TAG,
+                        "controller is not initialized");
+    if (xSemaphoreTake(controller->status_mutex, pdMS_TO_TICKS(20)) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+    snapshot->state = controller->state;
+    snapshot->volume_percent = controller->volume_percent;
+    snapshot->stop_reason = controller->stop_reason;
+    snapshot->fault_code = controller->fault_code;
+    const int64_t deadline_us = controller->session_deadline_us;
+    xSemaphoreGive(controller->status_mutex);
+
+    snapshot->remaining_seconds = 0U;
+    if (deadline_us > 0 && snapshot->state != SC_PLAYBACK_STOPPED &&
+        snapshot->state != SC_PLAYBACK_FAULT) {
+        const int64_t remaining_us = deadline_us - esp_timer_get_time();
+        if (remaining_us > 0) {
+            snapshot->remaining_seconds =
+                (uint32_t)((remaining_us + 999999LL) / 1000000LL);
+        }
     }
     return ESP_OK;
 }

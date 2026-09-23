@@ -167,9 +167,12 @@ Exit criteria:
 
 **Goal:** Implement the normative ICD contract.
 
-**Status:** Not started. M3 transport is available; first freeze the semantic
-message types/payloads, link-session identity, idempotent retry rules and
-authoritative status reconciliation in the ICD before enabling remote PLAY.
+**Status:** In progress on `feat/m4-semantic-audio-protocol`. The semantic
+type/payload catalog and ADR-0008 session/idempotency/retry model are frozen.
+The shared endpoint/client, Audio playback-owner adapter, bounded Control retry
+task and development console are implemented. Protocol host tests and clean
+ESP32-S3/ESP32-C6 builds pass. On-target two-controller command, boot-order and
+independent-reset verification remains before the M4 exit gate can pass.
 
 Deliverables:
 

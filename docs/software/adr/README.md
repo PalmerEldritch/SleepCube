@@ -49,6 +49,7 @@ Routine implementation details that are already constrained by SRS/SAS/ICD and d
 | ADR-0005 | Accepted | microSD-hosted 44.1 kHz/16-bit mono PCM WAV content |
 | ADR-0006 | Accepted | Audio Controller owns authoritative persisted volume |
 | ADR-0007 | Accepted | Bounded COBS/CRC UART framing and sequence correlation |
+| ADR-0008 | Accepted | Semantic boot sessions, idempotent commands and bounded retry recovery |
 
 ## Legacy decision history
 
