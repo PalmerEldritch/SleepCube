@@ -1,4 +1,6 @@
+#if CONFIG_SC_ENABLE_SEMANTIC_CONSOLE
 #include <stdio.h>
+#endif
 
 #include "esp_check.h"
 #include "esp_log.h"
@@ -10,6 +12,7 @@
 
 static const char *TAG = "main";
 
+#if CONFIG_SC_ENABLE_SEMANTIC_CONSOLE
 static void log_request_result(const char *name, esp_err_t result)
 {
     if (result == ESP_OK) {
@@ -66,6 +69,7 @@ static void semantic_console_task(void *argument)
         }
     }
 }
+#endif
 
 void app_main(void)
 {
@@ -77,9 +81,11 @@ void app_main(void)
                  esp_err_to_name(link_result));
     }
     ESP_ERROR_CHECK(sc_app_core_start());
+#if CONFIG_SC_ENABLE_SEMANTIC_CONSOLE
     if (link_result == ESP_OK &&
         xTaskCreate(semantic_console_task, "semantic_console", 3072,
                     NULL, 3, NULL) != pdPASS) {
         ESP_LOGE(TAG, "semantic diagnostic console task unavailable");
     }
+#endif
 }

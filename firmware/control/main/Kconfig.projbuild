@@ -36,6 +36,15 @@ config SC_REMOTE_PLAY_DURATION_SECONDS
         production builds use 1800 seconds. Shorter values may be selected in
         temporary verification builds without changing the wire contract.
 
+config SC_ENABLE_SEMANTIC_CONSOLE
+    bool "Enable development semantic-audio console"
+    depends on SC_AUDIO_REMOTE_LINK
+    default n
+    help
+        Enables the single-character USB development console used during M4
+        protocol bring-up. Keep this disabled in product, timing and endurance
+        images: arbitrary host input must never issue audio commands.
+
 choice SC_AUDIO_I2S_MODE
     prompt "Audio TX bus mode"
     depends on SC_ENABLE_AUDIO
