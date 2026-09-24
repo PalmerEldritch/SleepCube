@@ -94,3 +94,12 @@ python3 -m unittest discover -s tools -p 'test_*.py' -v
 
 The trace image is not the final release image. Restore and verify the exact
 product build after timing or endurance tests.
+
+## M4 diagnostic console isolation
+
+The historical single-character semantic-audio USB console is compiled only
+when `CONFIG_SC_ENABLE_SEMANTIC_CONSOLE=y`. It is enabled by
+`sdkconfig.m4.defaults` for isolated protocol bring-up and is deliberately
+disabled in product, timing and endurance profiles. Do not enable it in a
+release image: arbitrary host serial input must never be interpreted as a
+product audio command.

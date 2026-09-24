@@ -1,8 +1,9 @@
 # M8 system validation — verification record
 
-**Date:** 2026-09-23
-**Status:** IN PROGRESS — requirements/ICD audit and validation tooling prepared;
-final target evidence is pending.
+**Date:** 2026-09-23, updated 2026-09-24
+**Status:** IN PROGRESS — requirements/ICD audit, quantitative timing and
+repeated-reset gates pass; content faults, endurance and final-candidate checks
+remain.
 
 ## Scope
 
@@ -85,8 +86,8 @@ passes but the M8 release-candidate regression is still required.
 | SRS-FLT-003 | PASS | M5–M7 recovery reacquires authoritative status before presentation. |
 | SRS-FLT-004 | PASS | Strict semantic tests reject malformed, partial and out-of-range input safely. |
 | SRS-FLT-005 | PASS | M3/M6 parse, retry, timeout and recovery logs are actionable. |
-| SRS-SYS-010 | PENDING | Capture at least 20 nominal touch emit→app acceptance samples; maximum shall be ≤100 ms. |
-| SRS-COM-010 | PENDING | Capture at least 20 nominal user Audio event→correlated acknowledgement samples; maximum shall be ≤250 ms. |
+| SRS-SYS-010 | PASS | Corrected M8 trace captures 20 nominal touch emit→application receipt samples: maximum 0.453 ms against the 100 ms limit. |
+| SRS-COM-010 | PASS | Corrected M8 trace captures 20 nominal user event→correlated acknowledgement samples: maximum 59.710 ms against the 250 ms limit. |
 | SRS-LGT-010 | PASS | M5–M7 report continuous display/strip animation during UI/UART work. |
 | SRS-AUD-010 | RETEST | M2 60-minute run passed the same audio pipeline; repeat through the distributed facade with the M8 3,600-second overlay. |
 
@@ -119,43 +120,84 @@ change the frozen semantic contract.
 Strict C11/UBSan frame, semantic-protocol and settings-policy regressions pass.
 The timing-analyzer unit suite passes. ESP-IDF v6.0 clean builds pass for the
 ESP32-C6/8 MB product, trace and endurance profiles and the ESP32-S3/8 MB Audio
-profile. They were rebuilt after checkpoint commit `e4d31cc` so every image
-embeds that exact application version:
+profile. The release-relevant Control profiles were rebuilt after the
+diagnostic-console correction at exact checkpoint `ac421a7`. The Audio image
+flashed and exercised on target is exact checkpoint `057f1c5`; the intervening
+correction is Control-only.
 
 | Image | Size | SHA-256 |
 | --- | ---: | --- |
-| Control product | 604,288 bytes | `518e26225fef7253c1b28959ab7fd09651345a6dca4f9f36b964fc593b77b384` |
-| Control M8 timing trace | 604,976 bytes | `735b4bb778201fbf71da6810d909d553640abfa5923fd889c70579b54ba726d5` |
-| Control M8 3,600-second endurance | 604,288 bytes | `ee3d3930dde79ba657954454c5339ae4cd6e9faf45387027a73b84dc04cc8cf9` |
-| Audio product | 341,952 bytes | `fc95fcdfca352c096ae796fa1ac56c01a2b3fce4a3b2099b4560c0a834e0abb7` |
+| Control product (`ac421a7`) | 603,216 bytes | `b45ee13b43507577c3776585f882397b64be13b85e189c0215db532d8f6a4b45` |
+| Control M8 timing trace (`ac421a7`) | 603,904 bytes | `acf37a10c7c23a2da965814cfcc772f94bb809eaed377a2ec9e2c92dabbb1309` |
+| Control M8 3,600-second endurance (`ac421a7`) | 603,216 bytes | `d2b55ad778c03dbb323e76c857bb5939a19d26ecce7a2b52ec436b02ca07fec6` |
+| Audio product (`057f1c5`) | 341,952 bytes | `efd3c6cecf66b3ce220d73f9e3fe9929d9cc221550805138a96e4ed3a81cca2f` |
 
 No project-code warning was observed. Component-manager registry checks were
 skipped because the build host had no registry connection; all dependencies
 were already resolved locally and each build completed successfully.
 
+## Target timing and repeated resets — 2026-09-24
+
+Both controllers were exercised in the integrated USB/UART/speaker/display/
+GPIO8-strip setup. The Control endpoint was stable identity
+`AC:EB:E6:1E:67:C4`; Audio was `44:1B:F6:F4:FE:C8`. The target images reported
+Control `ac421a7` and Audio `057f1c5`. The corrected trace contained ten normal
+PLAY/STOP cycles, giving 20 samples for both normative timing paths:
+
+| Measurement | n | Minimum | Median | 95th percentile | Maximum | Limit | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Touch emit to application receipt | 20 | 0.296 ms | 0.395 ms | 0.452 ms | 0.453 ms | 100 ms | PASS |
+| User event to correlated acknowledgement | 20 | 47.748 ms | 57.749 ms | 59.685 ms | 59.710 ms | 250 ms | PASS |
+| UART first transmission to correlated response | 20 | 39.030 ms | 40.011 ms | 44.919 ms | 51.870 ms | informational | PASS |
+
+The analyzer reported `M8 timing gate: PASS`; the user completed the cycles
+without reporting a display, strip, synchronization or audible anomaly.
+
+Five independent Control resets and five independent Audio resets passed. Four
+of each were made while stopped and one of each during playback. The stopped
+Control resets produced four fresh HELLO synchronizations with Audio remaining
+STOPPED at the restored 59% volume and no PLAY/STOP/SET_VOLUME command. During
+the active Control reset, Audio continued its existing playback; Control
+resynchronized without replay or deadline replacement, and the later user STOP
+completed normally. Each stopped Audio reset booted with a new session identity
+and reached READY/STOPPED silently. The active Audio reset stopped output,
+booted a new session and remained STOPPED without automatic playback resume.
+
+### Defect found and corrected during the reset gate
+
+The first Control-reset attempt exposed a release-relevant defect: the M4
+single-character semantic diagnostic console was still enabled in product and
+trace builds. Host serial bytes received during reset/monitor recovery were
+interpreted as commands. The log showed unintended volume changes to 75%, 50%
+and 100%, then STOP and duplicate-request traffic; Audio did not start, but its
+persisted volume changed from 63% to 100%.
+
+Correction `ac421a7` makes the console compile-time opt-in and enables it only
+in `sdkconfig.m4.defaults`. Product, trace and endurance images have it disabled.
+The corrected reset sequence deliberately reproduced monitor/re-enumeration
+conditions with no semantic-console command and no unexpected volume change.
+The initial reset/timing observations are superseded; only the corrected data
+above is acceptance evidence.
+
 ## Remaining physical sequence
 
-1. Connect both controllers in the established setup; visually confirm common
-   ground and that no 5 V rail crosses between boards.
-2. Flash the exact committed Audio image and M8 Control trace image. Capture at
-   least 20 normal touch acceptances and 20 acknowledged Audio commands, analyze
-   the retained log, and observe continuous lighting.
-3. Perform five independent Control resets and five independent Audio resets,
-   including active-playback cases, checking silence/safe recovery and no replay.
-4. Mount the card on the laptop. Preserve and hash the canonical asset, audition
+1. Visually confirm common ground and that no 5 V rail crosses between boards;
+   bidirectional operation is proven but the no-5-V contact still needs an
+   explicit M8 inspection record.
+2. Mount the card on the laptop. Preserve and hash the canonical asset, audition
    that exact mono WAV through a known-clean output for `AUD-ISS-001`, then run
    missing-file and malformed/truncated-WAV target boots. Restore and re-hash the
    canonical file.
-5. Flash the M8 3,600-second Control overlay and run one integrated 60-minute
+3. Flash the M8 3,600-second Control overlay and run one integrated 60-minute
    session, retaining both controller logs and checking for underrun/fault.
-6. Restore the exact product image, perform three normal dual-controller power
+4. Restore the exact product image, perform three normal dual-controller power
    cycles to verify persistence and silent startup, and record the final
    release-candidate image identities.
 
 ## Open release items
 
-- quantitative timing capture;
-- final-candidate repeated reset/power-cycle checks;
+- explicit inspection of common ground and the disconnected/insulated 5 V contact;
+- final-candidate power-cycle and persistence checks;
 - missing-file and malformed/truncated content fault injection;
 - distributed 60-minute endurance regression;
 - evidence-backed `AUD-ISS-001` disposition;

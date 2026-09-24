@@ -1,29 +1,29 @@
 # SleepCube Software Development Status
 
 **Baseline:** R00 (draft)  
-**Last updated:** 2026-09-23
+**Last updated:** 2026-09-24
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M8 system validation in progress; tooling and evidence audit prepared**
+**M8 system validation in progress; timing and reset gates pass**
 
 Status: **M1 through M7 pass. The M8 audit maps all 55 SRS, 24 UX and 29 ICD
-IDs and identifies four release-sensitive requirement checks: exhaustive
-content faults, quantitative touch timing, quantitative command timing and an
-integrated 60-minute endurance regression. Repeated final-candidate resets and
-power cycles plus `AUD-ISS-001` disposition remain milestone gates. Five SRS
-rows omitted from the earlier VVM are now restored, stale deferred-design text
-is resolved, and validated audio transition durations are frozen as R00
-criteria. M8 preparation adds exact request/response timing logs, a tested log
-analyzer, a tracked 3,600-second Control overlay, reproducible Control build
-instructions and pre-playback truncated-WAV rejection. Strict host tests and
-clean product/trace/endurance/Audio builds pass. Exact checkpoint `e4d31cc`
-images have been rebuilt and hash-recorded for flashing. Neither controller is
-currently enumerated, so no M8 target result is claimed yet. The currently deployed
-hardware remains the M7 Control product `65ffc61` with Audio `d373b1a`, last
-confirmed silent/STOPPED at volume 63% with normal display/LED operation.**
+IDs. The quantitative target gate now passes: 20 corrected samples show a
+0.453 ms maximum touch-acceptance time and 59.710 ms maximum complete
+user-command acknowledgement time, comfortably inside the 100 ms and 250 ms
+limits. Five independent resets of each controller also pass, including active
+playback, with safe reconciliation and no automatic PLAY. The initial reset run
+found that the historical M4 semantic USB console was unintentionally present
+in product profiles and could interpret monitor bytes as volume/STOP commands.
+Correction `ac421a7` makes it M4-only; the corrected regression has no command
+injection or volume mutation. Clean exact Control product/trace/endurance builds
+at `ac421a7` and the deployed Audio build at `057f1c5` are hash-recorded. The
+hardware is currently STOPPED/silent at Audio volume 59%, with the corrected M8
+Control trace still deployed. Missing/malformed content faults, exact-content
+noise disposition, integrated 60-minute endurance, physical no-5-V inspection
+and final product power-cycle/persistence checks remain M8 gates.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -133,6 +133,11 @@ first-transmission/correlated-response timing, and the host analyzer combines
 that with M7 UI trace markers to enforce the 100 ms and 250 ms limits. The
 test-only `sdkconfig.m8.endurance` overlay requests a finite 3,600-second
 session through the normal facade; it is not a product default.
+
+The M4 single-character semantic diagnostic console is now guarded by
+`CONFIG_SC_ENABLE_SEMANTIC_CONSOLE`. Only `sdkconfig.m4.defaults` opts in;
+product, timing and endurance profiles compile it out so host serial bytes
+cannot issue application audio commands.
 
 Implemented migration seam:
 
@@ -625,27 +630,55 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Execute the first M8 target gate: timing and repeated resets.**
+**Execute the M8 card/content/noise gate.**
 
 The exact next task is:
 
-1. Connect both controllers and visually confirm the established TX/RX/common
-   ground wiring, with the Grove red 5 V contact disconnected and insulated.
-2. Identify both USB ports by stable serial identity. Flash the exact committed
-   Audio build first (manual Atom download/start procedure), then the exact M8
-   Control trace build (automatic Waveshare download mode).
-3. Capture at least 20 normal touch-event acceptances and 20 acknowledged Audio
-   commands, then run `firmware/control/tools/analyze_m8_timing.py` on the saved
-   log. Observe that lighting remains continuous.
-4. With the same images, perform five independent Control resets and five
-   independent Audio resets, including active playback, recording safe silence,
-   preserved deadlines/reconciliation and no automatic replay.
+1. Explicitly inspect common ground and confirm the Grove red 5 V contact is
+   disconnected and insulated.
+2. Power down Audio and mount the card on the laptop. Hash and preserve the
+   exact canonical `/sleepcube/audio.wav` before any fault injection.
+3. Audition that exact mono WAV through a known-clean output for `AUD-ISS-001`,
+   then run silent missing-file and malformed/truncated-file target boots while
+   checking actionable diagnostics and responsive Control UI/lighting.
+4. Restore and re-hash the canonical file. Then flash the exact `ac421a7`
+   3,600-second Control endurance image for the distributed 60-minute run.
 
-After that gate, mount the card for the exact-mono reference audition and
-missing/malformed content cases, followed by the distributed 60-minute run and
-final product/persistence restore described in the M8 verification record.
+After endurance, restore the exact product profile and perform the final three
+dual-controller power cycles/persistence checks described in the M8 record.
 
 ## 7. Session closeout record
+
+### 2026-09-24 — M8 quantitative timing and repeated-reset gate
+
+- Flashed/exercised Audio `057f1c5` and the Control M8 timing profile. The
+  initial reset attempt exposed an enabled M4 semantic diagnostic console:
+  stray host-monitor input issued unintended 75%, 50% and 100% volume commands
+  plus STOP and duplicate-request traffic. Audio never started, but persisted
+  volume changed from 63% to 100%; that run is superseded and is not acceptance
+  evidence.
+- Added `CONFIG_SC_ENABLE_SEMANTIC_CONSOLE` in correction `ac421a7`. It defaults
+  off and is enabled only by the M4 bring-up defaults. Product, timing and
+  endurance builds compile the console out.
+- Reflashed exact corrected trace `ac421a7`, restored Audio volume to 59%, and
+  reproduced reset/monitor recovery. No semantic-console command, automatic
+  PLAY or unexpected volume change occurred.
+- Ten corrected PLAY/STOP cycles supplied 20 timing samples. Touch acceptance
+  was 0.296/0.395/0.452/0.453 ms min/median/p95/max; complete user command to
+  correlated acknowledgement was 47.748/57.749/59.685/59.710 ms. UART RTT was
+  39.030/40.011/44.919/51.870 ms. The tracked analyzer passed both normative
+  limits.
+- Five independent Control resets and five independent Audio resets passed,
+  including one active-playback reset of each. Stopped resets stayed silent;
+  Control reacquired state without replay or deadline replacement; Audio reset
+  stopped output, booted a new session and remained STOPPED.
+- Rebuilt exact Control checkpoint `ac421a7`: product 603,216 bytes, trace
+  603,904 bytes and endurance 603,216 bytes. Their SHA-256 identities, plus the
+  deployed 341,952-byte Audio `057f1c5` identity, are in the M8 verification
+  record. No project-code warning was observed.
+- Current target state is silent/STOPPED at volume 59% with the corrected trace
+  image deployed. The exact next task is the SD-card content/noise fault gate in
+  section 6; M8 remains incomplete.
 
 ### 2026-09-23 — M8 audit and validation preparation
 
