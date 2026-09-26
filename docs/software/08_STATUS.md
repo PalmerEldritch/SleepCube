@@ -7,10 +7,20 @@
 
 ## 1. Current milestone
 
-**M8 system validation passes; M9 R00 release preparation is next**
+**M8 passes; post-M8 60-minute product-default regression is in progress**
 
-Status: **M1 through M8 pass. The M8 audit maps all 55 SRS, 24 UX and 29 ICD
-IDs and finds every non-deferred requirement ready for R00 release preparation.
+Status: **M1 through M8 pass. The user subsequently approved changing the R00
+normal session default from 1,800 to 3,600 seconds. Control product defaults,
+the Audio local fallback and active requirements/interface documentation now
+select 60 minutes while retaining the finite 1–3,600-second protocol range.
+M8-END-001 already passes the complete 3,600-second distributed playback path,
+but exact rebuilt product artifacts and a targeted on-device PLAY/STOP
+regression remain before M9. The previously deployed Control `b69d1a9` and
+Audio `057f1c5` images are the completed 30-minute-default M8 candidates, not
+the final candidates for the amended R00 behavior.**
+
+The M8 audit maps all 55 SRS, 24 UX and 29 ICD IDs and found every then-active
+non-deferred requirement ready for R00 release preparation.
 Quantitative target timing passes with 0.453 ms maximum touch acceptance and
 59.710 ms maximum complete command acknowledgement. Five independent resets of
 each controller pass, including active-playback cases. Missing-file and
@@ -23,13 +33,13 @@ exact Control product image was restored and three coordinated dual-controller
 power cycles retained silent `STOPPED`, no automatic PLAY, normal display/strip
 operation and stable persisted settings. `AUD-ISS-001` is accepted as a
 documented low-level R00 limitation; its physical root cause remains a post-R00
-improvement. The deployed final-candidate identities are Control `b69d1a9`,
+improvement. The last M8 candidate identities are Control `b69d1a9`,
 603,216 bytes, SHA-256
 `0a6b91a7ce86003a4a4d79d3c5b79151927fe06960ad192a3a708f9ba7585306`,
 and Audio `057f1c5`, 341,952 bytes, SHA-256
 `efd3c6cecf66b3ce220d73f9e3fe9929d9cc221550805138a96e4ed3a81cca2f`.
 Formal document promotion, final release consistency review and tagging remain
-M9 work.**
+M9 work after the duration-change regression.
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -635,22 +645,47 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Begin M9 R00 release preparation.**
+**Complete the 60-minute product-default regression, then begin M9.**
 
 The exact next task is:
 
-1. Audit the active R00 documents and accepted ADRs for stale draft/TBD text,
+1. Run retained host regressions and clean-build/hash the updated Control and
+   Audio product profiles.
+2. Flash the exact candidates and confirm silent synchronized startup, one
+   finite 3,600-second PLAY and a clean manual STOP.
+3. Close `R00-DUR-001`, then audit the active R00 documents and accepted ADRs
+   for stale draft/TBD text,
    without changing the M8-validated behavior or evidence dispositions.
-2. Promote the implementation and verification documentation to R00 and make
+4. Promote the implementation and verification documentation to R00 and make
    the legacy Control-local audio backend unambiguously absent from the active
    release build path (archive/remove only with an explicit, reviewed change).
-3. Run final host/build/document consistency checks and record the exact release
-   artifacts; the currently target-validated candidates are Control `b69d1a9`
-   and Audio `057f1c5` with hashes in section 1.
-4. Review the final diff, create the R00 release commit, and tag only after all
+5. Run final host/build/document consistency checks and record the exact release
+   artifacts.
+6. Review the final diff, create the R00 release commit, and tag only after all
    M9 checks pass.
 
 ## 7. Session closeout record
+
+### 2026-09-26 — R00 60-minute product-default adjustment in progress
+
+- User approved changing the normal R00 session default from 1,800 to 3,600
+  seconds while retaining PCM WAV content and deferring SD configuration/log
+  features.
+- Updated current Control product defaults, Audio local fallback, SRS, ICD,
+  operating instructions and ADR-0008's explicit duration note. The protocol
+  remains finite at 1–3,600 seconds and ownership/fault behavior is unchanged.
+  Historical M5/M6 defaults and verification records retain 1,800 seconds to
+  describe their actual milestone images.
+- Strict frame, semantic-protocol and settings-policy C11/UBSan tests pass; all
+  three timing-analyzer unit tests pass. Fresh preliminary ESP-IDF v6.0 product
+  builds pass at 603,216 bytes (Control) and 341,952 bytes (Audio). Generated
+  Control configuration is 3,600 seconds and Audio identifies a 60-minute local
+  default.
+- M8-END-001 already passes the full 3,600-second distributed runtime path, so
+  the remaining targeted gate is exact clean candidate build/flash, silent
+  synchronized startup, one 3,600-second PLAY confirmation and clean manual
+  STOP. The earlier `b69d1a9`/`057f1c5` M8 product pair is not the final
+  candidate for this amended behavior.
 
 ### 2026-09-26 — M8 endurance, final product restore and completion
 

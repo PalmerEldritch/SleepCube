@@ -49,7 +49,7 @@
 | SRS-AUD-008 | INS, HWT | Canonical 44.1 kHz/16-bit mono PCM WAV mounts, validates and plays from `/sleepcube/audio.wav` |
 | SRS-AUD-009 | FI, LOG | Missing card/file and malformed/unsupported WAV remain silent and produce actionable diagnostics |
 | SRS-SES-001 | INS, IT | Invalid/unbounded PLAY is impossible/rejected |
-| SRS-SES-002 | HWT | Nominal session duration configured to 30 min |
+| SRS-SES-002 | HWT | Nominal session duration configured to 60 min; M8-END-001 exercises the same finite 3,600-second value through the distributed facade |
 | SRS-SES-003 | FI, HWT | Disconnect/reset Control during playback; Audio Controller still stops at deadline |
 | SRS-SES-004 | INS, IT | Control maintains user-visible session state but is not sole timeout authority |
 | SRS-SES-005 | HWT, LOG | Timeout causes fade, stop and timeout/status event |
@@ -158,6 +158,7 @@ close the associated R00 requirements.
 | M8-AUD-002 | Evidence-backed `AUD-ISS-001` release disposition | PASS — exact canonical mono and unrelated streamed music showed comparable low-level noise in the high-volume laptop/headphone comparison; intended-distance SleepCube playback remains acceptable, so the limitation is documented and accepted for R00 without claiming root cause | `issues/AUD-ISS-001-playback-noise.md` |
 | M8-END-001 | Integrated finite 60-minute playback through the distributed facade | PASS — 3,600-second PLAY at 59% advanced through retained Audio heartbeats and ended in repeated `STOPPED`, timer-expired reason 2, `fault=0`; no audible/visual artifact or target runtime fault was reported | `verification/2026-09-23_M8_system_validation.md` |
 | M8-PWR-001 | Final product restore and three coordinated dual-controller power cycles | PASS — exact product image restored; each cycle booted Audio with canonical content and persisted 59% volume into silent `STOPPED`, Control polling resumed, display/strip were normal, settings stayed around 55–60%, and no automatic PLAY occurred | `verification/2026-09-23_M8_system_validation.md` |
+| R00-DUR-001 | Post-M8 change of the normal product-session default to 60 minutes | IN PROGRESS — implementation selects the already endurance-tested 3,600-second value; exact clean candidate builds and targeted on-device PLAY/STOP regression remain | `verification/2026-09-26_R00_60min_session_default.md` |
 
 Developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport or M5
 facade gates. M8 closes its release-blocking status through an explicit accepted

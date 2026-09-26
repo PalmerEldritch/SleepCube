@@ -36,9 +36,13 @@ automatically reissue the uncertain state-changing command. Responses echo the
 
 `RESULT/ACCEPTED` means the semantic operation was validated and queued. The
 subsequent Audio status/event is authoritative for asynchronous playback and
-volume state. Normal product PLAY is 1,800 seconds. The protocol accepts only
-finite durations from 1 to 3,600 seconds so short integration tests and the
-bounded endurance configuration remain possible without an unbounded path.
+volume state. Normal product PLAY is 3,600 seconds. The protocol accepts only
+finite durations from 1 to 3,600 seconds so short integration tests remain
+possible without an unbounded path.
+
+R00 duration amendment (2026-09-26): the product default changed from 1,800 to
+3,600 seconds after M8. This does not change controller ownership, framing,
+idempotency, retry behavior or the already-frozen finite protocol range.
 
 ## Consequences
 

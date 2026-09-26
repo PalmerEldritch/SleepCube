@@ -1,4 +1,4 @@
 # Test-only overlay for exercising the complete product-facade TIMER_EXPIRED
-# path without waiting for the 30-minute R00 duration. Never use this overlay
+# path without waiting for the 60-minute R00 duration. Never use this overlay
 # for a production/release image.
 CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS=30

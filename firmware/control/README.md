@@ -23,7 +23,7 @@ source /home/jeppe/esp/v6.0/esp-idf/export.sh
 ## Clean product build
 
 The R00 product profile uses the M7-verified UI/lighting configuration and
-requests a finite 1,800-second Audio session:
+requests a finite 3,600-second Audio session:
 
 ```sh
 idf.py -B /tmp/sleepcube-control-product-build \
@@ -42,8 +42,9 @@ idf.py -B /tmp/sleepcube-control-trace-build \
   set-target esp32c6 build
 ```
 
-The M8 endurance overlay changes only the finite requested duration to 3,600
-seconds. It is a test image, not the release product:
+The M8 endurance overlay explicitly pins the finite request to 3,600 seconds.
+After the R00 product-duration update this matches the product value, but the
+overlay is retained to reproduce the exact M8 test profile:
 
 ```sh
 idf.py -B /tmp/sleepcube-control-endurance-build \

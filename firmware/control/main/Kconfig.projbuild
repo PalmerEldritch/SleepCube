@@ -30,10 +30,10 @@ config SC_REMOTE_PLAY_DURATION_SECONDS
     int "Remote playback session duration (seconds)"
     depends on SC_AUDIO_REMOTE_LINK
     range 1 3600
-    default 1800
+    default 3600
     help
         Finite session duration sent with normal product PLAY requests. R00
-        production builds use 1800 seconds. Shorter values may be selected in
+        production builds use 3600 seconds. Shorter values may be selected in
         temporary verification builds without changing the wire contract.
 
 config SC_ENABLE_SEMANTIC_CONSOLE

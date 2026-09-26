@@ -25,12 +25,12 @@
 #define SC_VOLUME_DEFAULT_PERCENT           50U
 #define SC_VOLUME_OUTPUT_CAP_Q15            8192U /* -12 dBFS at 100%. */
 
-#if CONFIG_SC_M2_ENDURANCE_BUILD
 #define SC_SESSION_DURATION_SECONDS         3600U
+
+#if CONFIG_SC_M2_ENDURANCE_BUILD
 #define SC_BUILD_MODE_NAME                  "M2 60-minute endurance"
 #else
-#define SC_SESSION_DURATION_SECONDS         1800U
-#define SC_BUILD_MODE_NAME                  "M4 semantic link / 30-minute local default"
+#define SC_BUILD_MODE_NAME                  "M4 semantic link / 60-minute local default"
 #endif
 
 _Static_assert(SC_PLAYBACK_TIMEOUT_FADE_MS <

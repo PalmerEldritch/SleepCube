@@ -50,7 +50,7 @@ insert it into the unpowered Speaker Base, and then connect USB power.
 
 ## Clean normal build
 
-The normal image enforces a 30-minute session including its five-second timeout
+The normal image enforces a 60-minute session including its five-second timeout
 fade:
 
 ```sh
@@ -61,9 +61,9 @@ idf.py -B /tmp/sleepcube-m2-build \
 
 ## Separate endurance build
 
-The endurance image changes the finite deadline to 60 minutes. It is a
-compile-time verification image, not a normal command path for bypassing the
-30-minute product timeout:
+The endurance image retains the explicit M2 verification identity while using
+the same finite 60-minute deadline as the R00 product. It does not create a
+runtime path for bypassing the finite timeout:
 
 ```sh
 idf.py -B /tmp/sleepcube-m2-endurance-build \

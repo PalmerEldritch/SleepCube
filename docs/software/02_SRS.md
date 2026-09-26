@@ -62,7 +62,7 @@
 | ID | Derived From | Requirement |
 | --- | --- | --- |
 | SRS-SES-001 | PR-SES-001 | No normal command path shall permit the Audio Controller to enter a playing state without a finite session timeout. |
-| SRS-SES-002 | PR-SES-001 | The nominal software R00 playback-session duration shall be 30 minutes. |
+| SRS-SES-002 | PR-SES-001 | The nominal software R00 playback-session duration shall be 60 minutes. |
 | SRS-SES-003 | PR-SES-001, PR-FLT-001 | The Audio Controller shall independently enforce session timeout once playback has begun. |
 | SRS-SES-004 | PR-SES-001 | The Control Controller shall maintain corresponding user-visible session state but shall not be the sole authority preventing indefinite playback. |
 | SRS-SES-005 | PR-SES-002 | At session expiry, the Audio Controller shall use a 5.0 s fade that reaches silence at the finite deadline, stop playback and report the resulting state/event to the Control Controller. |

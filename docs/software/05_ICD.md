@@ -114,7 +114,7 @@ session. It shall not wrap; a new Control session shall be established first.
 | 15 | 4 | maximum accepted duration in seconds |
 
 The R00 implementation advertises durations from 1 through 3,600 seconds. The
-normal product request remains 1,800 seconds; shorter values are permitted for
+normal product request is 3,600 seconds; shorter values are permitted for
 bounded development/integration tests.
 
 ### 4.3 Status payload

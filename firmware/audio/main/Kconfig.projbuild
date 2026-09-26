@@ -4,8 +4,8 @@ config SC_M2_ENDURANCE_BUILD
     bool "Build the finite 60-minute M2 endurance image"
     default n
     help
-        Changes the standalone validation session from the normal 30 minutes
-        to a finite 60 minutes. This is a verification-only build setting and
+        Retains the explicit M2 endurance build identity. The R00 product and
+        endurance profiles now both use a finite 60-minute default; this option
         does not create a runtime API for unbounded playback.
 
 endmenu
