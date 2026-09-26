@@ -681,11 +681,18 @@ The exact next task is:
   builds pass at 603,216 bytes (Control) and 341,952 bytes (Audio). Generated
   Control configuration is 3,600 seconds and Audio identifies a 60-minute local
   default.
-- M8-END-001 already passes the full 3,600-second distributed runtime path, so
-  the remaining targeted gate is exact clean candidate build/flash, silent
-  synchronized startup, one 3,600-second PLAY confirmation and clean manual
-  STOP. The earlier `b69d1a9`/`057f1c5` M8 product pair is not the final
-  candidate for this amended behavior.
+- Exact clean product builds from implementation `3348213` pass. Control is
+  603,216 bytes, SHA-256
+  `c21fe2262e588443589f651a9fb2d779f017bd779a363a106cacc365413343d3`;
+  Audio is 341,952 bytes, SHA-256
+  `d62b3d311f9de8366e794b4212019447f3c16834ac6328db31096d75d6e0dd74`.
+  Both embed `3348213`; generated Control configuration is 3,600 seconds and no
+  product build enables an endurance overlay.
+- M8-END-001 already passes the full 3,600-second distributed runtime path. The
+  remaining targeted gate is exact candidate flash, silent synchronized
+  startup, one 3,600-second PLAY confirmation and clean manual STOP. The earlier
+  `b69d1a9`/`057f1c5` M8 product pair is not the final candidate for this amended
+  behavior.
 
 ### 2026-09-26 — M8 endurance, final product restore and completion
 

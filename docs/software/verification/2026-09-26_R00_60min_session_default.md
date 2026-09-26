@@ -1,8 +1,8 @@
 # R00 60-minute product-session default — verification record
 
 **Date:** 2026-09-26
-**Status:** IN PROGRESS — implementation and documentation updated; exact clean
-build and target regression remain.
+**Status:** IN PROGRESS — implementation, host regressions and exact clean builds
+pass; target regression remains.
 
 ## Scope
 
@@ -43,22 +43,24 @@ Strict C11/UBSan frame, semantic-protocol and settings-policy tests pass. All
 three timing-analyzer unit tests also pass.
 
 Fresh out-of-tree ESP-IDF v6.0 pre-commit builds pass for the current Control
-product profile and Audio product profile. Generated Control configuration
+product profile and Audio product profile. Exact clean builds from committed
+implementation `3348213` then pass with these identities:
+
+| Image | Target/configuration | Size | SHA-256 |
+| --- | --- | ---: | --- |
+| Control product | ESP32-C6, 8 MB, M7 product, 3,600 s | 603,216 bytes | `c21fe2262e588443589f651a9fb2d779f017bd779a363a106cacc365413343d3` |
+| Audio product | ESP32-S3, 8 MB, 3,600 s local fallback | 341,952 bytes | `d62b3d311f9de8366e794b4212019447f3c16834ac6328db31096d75d6e0dd74` |
+
+Both binaries embed exact version `3348213`. Generated Control configuration
 contains `CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS=3600`; the Audio binary
-contains the `60-minute local default` identity. The preliminary images are
-603,216 bytes for ESP32-C6 and 341,952 bytes for ESP32-S3. They carry a dirty
-application descriptor and are not release-candidate identities; exact clean
-committed builds remain required.
+contains the `60-minute local default` identity. No endurance overlay is enabled
+in either product build.
 
 ## Remaining verification
 
-1. Clean-build the Control product and Audio product profiles from the exact
-   implementation commit with ESP-IDF v6.0 and record exact image identities.
-2. Inspect generated configuration and boot diagnostics for a 3,600-second
-   product request/local default.
-3. Flash the exact candidates, confirm silent synchronized startup, start one
+1. Flash the exact candidates, confirm silent synchronized startup, start one
    session and verify both sides report a 3,600-second finite duration.
-4. Stop the session normally and verify a clean fade to silent `STOPPED` with no
+2. Stop the session normally and verify a clean fade to silent `STOPPED` with no
    fault or automatic restart.
 
 The full 60-minute endurance run need not be repeated unless the targeted
