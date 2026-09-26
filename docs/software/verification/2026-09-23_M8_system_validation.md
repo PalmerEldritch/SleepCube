@@ -1,9 +1,9 @@
 # M8 system validation — verification record
 
-**Date:** 2026-09-23, updated 2026-09-24
+**Date:** 2026-09-23, updated 2026-09-26
 **Status:** IN PROGRESS — requirements/ICD audit, quantitative timing and
-repeated-reset gates pass; content faults, endurance and final-candidate checks
-remain.
+repeated-reset, content-fault and audio-disposition gates pass; endurance and
+final-candidate checks remain.
 
 ## Scope
 
@@ -24,8 +24,9 @@ The SRS draft's old “deferred” list was stale: ADR-0007/ADR-0008 and the fro
 ICD already resolve framing, integrity, acknowledgement and retry behavior.
 M1–M7 target listening also established acceptable 1 s start/manual-stop,
 250 ms volume and 5 s timeout transitions; those values are now the explicit
-R00 acceptance baseline. `AUD-ISS-001` remains a release issue, not an
-unspecified requirement.
+R00 acceptance baseline. `AUD-ISS-001` was retained as an explicit release
+issue rather than an unspecified requirement; its M8 disposition is recorded
+below.
 
 ### SRS execution audit
 
@@ -64,7 +65,7 @@ passes but the M8 release-candidate regression is still required.
 | SRS-AUD-006 | PASS | M2 content loops continuously without user track selection. |
 | SRS-AUD-007 | PASS | M6 Control reset/link loss leaves Audio buffers and deadline autonomous. |
 | SRS-AUD-008 | PASS | Canonical 44.1 kHz/16-bit mono PCM path validates and plays, M2 onward. |
-| SRS-AUD-009 | PARTIAL | Missing card and unsupported WAV pass. Add missing-file and malformed/truncated-file target cases on the hardened reader. |
+| SRS-AUD-009 | PASS | Missing card and unsupported WAV pass in M2; M8 missing-file and declared-data-beyond-EOF boots fail silent with actionable diagnostics while the Control side remains responsive. |
 | SRS-SES-001 | PASS | Wire/server bounds and normal facade make unbounded PLAY impossible. |
 | SRS-SES-002 | PASS | Product profile requests 1,800 seconds. |
 | SRS-SES-003 | PASS | M2/M6 prove Audio-owned deadline through Control disruption. |
@@ -179,26 +180,50 @@ conditions with no semantic-console command and no unexpected volume change.
 The initial reset/timing observations are superseded; only the corrected data
 above is acceptance evidence.
 
+## Content faults, wiring inspection and audio disposition — 2026-09-26
+
+The user explicitly inspected the inter-controller wiring before the fault
+boots: only TX, RX and common GND were connected; the red 5 V contact was
+disconnected. This closes the outstanding physical no-cross-power inspection.
+
+The exact canonical `/sleepcube/audio.wav` was preserved before mutation:
+
+- PCM signed-16 mono, 44.1 kHz, 136.277891 seconds, 12,019,788 bytes;
+- SHA-256
+  `04295f9b56eec65350f8c3b566f04ec43409aa4b2685b37db52f763dc3a4e963`;
+- the on-card original and `/tmp` safety copy matched before fault injection.
+
+Two independent target boots then passed:
+
+| Case | Target diagnostic and state | Manual/system observation | Result |
+| --- | --- | --- | --- |
+| Canonical file absent | `cannot open /sdcard/sleepcube/audio.wav`; `ESP_ERR_NOT_FOUND`; `FAULT`, output volume 0%, playback disabled | Speaker silent; display and GPIO8 strip responsive; UART status polling continued; no panic/reboot | PASS |
+| 4,096-byte truncated copy with original header | `truncated WAV data: declared_end=12019788 file_size=4096`; `ESP_ERR_INVALID_SIZE`; `FAULT`, output volume 0%, playback disabled | Speaker silent; display and GPIO8 strip responsive; UART status polling continued; no panic/reboot | PASS |
+
+After testing, the untouched canonical file was restored at its required path
+and re-hashed against the safety copy. Both match the original SHA-256 above;
+format and duration also revalidate. The 4,096-byte specimen is retained as
+`/sleepcube/audio.m8-truncated.wav`, outside the canonical lookup path.
+
+For `AUD-ISS-001`, the exact hash-matched mono file was auditioned through the
+laptop headphone output. A similar but less noticeable background noise was
+heard only at high headphone volume; unrelated Spotify music through the same
+path exhibited comparable noise. Combined with the earlier intended-distance
+listening, three-speaker comparison, clean silent sections and absence of
+clicks/pops/dropouts/overdrive, the user observation supports accepting the
+low-level noise as a documented R00 limitation. It remains a future
+audio-quality improvement candidate; no electrical root cause is claimed.
+
 ## Remaining physical sequence
 
-1. Visually confirm common ground and that no 5 V rail crosses between boards;
-   bidirectional operation is proven but the no-5-V contact still needs an
-   explicit M8 inspection record.
-2. Mount the card on the laptop. Preserve and hash the canonical asset, audition
-   that exact mono WAV through a known-clean output for `AUD-ISS-001`, then run
-   missing-file and malformed/truncated-WAV target boots. Restore and re-hash the
-   canonical file.
-3. Flash the M8 3,600-second Control overlay and run one integrated 60-minute
+1. Flash the M8 3,600-second Control overlay and run one integrated 60-minute
    session, retaining both controller logs and checking for underrun/fault.
-4. Restore the exact product image, perform three normal dual-controller power
+2. Restore the exact product image, perform three normal dual-controller power
    cycles to verify persistence and silent startup, and record the final
    release-candidate image identities.
 
 ## Open release items
 
-- explicit inspection of common ground and the disconnected/insulated 5 V contact;
 - final-candidate power-cycle and persistence checks;
-- missing-file and malformed/truncated content fault injection;
 - distributed 60-minute endurance regression;
-- evidence-backed `AUD-ISS-001` disposition;
 - exact final release-candidate build/hash and product restore.

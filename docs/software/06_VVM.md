@@ -118,7 +118,7 @@ close the associated R00 requirements.
 | M2-MAN-001 | Stored-audio noise, distortion, loop-boundary and transition assessment on supplied 1 W/8 ohm speaker | PASS — no persistent stopped-state noise, distortion, loop artifact, click or pop; manual and timeout fades clean using laptop USB power, with endurance listening at approximately 30 cm | `verification/2026-09-16_M2_standalone_audio.md` |
 | M2-END-001 | Separate finite 60-minute Audio Controller endurance run | PASS — 60 loops, 158,761,472 frames / 635,045,888 bytes, finite timeout to `STOPPED`, no logged stream/runtime fault and no reported audible artifact | `verification/2026-09-16_M2_standalone_audio.md` |
 | M2-FI-001 | Representative missing-storage and unsupported-content startup faults | PASS — absent card produced actionable `ESP_ERR_TIMEOUT`; valid 8-bit WAV produced actionable `ESP_ERR_NOT_SUPPORTED`; both disabled playback and remained silent | `verification/2026-09-16_M2_standalone_audio.md` |
-| M2-FUP-001 | 10 W/4 ohm TEBM compatibility and intended sleep-music follow-up | PASS WITH OPEN ISSUE `AUD-ISS-001` — clean TEBM tone playback at 25%/50% and materially improved music at approximately 30 cm; no click, pop, dropout or overdrive. Signal-correlated noise was later reported on three different speakers and remains unresolved | `verification/2026-09-18_TEBM_music_followup.md`, `issues/AUD-ISS-001-playback-noise.md` |
+| M2-FUP-001 | 10 W/4 ohm TEBM compatibility and intended sleep-music follow-up | PASS WITH ACCEPTED LIMITATION `AUD-ISS-001` — clean TEBM tone playback at 25%/50% and materially improved music at approximately 30 cm; no click, pop, dropout or overdrive. Low-level signal-correlated noise was later reported on three speakers; its physical cause remains unresolved, but M8-AUD-002 records the evidence-backed R00 acceptance | `verification/2026-09-18_TEBM_music_followup.md`, `issues/AUD-ISS-001-playback-noise.md` |
 | M3-UT-001 | Shared COBS/CRC parser and resynchronization host tests | PASS — maximum-payload round trip; bad COBS/version/length/CRC, incomplete/overlong frames, timeout and delimiter recovery | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-BLD-001 | Separate ESP32-S3 Audio and ESP32-C6 Control transport builds | PASS — both 8 MB USB-console builds; Control M3 defaults preserve UI/light and disable old local audio | `verification/2026-09-21_M3_uart_transport.md` |
 | M3-FLS-001 | M3 Atom flash/image identity and complete application boot | PASS — ESP32-S3 v0.2/8 MB identified; writes hash-verified; post-reset log shows valid card/content and silent `STOPPED`/`READY` | `verification/2026-09-21_M3_uart_transport.md` |
@@ -153,12 +153,16 @@ close the associated R00 requirements.
 | M8-TIM-001 | Nominal touch acceptance and complete semantic-command acknowledgement timing | PASS — 20 corrected samples: touch maximum 0.453 ms against 100 ms; user event to correlated acknowledgement maximum 59.710 ms against 250 ms; UART RTT maximum 51.870 ms | `verification/2026-09-23_M8_system_validation.md` |
 | M8-RST-001 | Five independent resets of each controller, including active playback | PASS — stopped resets remained silent/STOPPED; Control reset preserved the existing Audio session without replay; Audio reset stopped safely, changed session and remained STOPPED; no automatic PLAY | `verification/2026-09-23_M8_system_validation.md` |
 | M8-DEF-001 | Product isolation from M4 semantic diagnostic console | PASS — initial reset testing exposed host serial bytes issuing unintended commands; correction `ac421a7` makes the console M4-only, and the corrected timing/reset run reproduced monitor recovery without command injection or persisted-volume mutation | `verification/2026-09-23_M8_system_validation.md` |
+| M8-CNT-001 | Missing canonical content and declared-data-beyond-EOF target faults | PASS — both boots produced actionable diagnostics, silent `FAULT` with playback disabled, continued UART/UI/lighting responsiveness and no panic/reboot; the exact canonical asset was hash-restored afterward | `verification/2026-09-23_M8_system_validation.md` |
+| M8-PHY-001 | Final inter-controller power/wiring inspection | PASS — user explicitly confirmed TX, RX and common GND with the red 5 V contact disconnected before M8 content-fault boots | `verification/2026-09-23_M8_system_validation.md` |
+| M8-AUD-002 | Evidence-backed `AUD-ISS-001` release disposition | PASS — exact canonical mono and unrelated streamed music showed comparable low-level noise in the high-volume laptop/headphone comparison; intended-distance SleepCube playback remains acceptable, so the limitation is documented and accepted for R00 without claiming root cause | `issues/AUD-ISS-001-playback-noise.md` |
 
-Open developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport
-or M5 facade gates. It is not closed by the M2 validation-tone/PCM results or
-by successful two-controller transport tests. Before R00 release, record either a verified
-fix/mitigation or an explicit accepted limitation supported by representative
-sleep-music listening; see `issues/AUD-ISS-001-playback-noise.md`.
+Developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport or M5
+facade gates. M8 closes its release-blocking status through an explicit accepted
+R00 limitation supported by representative intended-distance listening, three
+speaker loads and exact-content reference audition. The physical root cause is
+not claimed resolved; retain it as a future audio-quality improvement item. See
+`issues/AUD-ISS-001-playback-noise.md`.
 
 M1-BLD-001 is structural evidence toward SRS-SYS-001/SRS-SYS-003 only. It does
 not verify storage, decoding, product fades, session timing or the 60-minute

@@ -1,13 +1,13 @@
 # SleepCube Software Development Status
 
 **Baseline:** R00 (draft)  
-**Last updated:** 2026-09-24
+**Last updated:** 2026-09-26
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M8 system validation in progress; timing and reset gates pass**
+**M8 system validation in progress; timing, reset and content gates pass**
 
 Status: **M1 through M7 pass. The M8 audit maps all 55 SRS, 24 UX and 29 ICD
 IDs. The quantitative target gate now passes: 20 corrected samples show a
@@ -20,10 +20,14 @@ in product profiles and could interpret monitor bytes as volume/STOP commands.
 Correction `ac421a7` makes it M4-only; the corrected regression has no command
 injection or volume mutation. Clean exact Control product/trace/endurance builds
 at `ac421a7` and the deployed Audio build at `057f1c5` are hash-recorded. The
-hardware is currently STOPPED/silent at Audio volume 59%, with the corrected M8
-Control trace still deployed. Missing/malformed content faults, exact-content
-noise disposition, integrated 60-minute endurance, physical no-5-V inspection
-and final product power-cycle/persistence checks remain M8 gates.**
+hardware is currently powered down for card handling, with the corrected M8
+Control trace still deployed. Missing-file and truncated-WAV target boots pass
+silent with actionable faults and responsive Control UI/lighting; the exact
+canonical asset is hash-restored. The user explicitly confirmed TX/RX/common
+ground with no inter-controller 5 V connection. `AUD-ISS-001` is accepted as a
+documented low-level R00 limitation after exact-content reference listening;
+its physical root cause is not claimed resolved. Integrated 60-minute endurance
+and final product restore/power-cycle/persistence checks remain M8 gates.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -46,9 +50,10 @@ the normal image is the final deployed firmware. A post-M2 follow-up also
 confirms clean electrical operation with the 10 W/4 ohm TEBM speaker and
 materially improved sleep-music quality at the intended approximately 30 cm
 listening distance. The active card content is now the full converted
-Interstellar mono track. A signal-correlated music-playback noise is now tracked
-as open issue `AUD-ISS-001`: it was heard on three different speakers, remains
-non-blocking for M3, and needs explicit R00 disposition.
+Interstellar mono track. A signal-correlated music-playback noise is tracked as
+`AUD-ISS-001`: it was heard on three different speakers and its physical cause
+remains unresolved. M8 exact-content/reference listening now accepts it as a
+documented low-level R00 limitation rather than a release blocker.
 
 M3 now has a frozen ICD mapping: Waveshare GPIO16 TX to Atom GPIO2 RX, Atom
 GPIO1 TX to Waveshare GPIO17 RX, and common ground with no 5 V inter-controller
@@ -603,11 +608,10 @@ The installed ESP-IDF worktree reports `v6.0-dirty` because file modes differ
 from its tag, but its `HEAD` is exactly the v6.0 commit above. No changed ESP-IDF
 source content was required by the SleepCube build.
 
-The following implementation choices remain intentionally open:
+The following post-R00 improvement remains intentionally open:
 
-- independent physical inspection of the no-cross-board-power-rail hookup;
-- root cause and release disposition of `AUD-ISS-001`, including exact-mono
-  reference audition and representative listening after any mitigation.
+- physical root cause and potential mitigation of the accepted low-level
+  `AUD-ISS-001` playback noise. Its R00 release disposition is complete.
 
 The R00 volume curve and transition timings are no longer open placeholders.
 Any later perceptual retuning is an intentional behavior change that requires
@@ -630,24 +634,52 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Execute the M8 card/content/noise gate.**
+**Execute the M8 distributed-endurance and final-candidate gate.**
 
 The exact next task is:
 
-1. Explicitly inspect common ground and confirm the Grove red 5 V contact is
-   disconnected and insulated.
-2. Power down Audio and mount the card on the laptop. Hash and preserve the
-   exact canonical `/sleepcube/audio.wav` before any fault injection.
-3. Audition that exact mono WAV through a known-clean output for `AUD-ISS-001`,
-   then run silent missing-file and malformed/truncated-file target boots while
-   checking actionable diagnostics and responsive Control UI/lighting.
-4. Restore and re-hash the canonical file. Then flash the exact `ac421a7`
-   3,600-second Control endurance image for the distributed 60-minute run.
-
-After endurance, restore the exact product profile and perform the final three
-dual-controller power cycles/persistence checks described in the M8 record.
+1. Safely eject the restored card, insert it into the powered-off Atom and boot
+   both controllers. Confirm Audio `READY`/silent and the canonical hash-restored
+   content validates normally.
+2. Flash the exact `ac421a7` 3,600-second Control endurance image and capture
+   both controller logs for one complete session.
+3. Verify clean playback, no underrun/fault/reboot and controlled timeout to
+   silent STOPPED.
+4. Restore the exact product profile and perform three normal dual-controller
+   power cycles, checking silent startup and persisted brightness/volume.
+5. Record final release-candidate image identities and complete the M8 evidence
+   review.
 
 ## 7. Session closeout record
+
+### 2026-09-26 — M8 content faults and audio-noise disposition
+
+- Explicit wiring inspection passed: TX, RX and common GND are connected; the
+  inter-controller red 5 V contact is disconnected.
+- Preserved the exact 12,019,788-byte canonical WAV before fault injection:
+  signed-16 mono PCM at 44.1 kHz, 136.277891 seconds, SHA-256
+  `04295f9b56eec65350f8c3b566f04ec43409aa4b2685b37db52f763dc3a4e963`.
+- Missing-file boot passed with `ESP_ERR_NOT_FOUND`, silent `FAULT`, playback
+  disabled, continued UART polling and responsive display/GPIO8 strip.
+- A separate 4,096-byte copy retaining the canonical header was rejected before
+  playback with `declared_end=12019788 file_size=4096` and
+  `ESP_ERR_INVALID_SIZE`. Output remained silent, Control UI/lighting remained
+  responsive and no panic/reboot occurred.
+- Restored `/sleepcube/audio.wav` from the untouched on-card original and
+  re-hashed it against the laptop safety copy; format, duration, size and hash
+  all match. The fault specimen remains outside the lookup path as
+  `/sleepcube/audio.m8-truncated.wav`.
+- Auditioned the exact canonical mono file through laptop headphones. Similar
+  but less noticeable noise was heard at high volume, and unrelated Spotify
+  music through the same path exhibited comparable background noise. Together
+  with intended-distance acceptability, three-speaker evidence and clean
+  silence/transitions, `AUD-ISS-001` is explicitly accepted as a documented R00
+  limitation. Root cause remains a post-R00 improvement, not a release blocker.
+- Normal sandbox operation was restored after identifying and unmounting a
+  malformed Snap `mesa-2404` namespace entry; this was a host-tooling issue and
+  did not affect target behavior or evidence.
+- Exact next task: normal restored-content boot, then the integrated 3,600-second
+  endurance run and final product/persistence restore. M8 remains incomplete.
 
 ### 2026-09-24 — M8 quantitative timing and repeated-reset gate
 

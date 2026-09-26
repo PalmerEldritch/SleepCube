@@ -1,12 +1,13 @@
 # AUD-ISS-001 — Signal-correlated sleep-music noise
 
-**Status:** Open; root cause and final acceptability not determined
+**Status:** Accepted R00 limitation; retain for future improvement
 
 **First observed:** 2026-09-18
 
-**Updated:** 2026-09-23
+**Updated:** 2026-09-26
 
-**Priority:** M8/R00 release blocker until explicitly fixed, mitigated or accepted
+**Priority:** Non-blocking after M8 reference audition; physical root cause
+remains undetermined
 
 ## Symptom and impact
 
@@ -61,34 +62,53 @@ was established, but the test was stopped. See the vendor schematic linked from
 the [Atomic SPK Base product page](https://docs.m5stack.com/en/atom/Atomic%20SPK%20Base)
 and the local `references/datasheets/NS4168_CN_datasheet.pdf`.
 
-The user's earlier clean laptop-headphone reference was the track, but the
-record does not establish that it was the exact canonical mono conversion.
-That distinction remains important.
+On 2026-09-24 the exact hash-matched canonical mono file was played through the
+laptop headphone output. At high headphone volume the user heard a similar,
+though less noticeable, noise. Unrelated Spotify music played through the same
+headphone path at high volume also exhibited comparable background noise. This
+does not establish that all three noises have the same electrical cause, but it
+removes the earlier assumption that a clean reference chain uniquely separates
+the canonical file from the embedded path.
 
-## Next diagnostic and decision rule
+## R00 disposition
 
-1. Audition the *exact hash-matched canonical mono WAV* through a known-clean
-   laptop/headphone output at a comparable passage and comfortable level.
-   Record whether the same noise is present. Do not substitute the original
-   stereo WAV without identifying it as a separate comparison.
-2. If the mono file is noisy on the reference output, investigate the source
+Accepted as a documented low-level playback limitation for R00. The decision
+is supported by the complete listening set:
+
+- on SleepCube it is barely audible at the intended approximately 30 cm
+  distance and nominal sleep-music loudness, but noticeable during close
+  approximately 10 cm listening;
+- it occurs with three speaker loads and is therefore not unique to the TEBM
+  speaker or its connector;
+- stopped output and silent content are quiet, and no click, pop, dropout,
+  overdrive or persistent idle noise was reported;
+- the exact canonical file and unrelated streamed music both produced similar
+  low-level background noise in the high-volume laptop/headphone comparison.
+
+The evidence is sufficient for perceptual R00 acceptance, not for a hardware
+root-cause claim. A future audio-quality revision may investigate amplifier
+noise, power integrity and source/mastering with suitable differential
+measurement equipment. The invalid Speaker Base headphone-jack method remains
+prohibited.
+
+## Future diagnostic path
+
+1. If further improvement is prioritized, investigate the source
    recording and downmix/export chain; compare original stereo channels and a
    fresh conversion before changing embedded firmware.
-3. If the mono file is clean on the reference output, use a suitable isolated,
+2. Use a suitable isolated,
    differential Class-D measurement method or a known-safe post-filtered test
    load to compare the Speaker Base output. Do not attach a ground-referenced
    laptop line input or ordinary grounded oscilloscope probe directly across
    `VOP/VON`. Check supply behavior and the firmware sample/gain path only with
    evidence that separates them.
-4. Recheck any mitigation using the same track, firmware, power source,
+3. Recheck any mitigation using the same track, firmware, power source,
    speaker, listening distance and volume. Record a before/after comparison.
 
-M3 UART implementation may proceed. Before R00 release, this issue must be
-closed by a demonstrated fix/mitigation **or** explicitly accepted as a
-documented product limitation after representative listening at the intended
-distance and volume. Do not silently infer closure from clean tones, active
-silence, or successful UART/system tests. Record the decision and evidence here,
-in `06_VVM.md`, and in the current `08_STATUS.md` handoff.
+This acceptance must remain visible in release documentation. Clean tones,
+active silence or successful UART/system tests alone would not have closed the
+issue; the representative intended-track and exact-reference observations are
+the decision evidence.
 
 ## Related evidence
 

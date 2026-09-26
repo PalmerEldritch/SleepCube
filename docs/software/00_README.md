@@ -78,5 +78,6 @@ The bounded quadratic R00 gain curve and transition implementation are recorded
 in the Audio Controller README. Any later product retuning shall be treated as
 an intentional verified behavior change, not an unresolved R00 placeholder.
 
-`AUD-ISS-001` remains the one explicit audio-quality release issue. It must be
-fixed, mitigated or accepted with representative evidence before R00 release.
+`AUD-ISS-001` is the explicit audio-quality limitation. M8 representative and
+exact-content listening supports accepting it for R00; its physical root cause
+remains a documented post-R00 improvement item.

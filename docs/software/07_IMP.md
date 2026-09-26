@@ -301,8 +301,12 @@ target timing passes with 20 samples (0.453 ms maximum touch acceptance and
 of each controller pass, including active-playback cases. Reset testing exposed
 and corrected a product-enabled M4 diagnostic console at `ac421a7`; the
 corrected regression shows no host command injection or volume mutation.
-Content-fault, endurance, persistence, physical no-5-V inspection and
-`AUD-ISS-001` evidence remain before the exit criterion can be claimed. See
+Missing-file and truncated-WAV boots now fail silent with actionable diagnostics
+while UI/lighting remain responsive; the canonical asset is hash-restored. The
+no-cross-board-5-V inspection passes, and `AUD-ISS-001` is explicitly accepted
+as a documented R00 limitation after exact-content reference listening.
+Distributed endurance, product restore and persistence remain before the exit
+criterion can be claimed. See
 `verification/2026-09-23_M8_system_validation.md`.
 
 Deliverables:
@@ -357,17 +361,15 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Execute the M8 card/content/noise gate:
+Execute the M8 distributed-endurance and final-candidate gate:
 
-1. explicitly inspect common ground and confirm the Grove 5 V contact remains
-   disconnected and insulated;
-2. power down Audio, mount the card on the laptop, hash and preserve the exact
-   canonical `/sleepcube/audio.wav`, and audition that file through a known-clean
-   output for `AUD-ISS-001`;
-3. run missing-file and malformed/truncated-WAV boots, verifying actionable
-   faults, silence and responsive Control lighting/UI;
-4. restore and re-hash the canonical file, then proceed to the distributed
-   3,600-second endurance run.
-
-The audio-noise issue must be fixed, mitigated or explicitly accepted before
-R00 release; quantitative timing or reset success does not close it.
+1. restore the card with its hash-verified canonical asset to the Audio
+   Controller and verify a normal silent/READY boot;
+2. flash the exact `ac421a7` 3,600-second Control endurance overlay and capture
+   both controller logs for one complete session;
+3. verify clean playback, no underrun/fault/reboot and controlled timeout to
+   silent STOPPED;
+4. restore the exact product profile and perform three normal dual-controller
+   power cycles, checking silent startup and persisted brightness/volume;
+5. record the final release-candidate image identities and complete the M8
+   evidence review.
