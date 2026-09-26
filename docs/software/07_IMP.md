@@ -289,7 +289,7 @@ Exit criteria:
 
 **Goal:** Produce full R00 evidence.
 
-**Status (2026-09-24): IN PROGRESS.** The requirement/ICD audit is complete and
+**Status (2026-09-26): PASS.** The requirement/ICD audit is complete and
 maps all 55 SRS, 24 UX and 29 ICD IDs. Five previously omitted SRS rows were
 added to the VVM, stale deferred-design text was resolved, and the validated
 audio transition durations are now explicit R00 criteria. M8 tooling adds exact
@@ -305,8 +305,11 @@ Missing-file and truncated-WAV boots now fail silent with actionable diagnostics
 while UI/lighting remain responsive; the canonical asset is hash-restored. The
 no-cross-board-5-V inspection passes, and `AUD-ISS-001` is explicitly accepted
 as a documented R00 limitation after exact-content reference listening.
-Distributed endurance, product restore and persistence remain before the exit
-criterion can be claimed. See
+The integrated 3,600-second session reached timer-expired `STOPPED` with
+`fault=0` and no user-observed audible/visual artifact. The exact product image
+was restored and three coordinated dual-controller power cycles retained
+silent startup, no automatic PLAY, normal display/strip behavior and persisted
+brightness/volume. All M8 exit criteria pass. See
 `verification/2026-09-23_M8_system_validation.md`.
 
 Deliverables:
@@ -361,15 +364,15 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Execute the M8 distributed-endurance and final-candidate gate:
+Start M9 R00 release preparation:
 
-1. restore the card with its hash-verified canonical asset to the Audio
-   Controller and verify a normal silent/READY boot;
-2. flash the exact `ac421a7` 3,600-second Control endurance overlay and capture
-   both controller logs for one complete session;
-3. verify clean playback, no underrun/fault/reboot and controlled timeout to
-   silent STOPPED;
-4. restore the exact product profile and perform three normal dual-controller
-   power cycles, checking silent startup and persisted brightness/volume;
-5. record the final release-candidate image identities and complete the M8
-   evidence review.
+1. review every active document and ADR for remaining draft/TBD language that
+   affects the validated R00 baseline;
+2. promote implementation and verification documentation from draft to R00
+   without changing the validated behavior or accepted `AUD-ISS-001`
+   disposition;
+3. clearly remove/archive the legacy Control-local audio backend from the active
+   release build path while preserving required history;
+4. run the release build/document consistency checks and record exact release
+   artifacts;
+5. create the R00 release commit and tag only after that review passes.

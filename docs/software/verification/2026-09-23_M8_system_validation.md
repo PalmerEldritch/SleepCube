@@ -1,9 +1,9 @@
 # M8 system validation — verification record
 
 **Date:** 2026-09-23, updated 2026-09-26
-**Status:** IN PROGRESS — requirements/ICD audit, quantitative timing and
-repeated-reset, content-fault and audio-disposition gates pass; endurance and
-final-candidate checks remain.
+**Status:** PASS — requirements/ICD audit, quantitative timing, repeated-reset,
+content-fault, audio-disposition, integrated endurance and final-candidate
+power-cycle gates pass.
 
 ## Scope
 
@@ -30,9 +30,9 @@ below.
 
 ### SRS execution audit
 
-`PASS` means retained evidence is sufficient for the stated requirement.
-`PARTIAL` or `PENDING` identifies exact M8 work. `RETEST` means earlier evidence
-passes but the M8 release-candidate regression is still required.
+`PASS` means retained evidence is sufficient for the stated requirement. Every
+row is now closed with passing evidence; superseded intermediate observations
+remain described in the detailed sections below.
 
 | Requirement | Audit | Evidence or exact remaining work |
 | --- | --- | --- |
@@ -90,7 +90,7 @@ passes but the M8 release-candidate regression is still required.
 | SRS-SYS-010 | PASS | Corrected M8 trace captures 20 nominal touch emit→application receipt samples: maximum 0.453 ms against the 100 ms limit. |
 | SRS-COM-010 | PASS | Corrected M8 trace captures 20 nominal user event→correlated acknowledgement samples: maximum 59.710 ms against the 250 ms limit. |
 | SRS-LGT-010 | PASS | M5–M7 report continuous display/strip animation during UI/UART work. |
-| SRS-AUD-010 | RETEST | M2 60-minute run passed the same audio pipeline; repeat through the distributed facade with the M8 3,600-second overlay. |
+| SRS-AUD-010 | PASS | The M8 3,600-second distributed-facade session reached timer-expired `STOPPED` with `fault=0`; the user reported no audible or visual artifact. |
 
 ### ICD execution audit
 
@@ -132,6 +132,15 @@ correction is Control-only.
 | Control M8 timing trace (`ac421a7`) | 603,904 bytes | `acf37a10c7c23a2da965814cfcc772f94bb809eaed377a2ec9e2c92dabbb1309` |
 | Control M8 3,600-second endurance (`ac421a7`) | 603,216 bytes | `d2b55ad778c03dbb323e76c857bb5939a19d26ecce7a2b52ec436b02ca07fec6` |
 | Audio product (`057f1c5`) | 341,952 bytes | `efd3c6cecf66b3ce220d73f9e3fe9929d9cc221550805138a96e4ed3a81cca2f` |
+
+The final target gate was flashed after documentation-only commits advanced the
+Control application descriptor to `b69d1a9`; Control source behavior remained
+the corrected `ac421a7` implementation. The exact exercised artifacts were:
+
+| Target-gate image | Size | SHA-256 |
+| --- | ---: | --- |
+| Control M8 3,600-second endurance (`b69d1a9`) | 603,216 bytes | `b418070bbf551c71aec6c446969a37b63154368e36f974efb2557443fd8fcafb` |
+| Control final product (`b69d1a9`) | 603,216 bytes | `0a6b91a7ce86003a4a4d79d3c5b79151927fe06960ad192a3a708f9ba7585306` |
 
 No project-code warning was observed. Component-manager registry checks were
 skipped because the build host had no registry connection; all dependencies
@@ -214,16 +223,42 @@ clicks/pops/dropouts/overdrive, the user observation supports accepting the
 low-level noise as a documented R00 limitation. It remains a future
 audio-quality improvement candidate; no electrical root cause is claimed.
 
-## Remaining physical sequence
+## Integrated endurance and final candidate — 2026-09-26
 
-1. Flash the M8 3,600-second Control overlay and run one integrated 60-minute
-   session, retaining both controller logs and checking for underrun/fault.
-2. Restore the exact product image, perform three normal dual-controller power
-   cycles to verify persistence and silent startup, and record the final
-   release-candidate image identities.
+The exact `b69d1a9` endurance artifact above requested one finite 3,600-second
+session through the normal distributed facade at the persisted 59% volume.
+Audio entered `PLAYING`; its retained 60-second heartbeats progressed through
+132,301,312 frames / 529,205,248 I2S bytes, 22 content loops and 600 seconds
+remaining. Control status polling was captured continuously through 543 seconds
+remaining. The host PTY then compressed one accumulated interval, so the final
+Audio counters and the PLAYING-to-STOPPING lines are not claimed from that
+capture. Subsequent Control status repeatedly reported `STOPPED`, zero seconds,
+timer-expired stop reason 2 and `fault=0`. The user observed the complete hour
+and reported the timeout complete with no audible or visual artifact.
 
-## Open release items
+One Audio `rejected frame reason=6 count=1` occurred before playback while the
+Control endurance image was being flashed and rebooted. The link recovered
+before PLAY; no rejected frame, playback fault, panic, watchdog, reboot,
+underrun or partial I2S write was observed during the session. The host-log
+compression is retained as an evidence limitation rather than represented as a
+target fault.
 
-- final-candidate power-cycle and persistence checks;
-- distributed 60-minute endurance regression;
-- exact final release-candidate build/hash and product restore.
+The exact product image above was then restored. Three coordinated normal
+dual-controller power cycles passed. Each Audio boot created a fresh session,
+loaded the exact 59% persisted volume, validated the canonical 6,009,855-frame
+WAV and reached silent `READY`/`STOPPED`; continued GET_STATUS traffic proved
+Control synchronization after each boot. The user confirmed silent startup,
+no automatic playback, normal display/GPIO8-strip operation and stable
+brightness/volume indications around 55–60% on all three cycles. USB monitor
+reconnection did not retain each Control boot prologue, so the acceptance claim
+uses the Audio-side reciprocal polling plus direct visual observation.
+
+## M8 conclusion
+
+All M8 exit criteria pass. Every non-deferred SRS and accepted ICD requirement
+has passing evidence, the release-sensitive timing and fault gates pass, the
+distributed 60-minute endurance run passes, and the final product profile is
+restored and power-cycle verified. `AUD-ISS-001` remains documented as an
+accepted low-level R00 limitation and post-R00 improvement candidate, not an
+unrecorded blocker. The exact next milestone is M9 R00 release/documentation
+promotion; M8 does not itself create or tag the release.

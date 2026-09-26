@@ -7,27 +7,29 @@
 
 ## 1. Current milestone
 
-**M8 system validation in progress; timing, reset and content gates pass**
+**M8 system validation passes; M9 R00 release preparation is next**
 
-Status: **M1 through M7 pass. The M8 audit maps all 55 SRS, 24 UX and 29 ICD
-IDs. The quantitative target gate now passes: 20 corrected samples show a
-0.453 ms maximum touch-acceptance time and 59.710 ms maximum complete
-user-command acknowledgement time, comfortably inside the 100 ms and 250 ms
-limits. Five independent resets of each controller also pass, including active
-playback, with safe reconciliation and no automatic PLAY. The initial reset run
-found that the historical M4 semantic USB console was unintentionally present
-in product profiles and could interpret monitor bytes as volume/STOP commands.
-Correction `ac421a7` makes it M4-only; the corrected regression has no command
-injection or volume mutation. Clean exact Control product/trace/endurance builds
-at `ac421a7` and the deployed Audio build at `057f1c5` are hash-recorded. The
-hardware is currently powered down for card handling, with the corrected M8
-Control trace still deployed. Missing-file and truncated-WAV target boots pass
-silent with actionable faults and responsive Control UI/lighting; the exact
-canonical asset is hash-restored. The user explicitly confirmed TX/RX/common
-ground with no inter-controller 5 V connection. `AUD-ISS-001` is accepted as a
-documented low-level R00 limitation after exact-content reference listening;
-its physical root cause is not claimed resolved. Integrated 60-minute endurance
-and final product restore/power-cycle/persistence checks remain M8 gates.**
+Status: **M1 through M8 pass. The M8 audit maps all 55 SRS, 24 UX and 29 ICD
+IDs and finds every non-deferred requirement ready for R00 release preparation.
+Quantitative target timing passes with 0.453 ms maximum touch acceptance and
+59.710 ms maximum complete command acknowledgement. Five independent resets of
+each controller pass, including active-playback cases. Missing-file and
+truncated-WAV boots fail silent with actionable diagnostics; the canonical
+asset is restored. The corrected product excludes the M4 semantic USB console,
+and TX/RX/common ground were inspected with no inter-controller 5 V connection.
+The integrated 3,600-second distributed session reached timer-expired
+`STOPPED`, `fault=0`, with no user-observed audible or visual artifact. The
+exact Control product image was restored and three coordinated dual-controller
+power cycles retained silent `STOPPED`, no automatic PLAY, normal display/strip
+operation and stable persisted settings. `AUD-ISS-001` is accepted as a
+documented low-level R00 limitation; its physical root cause remains a post-R00
+improvement. The deployed final-candidate identities are Control `b69d1a9`,
+603,216 bytes, SHA-256
+`0a6b91a7ce86003a4a4d79d3c5b79151927fe06960ad192a3a708f9ba7585306`,
+and Audio `057f1c5`, 341,952 bytes, SHA-256
+`efd3c6cecf66b3ce220d73f9e3fe9929d9cc221550805138a96e4ed3a81cca2f`.
+Formal document promotion, final release consistency review and tagging remain
+M9 work.**
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -540,16 +542,13 @@ Verified for M7 software and target hardware on 2026-09-23:
   silent/STOPPED. The user confirmed normal display and LED operation. Full
   evidence is in `docs/software/verification/2026-09-23_M7_ux_lighting.md`.
 
-Not yet verified for the new architecture:
+Additional non-blocking permutations not run on target:
 
-- exhaustive SRS-AUD-009 permutations beyond the representative M2 absent-card
-  and unsupported-format fault cases;
-- hardware injection of an invalid Control brightness NVS value; policy unit
-  tests cover the bounds and retained M2 target evidence covers invalid Audio
-  volume;
-- release-level 100 ms touch-event and 250 ms command-confirmation measurements;
-- final-candidate repeated reset/power-cycle checks and integrated 60-minute
-  distributed endurance regression.
+- exhaustive SRS-AUD-009 corrupt-content permutations beyond the passing M2
+  absent-card/unsupported-format and M8 missing-file/truncated-data cases;
+- physical injection of an invalid Control brightness NVS value. Policy unit
+  tests cover the bounds, and retained M2 target evidence covers invalid Audio
+  volume, so this is not an open R00 requirement gap.
 
 ## 4. Architectural decisions in force
 
@@ -587,13 +586,15 @@ the original path. Open issue `AUD-ISS-001` records a signal-correlated hiss/buz
 that was also heard with the supplied 1 W/8 Ω speaker and another small 3 W/4 Ω
 speaker. With the TEBM it was noticeable at approximately 10 cm. It is not
 present during active digital silence and was not changed by removing content
-above 4 kHz or by a 12 dB digital-gain comparison. A headphone-jack comparison
-was invalid because the jack directly shares the filterless differential
-Class-D output; severe high-pitched noise occurred and that test should not be
-repeated with those headphones. The exact mono asset has not yet been confirmed
-clean or noisy on a known-clean reference output. The root cause is unresolved;
-the issue did not block M3–M5 but requires an explicit fix, mitigation or
-accepted limitation before R00 release. The available 1 GB FAT16 card has
+above 4 kHz or by a 12 dB digital-gain comparison. A Speaker Base headphone-jack
+comparison was invalid because the jack directly shares the filterless
+differential Class-D output; severe high-pitched noise occurred and that test
+should not be repeated with those headphones. The exact mono asset was later
+auditioned through the laptop headphone output: similar but less noticeable
+background noise appeared only at high volume, and unrelated Spotify material
+showed comparable noise. Intended-distance playback is accepted for R00 without
+claiming the physical cause resolved; future mitigation remains a post-R00
+improvement. The available 1 GB FAT16 card has
 enough capacity for the selected PCM policy; FAT mount compatibility and
 fixed-low-CS operation pass on the intended hardware.
 
@@ -634,23 +635,58 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Execute the M8 distributed-endurance and final-candidate gate.**
+**Begin M9 R00 release preparation.**
 
 The exact next task is:
 
-1. Safely eject the restored card, insert it into the powered-off Atom and boot
-   both controllers. Confirm Audio `READY`/silent and the canonical hash-restored
-   content validates normally.
-2. Flash the exact `ac421a7` 3,600-second Control endurance image and capture
-   both controller logs for one complete session.
-3. Verify clean playback, no underrun/fault/reboot and controlled timeout to
-   silent STOPPED.
-4. Restore the exact product profile and perform three normal dual-controller
-   power cycles, checking silent startup and persisted brightness/volume.
-5. Record final release-candidate image identities and complete the M8 evidence
-   review.
+1. Audit the active R00 documents and accepted ADRs for stale draft/TBD text,
+   without changing the M8-validated behavior or evidence dispositions.
+2. Promote the implementation and verification documentation to R00 and make
+   the legacy Control-local audio backend unambiguously absent from the active
+   release build path (archive/remove only with an explicit, reviewed change).
+3. Run final host/build/document consistency checks and record the exact release
+   artifacts; the currently target-validated candidates are Control `b69d1a9`
+   and Audio `057f1c5` with hashes in section 1.
+4. Review the final diff, create the R00 release commit, and tag only after all
+   M9 checks pass.
 
 ## 7. Session closeout record
+
+### 2026-09-26 — M8 endurance, final product restore and completion
+
+- Normal restored-content boot passed before endurance: Audio `057f1c5`
+  validated the 6,009,855-frame canonical WAV, loaded persisted volume 59% and
+  reached silent `READY`/`STOPPED` with Control synchronized.
+- Flashed and exercised the finite 3,600-second Control endurance profile. The
+  exact target artifact reported `b69d1a9`, was 603,216 bytes, and had SHA-256
+  `b418070bbf551c71aec6c446969a37b63154368e36f974efb2557443fd8fcafb`.
+  This differs from the earlier `ac421a7` artifact only because subsequent
+  documentation commits advanced the application descriptor; functional
+  Control source remained the corrected `ac421a7` implementation.
+- The distributed session began at 59% and Audio heartbeats advanced through
+  132,301,312 frames / 529,205,248 I2S bytes, 22 content loops and 600 seconds
+  remaining. Control status was captured through 543 seconds remaining, after
+  which host PTY backpressure compressed the accumulated interval. Final
+  Control polling repeatedly reported `STOPPED`, remaining 0, timer-expired
+  reason 2 and `fault=0`. The user observed the full hour and reported no
+  artifact.
+- One rejected Audio frame occurred during the pre-session Control flash/reboot
+  and recovered before PLAY. No endurance-session target fault, panic, watchdog,
+  reboot, underrun or partial I2S write was observed. The incomplete serial
+  interval is explicitly retained as a host-capture limitation.
+- Restored the normal product profile. Its exact `b69d1a9` artifact is 603,216
+  bytes with SHA-256
+  `0a6b91a7ce86003a4a4d79d3c5b79151927fe06960ad192a3a708f9ba7585306`;
+  flash write hashes passed.
+- Three coordinated dual-controller power cycles passed. Each Audio log showed
+  a fresh session, canonical content, saved 59% volume, silent `STOPPED` and
+  resumed Control GET_STATUS traffic. The user confirmed silent startup, no
+  automatic playback, normal display/GPIO8-strip operation and stable
+  brightness/volume around 55–60% on every cycle.
+- M8 passes. All non-deferred SRS/accepted ICD evidence gates are satisfied for
+  entry into M9. `AUD-ISS-001` remains an accepted R00 limitation and post-R00
+  improvement, not a release blocker. Exact next task: execute the M9 active-
+  document/ADR audit and release promotion sequence in section 6.
 
 ### 2026-09-26 — M8 content faults and audio-noise disposition
 
