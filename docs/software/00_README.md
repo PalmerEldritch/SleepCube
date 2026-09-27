@@ -1,6 +1,6 @@
 # SleepCube Software Documentation
 
-**Baseline:** R00 (draft)
+**Baseline:** R00
 
 ## 1. Scope
 

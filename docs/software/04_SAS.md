@@ -1,6 +1,6 @@
 # SleepCube Software Architecture Specification
 
-**Revision:** R00 draft
+**Revision:** R00
 
 ## 1. Architectural drivers
 

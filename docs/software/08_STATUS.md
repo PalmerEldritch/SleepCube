@@ -1,21 +1,21 @@
 # SleepCube Software Development Status
 
-**Baseline:** R00 (draft)  
+**Baseline:** R00
+
 **Last updated:** 2026-09-27
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M9 R00 release preparation is in progress; final target smoke is next**
+**M9 passes; software R00 is released as `software-r00`**
 
-Status: **M1 through M8 and the post-M8 `R00-DUR-001` regression pass. M9
-implementation checkpoint `2bb7fd0` removes the superseded Control-local audio
-stack from the active source/build graph, adds an explicit R00 Control profile,
-and pins both embedded application versions to `R00`. Strict host regressions
-and exact ESP-IDF v6.0 release builds pass. The controllers are not currently
-enumerated on the host, so the integrated release-image smoke, final document
-promotion and annotated release tag remain pending.**
+Status: **M1 through M9 pass. The active software baseline is R00 and annotated
+tag `software-r00` identifies the release. Implementation checkpoint `2bb7fd0`
+removes the superseded Control-local audio stack from the active source/build
+graph, adds an explicit R00 Control profile, and pins both embedded application
+versions to `R00`. Strict host regressions, exact ESP-IDF v6.0 release builds
+and the integrated exact-image target smoke pass.**
 
 The M8 audit maps all 55 SRS, 24 UX and 29 ICD IDs and found every then-active
 non-deferred requirement ready for R00 release preparation.
@@ -44,8 +44,11 @@ Exact M9 build identities are Control 603,200 bytes, SHA-256
 `63f1b0bd27ca47ca9583d4c90ca6a13da16dfe5577c937af4a0c4bc5d5836ef3`,
 and Audio 341,952 bytes, SHA-256
 `bf088239b393820beb72b29635f940d6c03de9d9a80ef5142271354a5b28c2af`.
-Both embed version `R00`. Integrated target smoke, formal document promotion,
-final release consistency review and tagging remain M9 work.
+Both embed version `R00`. Both images flashed with hash verification and passed
+silent synchronized startup, finite 3,600-second PLAY establishment and clean
+manual STOP to silent `STOPPED`, `remaining=0`, `fault=0`; the user reported
+normal audio, display and LED-strip operation. Active documents are promoted,
+the final release consistency review passes, and M9 is complete.
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -653,23 +656,37 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Complete the M9 integrated release-image smoke.**
+**Select and specify the first post-R00 objective.**
 
 The exact next task is:
 
-1. Connect both controllers with their validated UART/common-ground wiring,
-   independent USB power, SD card and speaker; keep inter-controller 5 V
-   disconnected.
-2. Resolve the stable USB identities, flash the exact M9 Control and Audio
-   artifacts, and confirm both boot silently into synchronized `STOPPED` with
-   normal display and strip operation.
-3. Start one product session and confirm both sides report a finite 3,600-second
-   session, then manually stop and confirm the one-second fade reaches silent
-   `STOPPED`, `remaining=0`, `fault=0`, without restart.
-4. Promote the active document headers to R00, close the M9 report/VVM/plan,
-   commit the final evidence, and create the annotated R00 tag.
+1. Choose between investigating `AUD-ISS-001` or specifying the deferred
+   SD-card configuration/diagnostic-log feature as the next release objective.
+2. Update the PRD/SRS and, when ownership or persistent-data policy changes,
+   add an ADR before implementation.
+3. Define a new milestone and verification gate without modifying the tagged
+   R00 baseline or retroactively changing its evidence.
 
 ## 7. Session closeout record
+
+### 2026-09-27 — M9 passes and software R00 is released
+
+- Resolved the stable USB identities as Control `AC:EB:E6:1E:67:C4` on
+  `/dev/ttyACM0` and Audio `44:1B:F6:F4:FE:C8` on `/dev/ttyACM1`.
+- Flashed the exact M9 Control and Audio artifacts; every bootloader, partition
+  table and application write passed esptool hash verification.
+- Non-resetting monitors showed repeated synchronized `STOPPED`, persisted
+  volume 59%, `remaining=0`, `fault=0`. The user reported normal startup,
+  speaker silence, display and LED-strip operation.
+- Product input issued `PLAY(3600s)`; Audio established the 3,600-second local
+  deadline and both sides reported `PLAYING` with a matching countdown and
+  `fault=0`.
+- Manual STOP entered `STOPPING`, completed the one-second fade, and remained
+  silent `STOPPED`, reason 1, `remaining=0`, `fault=0`, without restart. The
+  user reported all audio/visual behavior normal.
+- Promoted the active document set from draft to R00, closed the M9 VVM/plan
+  gates, and designated annotated tag `software-r00` for the final release
+  commit. `AUD-ISS-001` remains an accepted R00 limitation and post-R00 work.
 
 ### 2026-09-27 — M9 release preparation reaches target-smoke gate
 

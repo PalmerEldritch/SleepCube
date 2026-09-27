@@ -1,6 +1,6 @@
 # SleepCube Software Verification and Validation Matrix
 
-**Revision:** R00 draft
+**Revision:** R00
 
 ## 1. Verification method codes
 
@@ -159,6 +159,10 @@ close the associated R00 requirements.
 | M8-END-001 | Integrated finite 60-minute playback through the distributed facade | PASS — 3,600-second PLAY at 59% advanced through retained Audio heartbeats and ended in repeated `STOPPED`, timer-expired reason 2, `fault=0`; no audible/visual artifact or target runtime fault was reported | `verification/2026-09-23_M8_system_validation.md` |
 | M8-PWR-001 | Final product restore and three coordinated dual-controller power cycles | PASS — exact product image restored; each cycle booted Audio with canonical content and persisted 59% volume into silent `STOPPED`, Control polling resumed, display/strip were normal, settings stayed around 55–60%, and no automatic PLAY occurred | `verification/2026-09-23_M8_system_validation.md` |
 | R00-DUR-001 | Post-M8 change of the normal product-session default to 60 minutes | PASS — exact `3348213` Control/Audio candidates booted silent and synchronized; Control requested and Audio enforced 3,600 seconds with matching countdown, then manual STOP reached clean silent `STOPPED`, reason 1, `remaining=0`, `fault=0`, without restart | `verification/2026-09-26_R00_60min_session_default.md` |
+| M9-AUD-001 | Final active-document and ADR consistency audit | PASS — all active requirement/interface IDs retain explicit evidence; ADR-0002 through ADR-0008 remain accepted; no R00-critical behavioral TBD remains; `AUD-ISS-001` retains its accepted-limitation disposition | `verification/2026-09-27_M9_R00_release.md` |
+| M9-BLD-001 | Exact R00 host regression and target builds | PASS — strict frame, semantic-protocol and settings-policy C11/UBSan suites plus all timing-analyzer tests pass; exact ESP32-C6/8 MB and ESP32-S3/8 MB product artifacts embed `R00` and have recorded sizes/SHA-256 identities | `verification/2026-09-27_M9_R00_release.md` |
+| M9-HWT-001 | Exact R00 integrated startup, 3,600-second PLAY establishment and manual STOP smoke | PASS — both images flash with hash verification; synchronized startup is silent/STOPPED; PLAY establishes the Audio-owned 3,600-second deadline; manual STOP fades cleanly to silent `STOPPED`, reason 1, `remaining=0`, `fault=0`; display/strip remain normal | `verification/2026-09-27_M9_R00_release.md` |
+| M9-REL-001 | R00 document promotion and release tag | PASS — active document headers are R00, implementation documentation matches the release path, superseded Control-local audio is absent from the active graph, and annotated tag `software-r00` identifies the release | `verification/2026-09-27_M9_R00_release.md` |
 
 Developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport or M5
 facade gates. M8 closes its release-blocking status through an explicit accepted
@@ -220,6 +224,7 @@ Software R00 shall not be released until:
 5. the active document set contains no unresolved TBD that affects required R00 external behaviour or safety/fault containment;
 6. `AUD-ISS-001` has an explicit evidence-backed disposition (verified fix/mitigation or accepted limitation), rather than being silently treated as closed by transport or validation-tone success.
 
-The M8 evidence review finds all six conditions satisfied for entry into M9.
-Formal document promotion and release tagging remain M9 activities; this VVM
-therefore remains an R00 draft until that milestone is completed.
+The M8 evidence review found all six conditions satisfied for entry into M9.
+M9 repeated the release-sensitive host/build and exact-image smoke checks,
+promoted the active document set and completed the annotated `software-r00`
+release. All six R00 release conditions remain satisfied.

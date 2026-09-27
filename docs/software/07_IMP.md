@@ -1,6 +1,6 @@
 # SleepCube Software Implementation Plan
 
-**Revision:** R00 draft
+**Revision:** R00
 
 ## 1. Development strategy
 
@@ -342,6 +342,21 @@ Exit criteria:
 
 ### M9 — R00 release
 
+**Status (2026-09-27): PASS.** The active document/ADR audit found no
+R00-critical behavioral TBD, and the accepted `AUD-ISS-001` limitation remains
+explicit. The superseded Waveshare-local audio implementation, configuration,
+Helix dependency and SPIFFS image generation were removed from the active
+Control tree. A tracked `sdkconfig.r00.defaults` now defines the release
+Control profile, and both firmwares embed stable version `R00`.
+
+Strict host regressions and exact ESP-IDF v6.0 ESP32-C6/ESP32-S3 builds pass.
+The exact images flashed with hash verification and passed silent synchronized
+startup, finite 3,600-second PLAY establishment, clean manual fade to silent
+`STOPPED`, `remaining=0`, `fault=0`, and normal display/strip observation. The
+active documents are promoted to R00 and annotated tag `software-r00`
+identifies the release. Evidence is in
+`verification/2026-09-27_M9_R00_release.md`.
+
 Deliverables:
 
 - documentation promoted from draft to R00;
@@ -350,7 +365,7 @@ Deliverables:
 - legacy P0 audio code clearly archived/removed from active build path;
 - tagged release.
 
-## 3. Proposed repository target
+## 3. Released repository layout
 
 ```text
 firmware/
@@ -360,7 +375,7 @@ firmware/
     └── protocol/            # wire-level types/constants if safely shareable
 ```
 
-The physical repository move should occur only when it simplifies M1-M5 work. M0 shall not rename the existing firmware tree merely for cosmetic consistency.
+M0 established this two-controller layout, and M9 releases it unchanged.
 
 ## 4. Development constraints
 
@@ -373,15 +388,15 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Start M9 from the passed M8 plus `R00-DUR-001` baseline:
+R00 is released. Begin post-R00 planning with a narrowly scoped decision on the
+next release objective before changing product behavior. The two recorded
+candidates are:
 
-1. review every active document and ADR for remaining draft/TBD language that
-   affects the validated R00 baseline;
-2. promote implementation and verification documentation from draft to R00
-   without changing the validated behavior or accepted `AUD-ISS-001`
-   disposition;
-3. clearly remove/archive the legacy Control-local audio backend from the active
-   release build path while preserving required history;
-4. run the release build/document consistency checks and record exact release
-   artifacts;
-5. create the R00 release commit and tag only after that review passes.
+1. investigate and, if justified by evidence, mitigate the accepted low-level
+   `AUD-ISS-001` playback noise; or
+2. specify the deferred SD-card configuration and bounded diagnostic-log
+   facility, including validation, defaults, ownership, write-lifetime and
+   fault-containment requirements, before implementation.
+
+Either candidate should begin with updated requirements and an ADR if it
+changes ownership, persistent-data policy or the inter-controller contract.

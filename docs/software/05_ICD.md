@@ -1,6 +1,6 @@
 # SleepCube Inter-Controller Interface Control Document
 
-**Revision:** R00 draft
+**Revision:** R00
 
 ## 1. Purpose
 

@@ -1,6 +1,6 @@
 # SleepCube Software Product Requirements Document
 
-**Revision:** R00 draft
+**Revision:** R00
 
 ## 1. Purpose
 

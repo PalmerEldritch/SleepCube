@@ -1,6 +1,6 @@
 # SleepCube Software Requirements Specification
 
-**Revision:** R00 draft
+**Revision:** R00
 
 ## 1. System and ownership
 
