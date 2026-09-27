@@ -106,11 +106,7 @@ esp_err_t sc_app_core_start(void)
     ESP_LOGI(TAG, "light service disabled");
 #endif
 
-#if CONFIG_SC_ENABLE_AUDIO || CONFIG_SC_AUDIO_REMOTE_LINK
     ESP_RETURN_ON_ERROR(sc_audio_service_start(), TAG, "audio service start failed");
-#else
-    ESP_LOGI(TAG, "audio service disabled");
-#endif
 
 #if CONFIG_SC_ENABLE_UI
     ESP_RETURN_ON_ERROR(sc_ui_service_start(), TAG, "ui service start failed");

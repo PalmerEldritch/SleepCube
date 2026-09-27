@@ -19,7 +19,9 @@ The Audio Controller shall be authoritative for actual playback state and shall 
 
 The Control Controller shall own user-visible session state and presentation, but loss or reset of the Control Controller shall not remove an already-established Audio Controller playback deadline.
 
-The exact wire framing, integrity/checksum mechanism and acknowledgement/idempotency strategy are deferred to a later ADR during the UART/protocol milestones.
+The exact wire framing and integrity mechanism were subsequently resolved by
+ADR-0007. Acknowledgement, idempotency and retry/recovery were resolved by
+ADR-0008.
 
 ## Consequences
 

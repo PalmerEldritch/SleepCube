@@ -2,7 +2,10 @@
 
 ESP-IDF firmware for the Waveshare ESP32-C6 touch/display controller. The
 normal product build owns touch UI, display and GPIO8 ambient lighting, and
-uses the semantic UART facade to control the separate Audio Controller.
+uses the semantic UART facade to control the separate Audio Controller. The
+superseded Waveshare-local decoder/I2S backend is not part of the active source,
+configuration or dependency graph; its pre-M9 implementation remains available
+through Git history.
 
 ## Toolchain and wiring
 
@@ -22,13 +25,14 @@ source /home/jeppe/esp/v6.0/esp-idf/export.sh
 
 ## Clean product build
 
-The R00 product profile uses the M7-verified UI/lighting configuration and
-requests a finite 3,600-second Audio session:
+The frozen R00 product profile carries forward the M7-verified UI/lighting
+configuration, requests a finite 3,600-second Audio session, and disables the
+development semantic console and timing trace:
 
 ```sh
 idf.py -B /tmp/sleepcube-control-product-build \
   -D SDKCONFIG=/tmp/sleepcube-control-product-sdkconfig \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.m7.defaults' \
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.r00.defaults' \
   set-target esp32c6 build
 ```
 
@@ -93,8 +97,9 @@ Run its host tests with:
 python3 -m unittest discover -s tools -p 'test_*.py' -v
 ```
 
-The trace image is not the final release image. Restore and verify the exact
-product build after timing or endurance tests.
+The trace and endurance profiles are historical verification profiles, not
+release overlays. Rebuild the exact `sdkconfig.r00.defaults` product profile
+after using either one.
 
 ## M4 diagnostic console isolation
 
@@ -104,3 +109,7 @@ when `CONFIG_SC_ENABLE_SEMANTIC_CONSOLE=y`. It is enabled by
 disabled in product, timing and endurance profiles. Do not enable it in a
 release image: arbitrary host serial input must never be interpreted as a
 product audio command.
+
+The custom partition table retains its previously validated, unused `storage`
+partition so M9 does not introduce a flash-layout change. The release build
+does not create, flash, mount or read a Control-side SPIFFS image.

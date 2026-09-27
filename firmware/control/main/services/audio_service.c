@@ -10,23 +10,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#if CONFIG_SC_ENABLE_AUDIO
-#include "audio_diag_console.h"
-#include "audio_player.h"
-#include "settings_policy.h"
-#include "settings_store.h"
-#elif CONFIG_SC_AUDIO_REMOTE_LINK
 #include "sc_audio_link.h"
 #include "sc_audio_protocol.h"
-#endif
 
 static const char *TAG = "sc_audio_service";
 
 #define SC_AUDIO_VOLUME_STEP_PCT (5)
-#define SC_AUDIO_DEFAULT_VOLUME_PCT (40U)
-#define SC_AUDIO_SETTINGS_KEY_VOLUME "volume_pct"
-
-#if CONFIG_SC_ENABLE_AUDIO || CONFIG_SC_AUDIO_REMOTE_LINK
 static void post_audio_event(sc_app_event_type_t type, int32_t value)
 {
     const sc_app_event_t event = {
@@ -39,111 +28,6 @@ static void post_audio_event(sc_app_event_type_t type, int32_t value)
                  esp_err_to_name(error));
     }
 }
-#endif
-
-#if CONFIG_SC_ENABLE_AUDIO
-
-esp_err_t sc_audio_service_start(void)
-{
-    uint8_t initial_volume = SC_AUDIO_DEFAULT_VOLUME_PCT;
-    esp_err_t load_err = sc_settings_store_load_u8(SC_AUDIO_SETTINGS_KEY_VOLUME, SC_AUDIO_DEFAULT_VOLUME_PCT, &initial_volume);
-    if (load_err != ESP_OK) {
-        ESP_LOGW(TAG, "volume load failed, using default: %s", esp_err_to_name(load_err));
-        initial_volume = SC_AUDIO_DEFAULT_VOLUME_PCT;
-    }
-    const uint8_t validated_volume = sc_settings_bound_u8(
-        initial_volume, 0U, 100U);
-    if (validated_volume != initial_volume) {
-        ESP_LOGW(TAG, "saved local volume=%u%% is invalid; clamped to %u%%",
-                 (unsigned)initial_volume, (unsigned)validated_volume);
-        initial_volume = validated_volume;
-    }
-
-    ESP_LOGI(TAG, "starting legacy local audio playback service");
-    ESP_RETURN_ON_ERROR(sc_audio_player_start(), TAG, "audio player start failed");
-    sc_audio_player_set_enabled(false);
-    sc_audio_player_set_volume_percent(initial_volume);
-#if CONFIG_SC_AUDIO_DIAG_SERIAL_CONSOLE
-    ESP_RETURN_ON_ERROR(sc_audio_diag_console_start(), TAG, "audio diagnostic console start failed");
-#endif
-    ESP_LOGI(TAG, "local audio ready: enabled=%d volume=%u%%",
-             sc_audio_player_get_enabled(), (unsigned)sc_audio_player_get_volume_percent());
-    return ESP_OK;
-}
-
-esp_err_t sc_audio_service_set_playback(bool enable)
-{
-    const bool current = sc_audio_player_get_enabled();
-    if (current == enable) {
-        return ESP_OK;
-    }
-
-    if (enable) {
-        sc_audio_player_set_enabled(true);
-    } else {
-        sc_audio_player_request_stop();
-    }
-    post_audio_event(SC_APP_EVT_AUDIO_STATE_CHANGED, enable ? 1 : 0);
-    ESP_LOGI(TAG, "local playback %s", enable ? "enabled" : "disabled");
-    return ESP_OK;
-}
-
-esp_err_t sc_audio_service_toggle_playback(void)
-{
-    return sc_audio_service_set_playback(!sc_audio_player_get_enabled());
-}
-
-esp_err_t sc_audio_service_change_volume(int delta_steps)
-{
-    int next = (int)sc_audio_player_get_volume_percent() +
-               (delta_steps * SC_AUDIO_VOLUME_STEP_PCT);
-    if (next < 0) {
-        next = 0;
-    }
-    if (next > 100) {
-        next = 100;
-    }
-    return sc_audio_service_set_volume_percent((uint8_t)next);
-}
-
-esp_err_t sc_audio_service_set_volume_percent(uint8_t percent)
-{
-    const uint8_t next = percent > 100U ? 100U : percent;
-    if (sc_audio_player_get_volume_percent() == next) {
-        return ESP_OK;
-    }
-
-    sc_audio_player_set_volume_percent(next);
-    const esp_err_t save_err = sc_settings_store_save_u8(SC_AUDIO_SETTINGS_KEY_VOLUME, next);
-    if (save_err != ESP_OK) {
-        ESP_LOGW(TAG, "volume save failed: %s", esp_err_to_name(save_err));
-    }
-    post_audio_event(SC_APP_EVT_AUDIO_VOLUME_CHANGED, next);
-    ESP_LOGI(TAG, "local volume=%u%%", (unsigned)next);
-    return ESP_OK;
-}
-
-bool sc_audio_service_get_playback_enabled(void)
-{
-    return sc_audio_player_get_enabled();
-}
-
-uint8_t sc_audio_service_get_volume_percent(void)
-{
-    return sc_audio_player_get_volume_percent();
-}
-
-bool sc_audio_service_is_available(void)
-{
-    return true;
-}
-
-bool sc_audio_service_is_synchronized(void)
-{
-    return true;
-}
-
-#elif CONFIG_SC_AUDIO_REMOTE_LINK
 
 #define SC_REMOTE_POLL_MS (20U)
 #define SC_REMOTE_COMMAND_SETTLE_MS (1500U)
@@ -506,56 +390,3 @@ bool sc_audio_service_is_synchronized(void)
     portEXIT_CRITICAL(&s_remote_lock);
     return synchronized;
 }
-
-#else
-
-esp_err_t sc_audio_service_start(void)
-{
-    ESP_LOGI(TAG, "audio service disabled by config");
-    return ESP_OK;
-}
-
-esp_err_t sc_audio_service_set_playback(bool enable)
-{
-    (void)enable;
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t sc_audio_service_toggle_playback(void)
-{
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t sc_audio_service_change_volume(int delta_steps)
-{
-    (void)delta_steps;
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-esp_err_t sc_audio_service_set_volume_percent(uint8_t percent)
-{
-    (void)percent;
-    return ESP_ERR_NOT_SUPPORTED;
-}
-
-bool sc_audio_service_get_playback_enabled(void)
-{
-    return false;
-}
-
-uint8_t sc_audio_service_get_volume_percent(void)
-{
-    return 0U;
-}
-
-bool sc_audio_service_is_available(void)
-{
-    return false;
-}
-
-bool sc_audio_service_is_synchronized(void)
-{
-    return false;
-}
-
-#endif

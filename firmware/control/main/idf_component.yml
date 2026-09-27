@@ -1,2 +1,2 @@
 dependencies:
-  chmorgan/esp-libhelix-mp3: "^1.0.3"
+  idf: ">=6.0"

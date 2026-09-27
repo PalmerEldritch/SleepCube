@@ -35,12 +35,6 @@ static const char *TAG = "sc_hw_profile";
 #define SC_CFG_LED_GPIO -1
 #endif
 
-#ifdef CONFIG_SC_ENABLE_AUDIO
-#define SC_CFG_AUDIO 1
-#else
-#define SC_CFG_AUDIO 0
-#endif
-
 #ifdef CONFIG_SC_ENABLE_LIGHT
 #define SC_CFG_LIGHT 1
 #else
@@ -51,12 +45,6 @@ static const char *TAG = "sc_hw_profile";
 #define SC_CFG_UI 1
 #else
 #define SC_CFG_UI 0
-#endif
-
-#ifdef CONFIG_SC_LOOPBACK_ENABLE
-#define SC_CFG_LOOPBACK 1
-#else
-#define SC_CFG_LOOPBACK 0
 #endif
 
 #ifdef CONFIG_SC_LIGHT_STARTUP_RAMP_MS
@@ -76,13 +64,12 @@ void sc_hw_profile_log(void)
 #endif
 
     ESP_LOGI(TAG, "board profile: %s", board);
-    ESP_LOGI(TAG, "services: audio=%d light=%d ui=%d",
-             SC_CFG_AUDIO, SC_CFG_LIGHT, SC_CFG_UI);
-    ESP_LOGI(TAG, "backends: led_strip=%d lcd_touch=%d buttons=%d loopback=%d",
+    ESP_LOGI(TAG, "services: audio=remote light=%d ui=%d",
+             SC_CFG_LIGHT, SC_CFG_UI);
+    ESP_LOGI(TAG, "backends: led_strip=%d lcd_touch=%d buttons=%d",
              SC_CFG_LED_STRIP,
              SC_CFG_LCD_TOUCH,
-             SC_CFG_UI_BUTTONS,
-             SC_CFG_LOOPBACK);
+             SC_CFG_UI_BUTTONS);
     ESP_LOGI(TAG, "light cfg: led_count=%d led_gpio=%d", SC_CFG_LED_COUNT, SC_CFG_LED_GPIO);
     ESP_LOGI(TAG, "light anim: startup_ramp_ms=%d", SC_CFG_LIGHT_STARTUP_RAMP_MS);
 }

@@ -5,57 +5,6 @@
 #include "driver/spi_common.h"
 
 /**
- * @brief Board-specific TX pins for I2S audio output.
- */
-#if CONFIG_SC_BOARD_WAVESHARE_ESP32C6
-/**
- * Wiring for ESP32-C6 touch display board + mono I2S amplifier:
- * - WS/LRCLK: GPIO5
- * - BCLK: GPIO6
- * - DOUT: GPIO7
- *
- * Amplifier shutdown is tied high in hardware, so no firmware GPIO is used.
- */
-#define SC_AUDIO_I2S_BCLK_GPIO   GPIO_NUM_6
-#define SC_AUDIO_I2S_WS_GPIO     GPIO_NUM_5
-#define SC_AUDIO_I2S_DOUT_GPIO   GPIO_NUM_7
-#define SC_AUDIO_AMP_SD_GPIO     GPIO_NUM_NC
-#else
-/**
- * Wiring for MAX98357 test setup on ESP32 DevKitC:
- * - BCLK: GPIO26
- * - WS/LRCLK: GPIO25
- * - DOUT: GPIO22
- */
-#define SC_AUDIO_I2S_BCLK_GPIO   GPIO_NUM_26
-#define SC_AUDIO_I2S_WS_GPIO     GPIO_NUM_25
-#define SC_AUDIO_I2S_DOUT_GPIO   GPIO_NUM_22
-#define SC_AUDIO_AMP_SD_GPIO     GPIO_NUM_NC
-#endif
-
-/**
- * @brief RX pins used for external digital loopback verification.
- *
- * Required jumpers:
- * - GPIO26 -> GPIO14 (BCLK)
- * - GPIO25 -> GPIO27 (WS)
- * - GPIO22 -> GPIO34 (DIN)
- */
-#if CONFIG_SC_BOARD_DEVKITC_ESP32
-#define SC_AUDIO_I2S_RX_BCLK_GPIO  GPIO_NUM_14
-#define SC_AUDIO_I2S_RX_WS_GPIO    GPIO_NUM_27
-#define SC_AUDIO_I2S_RX_DIN_GPIO   GPIO_NUM_34
-#elif CONFIG_SC_BOARD_WAVESHARE_ESP32C6
-#define SC_AUDIO_I2S_RX_BCLK_GPIO  GPIO_NUM_NC
-#define SC_AUDIO_I2S_RX_WS_GPIO    GPIO_NUM_NC
-#define SC_AUDIO_I2S_RX_DIN_GPIO   GPIO_NUM_NC
-#else
-#define SC_AUDIO_I2S_RX_BCLK_GPIO  GPIO_NUM_NC
-#define SC_AUDIO_I2S_RX_WS_GPIO    GPIO_NUM_NC
-#define SC_AUDIO_I2S_RX_DIN_GPIO   GPIO_NUM_NC
-#endif
-
-/**
  * @brief Default GPIO map for LED strip and temporary button UI on ESP32 DevKitC.
  *
  * These values mirror the defaults in menuconfig (`Kconfig.projbuild`):

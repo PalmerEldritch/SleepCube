@@ -97,7 +97,9 @@ UI ──events──> app_core ──commands──> audio_service ──> audi
 Audio link ──status/events──> audio_service/app_core ──> UI + lighting response
 ```
 
-`audio_service` remains the application-facing audio abstraction, but its backend changes from local player/I2S calls to the remote audio link.
+`audio_service` is the application-facing audio abstraction and its only R00
+backend is the remote audio link. The superseded Control-local player/I2S
+backend is not part of the active release source or build graph.
 
 While synchronized, the Control-side link owner performs periodic bounded
 status probes in addition to processing events and application commands. A
@@ -230,6 +232,7 @@ Accepted architecture decisions are recorded separately, including:
 - independent Audio Controller timeout enforcement;
 - retention/migration of existing Control Controller UI and lighting implementation.
 
-The framing/checksum and semantic session/retry decisions are now captured by
-ADR-0007 and ADR-0008. Degraded-state UX remains a future ADR candidate if M5–M7
-introduce a durable product behavior choice beyond the current SRS/UX text.
+The framing/checksum and semantic session/retry decisions are captured by
+ADR-0007 and ADR-0008. M5–M8 validation did not introduce a degraded-state
+behavior beyond the current SRS/UX baseline, so no additional R00 ADR is
+required. A later durable change to that behavior would require a new ADR.
