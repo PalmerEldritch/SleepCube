@@ -7,16 +7,15 @@
 
 ## 1. Current milestone
 
-**M8 and the post-M8 60-minute product-default regression pass; M9 is next**
+**M9 R00 release preparation is in progress; final target smoke is next**
 
-Status: **M1 through M8 pass. The user subsequently approved changing the R00
-normal session default from 1,800 to 3,600 seconds. Control product defaults,
-the Audio local fallback and active requirements/interface documentation now
-select 60 minutes while retaining the finite 1–3,600-second protocol range.
-M8-END-001 passes the complete 3,600-second distributed playback path, and
-`R00-DUR-001` now passes exact-candidate silent startup plus targeted 3,600-second
-PLAY/manual-STOP regression. The final tested implementation version is
-`3348213`; M9 release preparation is the next work.**
+Status: **M1 through M8 and the post-M8 `R00-DUR-001` regression pass. M9
+implementation checkpoint `2bb7fd0` removes the superseded Control-local audio
+stack from the active source/build graph, adds an explicit R00 Control profile,
+and pins both embedded application versions to `R00`. Strict host regressions
+and exact ESP-IDF v6.0 release builds pass. The controllers are not currently
+enumerated on the host, so the integrated release-image smoke, final document
+promotion and annotated release tag remain pending.**
 
 The M8 audit maps all 55 SRS, 24 UX and 29 ICD IDs and found every then-active
 non-deferred requirement ready for R00 release preparation.
@@ -41,8 +40,12 @@ The final targeted-regression candidates are Control `3348213`, 603,216 bytes,
 SHA-256 `c526231c244d70e2036069c90cd709019b1472d947b4c5e5918dcb20958e0036`,
 and Audio `3348213`, 341,952 bytes, SHA-256
 `d62b3d311f9de8366e794b4212019447f3c16834ac6328db31096d75d6e0dd74`.
-Formal document promotion, final release consistency review and tagging remain
-M9 work.
+Exact M9 build identities are Control 603,200 bytes, SHA-256
+`63f1b0bd27ca47ca9583d4c90ca6a13da16dfe5577c937af4a0c4bc5d5836ef3`,
+and Audio 341,952 bytes, SHA-256
+`bf088239b393820beb72b29635f940d6c03de9d9a80ef5142271354a5b28c2af`.
+Both embed version `R00`. Integrated target smoke, formal document promotion,
+final release consistency review and tagging remain M9 work.
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -123,8 +126,10 @@ Working/valuable implementation to preserve:
 - persistent light brightness handling;
 - application event queue / `app_core` structure.
 
-The existing local audio stack remains present only as a legacy compatibility
-backend; the normal M5 configuration selects the Audio Controller facade.
+The superseded Control-local storage/decoder/player/I2S implementation is no
+longer present in the active source or build graph. Its history remains in Git.
+The Control `audio_service` has one R00 backend: the Audio Controller semantic
+facade.
 
 For M4, `sdkconfig.m4.defaults` selects the 8 MB ESP32-C6/USB Serial-JTAG build
 with UI and lighting enabled and legacy local audio disabled. A dedicated UART
@@ -648,21 +653,47 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Begin M9 R00 release preparation.**
+**Complete the M9 integrated release-image smoke.**
 
 The exact next task is:
 
-1. Audit the active R00 documents and accepted ADRs for stale draft/TBD text,
-   without changing the M8-validated behavior or evidence dispositions.
-2. Promote the implementation and verification documentation to R00 and make
-   the legacy Control-local audio backend unambiguously absent from the active
-   release build path (archive/remove only with an explicit, reviewed change).
-3. Run final host/build/document consistency checks and record the exact release
-   artifacts.
-4. Review the final diff, create the R00 release commit, and tag only after all
-   M9 checks pass.
+1. Connect both controllers with their validated UART/common-ground wiring,
+   independent USB power, SD card and speaker; keep inter-controller 5 V
+   disconnected.
+2. Resolve the stable USB identities, flash the exact M9 Control and Audio
+   artifacts, and confirm both boot silently into synchronized `STOPPED` with
+   normal display and strip operation.
+3. Start one product session and confirm both sides report a finite 3,600-second
+   session, then manually stop and confirm the one-second fade reaches silent
+   `STOPPED`, `remaining=0`, `fault=0`, without restart.
+4. Promote the active document headers to R00, close the M9 report/VVM/plan,
+   commit the final evidence, and create the annotated R00 tag.
 
 ## 7. Session closeout record
+
+### 2026-09-27 — M9 release preparation reaches target-smoke gate
+
+- Audited the active specification and ADR set. All R00-critical behavior is
+  resolved, ADR-0002 through ADR-0008 remain accepted, and `AUD-ISS-001`
+  retains its explicit accepted-limitation disposition.
+- Removed the obsolete Waveshare-local audio sources, Kconfig surface, Helix
+  dependency and SPIFFS image generation from the active Control tree. The
+  unchanged partition layout retains an unused storage partition to avoid an
+  unnecessary release migration.
+- Added `sdkconfig.r00.defaults` for the ESP32-C6/8 MB product image with a
+  finite 3,600-second request, validated UI/light configuration, and diagnostic
+  console/trace disabled. Both projects now embed stable version `R00`.
+- Strict C11/UBSan frame, semantic-protocol and settings-policy suites pass;
+  all three timing-analyzer tests pass.
+- Fresh exact ESP-IDF v6.0 builds from `2bb7fd0` pass: Control 603,200 bytes,
+  SHA-256 `63f1b0bd27ca47ca9583d4c90ca6a13da16dfe5577c937af4a0c4bc5d5836ef3`;
+  Audio 341,952 bytes, SHA-256
+  `bf088239b393820beb72b29635f940d6c03de9d9a80ef5142271354a5b28c2af`.
+- A first parallel Control build ran out of `/tmp` space at final link. This was
+  a host-capacity failure, not firmware evidence; removing generated obsolete
+  build trees and repeating the same clean command passed.
+- No `/dev/ttyACM*` device is currently enumerated. M9 is paused only for both
+  controllers to be connected so the exact-image integrated smoke can run.
 
 ### 2026-09-27 — R00 60-minute product-default regression passes
 
