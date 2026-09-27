@@ -1,8 +1,7 @@
 # R00 60-minute product-session default — verification record
 
-**Date:** 2026-09-26
-**Status:** IN PROGRESS — implementation, host regressions and exact clean builds
-pass; target regression remains.
+**Date:** 2026-09-26; target regression completed 2026-09-27
+**Status:** PASS
 
 ## Scope
 
@@ -48,7 +47,7 @@ implementation `3348213` then pass with these identities:
 
 | Image | Target/configuration | Size | SHA-256 |
 | --- | --- | ---: | --- |
-| Control product | ESP32-C6, 8 MB, M7 product, 3,600 s | 603,216 bytes | `c21fe2262e588443589f651a9fb2d779f017bd779a363a106cacc365413343d3` |
+| Control product initially recorded | ESP32-C6, 8 MB, M7 product, 3,600 s | 603,216 bytes | `c21fe2262e588443589f651a9fb2d779f017bd779a363a106cacc365413343d3` |
 | Audio product | ESP32-S3, 8 MB, 3,600 s local fallback | 341,952 bytes | `d62b3d311f9de8366e794b4212019447f3c16834ac6328db31096d75d6e0dd74` |
 
 Both binaries embed exact version `3348213`. Generated Control configuration
@@ -56,13 +55,53 @@ contains `CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS=3600`; the Audio binary
 contains the `60-minute local default` identity. No endurance overlay is enabled
 in either product build.
 
-## Remaining verification
+## Final flashed candidates
 
-1. Flash the exact candidates, confirm silent synchronized startup, start one
-   session and verify both sides report a 3,600-second finite duration.
-2. Stop the session normally and verify a clean fade to silent `STOPPED` with no
-   fault or automatic restart.
+Before target testing, both USB identities were resolved rather than inferred
+from device order: Waveshare Control `AC:EB:E6:1E:67:C4` enumerated as
+`/dev/ttyACM0`, and Atom Audio `44:1B:F6:F4:FE:C8` enumerated as
+`/dev/ttyACM1`.
 
-The full 60-minute endurance run need not be repeated unless the targeted
-regression differs from the M8-END-001 path or exposes a fault; the only product
-change selects the already exercised 3,600-second value.
+The first Control `idf.py flash` invocation reconfigured the preserved build
+directory under the later documentation-only repository checkpoint `8fdcb2b`,
+changing the embedded application version and binary hash. This was detected
+from the build output before target evidence was collected. A fresh isolated
+build was therefore made from detached implementation commit `3348213`, and
+the resulting files were flashed directly without another build step. No
+verification result is credited to the superseded interim image.
+
+| Final flashed image | Embedded version | Size | SHA-256 |
+| --- | --- | ---: | --- |
+| Control product | `3348213` | 603,216 bytes | `c526231c244d70e2036069c90cd709019b1472d947b4c5e5918dcb20958e0036` |
+| Audio product | `3348213` | 341,952 bytes | `d62b3d311f9de8366e794b4212019447f3c16834ac6328db31096d75d6e0dd74` |
+
+All bootloader, partition-table and application writes completed with esptool
+hash verification. Control configuration was rechecked as
+`CONFIG_SC_REMOTE_PLAY_DURATION_SECONDS=3600`; the preserved Audio application
+was rechecked for both embedded version `3348213` and the `60-minute local
+default` identity.
+
+## Target regression
+
+The exact final candidates passed the targeted on-device regression on
+2026-09-27:
+
+- synchronized startup reached repeated authoritative `STOPPED`,
+  `remaining=0s`, `fault=0`, with persisted volume 59%;
+- the user confirmed silent startup, normal display/LED-strip rest presentation,
+  and no click, pop or false playback indication;
+- Control logged `remote PLAY(3600s) requested`, Audio accepted the correlated
+  command and logged `session start duration=3600s`;
+- both sides reported `STARTING` and then `PLAYING` with `remaining=3600s`,
+  followed by the expected countdown and `fault=0`;
+- the manual STOP was accepted, Audio logged the configured one-second fade,
+  then reached `STOPPED`, manual reason 1, `remaining=0s`, `fault=0`;
+- repeated post-stop status polls remained `STOPPED` without automatic restart;
+- the user reported a good response, clean fade and fully silent speaker.
+
+## Disposition
+
+`R00-DUR-001` passes. The targeted candidate result identifies the exact normal
+product artifacts and confirms their configured 3,600-second PLAY/STOP path.
+M8-END-001 supplies the retained complete 3,600-second runtime/deadline evidence,
+so another hour-long run is not required. M9 release preparation may begin.

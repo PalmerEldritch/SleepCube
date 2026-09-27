@@ -1,23 +1,22 @@
 # SleepCube Software Development Status
 
 **Baseline:** R00 (draft)  
-**Last updated:** 2026-09-26
+**Last updated:** 2026-09-27
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M8 passes; post-M8 60-minute product-default regression is in progress**
+**M8 and the post-M8 60-minute product-default regression pass; M9 is next**
 
 Status: **M1 through M8 pass. The user subsequently approved changing the R00
 normal session default from 1,800 to 3,600 seconds. Control product defaults,
 the Audio local fallback and active requirements/interface documentation now
 select 60 minutes while retaining the finite 1–3,600-second protocol range.
-M8-END-001 already passes the complete 3,600-second distributed playback path,
-but exact rebuilt product artifacts and a targeted on-device PLAY/STOP
-regression remain before M9. The previously deployed Control `b69d1a9` and
-Audio `057f1c5` images are the completed 30-minute-default M8 candidates, not
-the final candidates for the amended R00 behavior.**
+M8-END-001 passes the complete 3,600-second distributed playback path, and
+`R00-DUR-001` now passes exact-candidate silent startup plus targeted 3,600-second
+PLAY/manual-STOP regression. The final tested implementation version is
+`3348213`; M9 release preparation is the next work.**
 
 The M8 audit maps all 55 SRS, 24 UX and 29 ICD IDs and found every then-active
 non-deferred requirement ready for R00 release preparation.
@@ -38,8 +37,12 @@ improvement. The last M8 candidate identities are Control `b69d1a9`,
 `0a6b91a7ce86003a4a4d79d3c5b79151927fe06960ad192a3a708f9ba7585306`,
 and Audio `057f1c5`, 341,952 bytes, SHA-256
 `efd3c6cecf66b3ce220d73f9e3fe9929d9cc221550805138a96e4ed3a81cca2f`.
+The final targeted-regression candidates are Control `3348213`, 603,216 bytes,
+SHA-256 `c526231c244d70e2036069c90cd709019b1472d947b4c5e5918dcb20958e0036`,
+and Audio `3348213`, 341,952 bytes, SHA-256
+`d62b3d311f9de8366e794b4212019447f3c16834ac6328db31096d75d6e0dd74`.
 Formal document promotion, final release consistency review and tagging remain
-M9 work after the duration-change regression.
+M9 work.
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -645,26 +648,49 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Complete the 60-minute product-default regression, then begin M9.**
+**Begin M9 R00 release preparation.**
 
 The exact next task is:
 
-1. Run retained host regressions and clean-build/hash the updated Control and
-   Audio product profiles.
-2. Flash the exact candidates and confirm silent synchronized startup, one
-   finite 3,600-second PLAY and a clean manual STOP.
-3. Close `R00-DUR-001`, then audit the active R00 documents and accepted ADRs
-   for stale draft/TBD text,
+1. Audit the active R00 documents and accepted ADRs for stale draft/TBD text,
    without changing the M8-validated behavior or evidence dispositions.
-4. Promote the implementation and verification documentation to R00 and make
+2. Promote the implementation and verification documentation to R00 and make
    the legacy Control-local audio backend unambiguously absent from the active
    release build path (archive/remove only with an explicit, reviewed change).
-5. Run final host/build/document consistency checks and record the exact release
+3. Run final host/build/document consistency checks and record the exact release
    artifacts.
-6. Review the final diff, create the R00 release commit, and tag only after all
+4. Review the final diff, create the R00 release commit, and tag only after all
    M9 checks pass.
 
 ## 7. Session closeout record
+
+### 2026-09-27 — R00 60-minute product-default regression passes
+
+- Resolved both USB identities before flashing: Waveshare Control
+  `AC:EB:E6:1E:67:C4` on `/dev/ttyACM0` and Atom Audio
+  `44:1B:F6:F4:FE:C8` on `/dev/ttyACM1`.
+- Detected that an initial Control `idf.py flash` reconfigured the preserved
+  build against documentation-only checkpoint `8fdcb2b`. No target evidence
+  was credited to that interim image. Rebuilt from detached implementation
+  commit `3348213` and directly flashed the corrected exact candidate; Audio's
+  preserved exact `3348213` candidate was also directly flashed. All writes
+  passed esptool hash verification.
+- Final tested candidate identities are Control 603,216 bytes, SHA-256
+  `c526231c244d70e2036069c90cd709019b1472d947b4c5e5918dcb20958e0036`,
+  and Audio 341,952 bytes, SHA-256
+  `d62b3d311f9de8366e794b4212019447f3c16834ac6328db31096d75d6e0dd74`.
+- Silent synchronized startup passed at persisted volume 59%: repeated status
+  reported `STOPPED`, `remaining=0`, `fault=0`; the user confirmed normal rest
+  display/strip behavior and no click, pop or false playback indication.
+- Control requested `PLAY(3600s)`; Audio logged `session start duration=3600s`.
+  Both sides reported `PLAYING` from 3,600 seconds with a normal countdown and
+  `fault=0`.
+- Manual STOP passed: Audio logged its one-second fade, reached silent
+  `STOPPED`, reason 1, `remaining=0`, `fault=0`; repeated polls showed no
+  restart. The user confirmed good synchronized response, a clean fade and a
+  fully silent speaker.
+- `R00-DUR-001` passes using this targeted exact-candidate result plus retained
+  M8-END-001 full-hour evidence. M9 release preparation is the exact next task.
 
 ### 2026-09-26 — R00 60-minute product-default adjustment in progress
 

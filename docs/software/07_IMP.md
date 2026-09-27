@@ -312,12 +312,14 @@ silent startup, no automatic PLAY, normal display/strip behavior and persisted
 brightness/volume. All M8 exit criteria pass. See
 `verification/2026-09-23_M8_system_validation.md`.
 
-Post-M8 R00 adjustment (2026-09-26): the user approved changing the normal
+Post-M8 R00 adjustment (completed 2026-09-27): the user approved changing the normal
 product-session default from 1,800 to 3,600 seconds. The protocol range and all
 ownership/fault semantics remain unchanged, and M8-END-001 already passes the
-complete 3,600-second distributed path. Exact rebuilt product artifacts and a
-targeted PLAY/STOP regression are tracked in
-`verification/2026-09-26_R00_60min_session_default.md` and must pass before M9.
+complete 3,600-second distributed path. Exact `3348213` product artifacts then
+passed silent synchronized startup, a normal PLAY reporting 3,600 seconds on
+both controllers, and a clean manual fade to silent `STOPPED` with `fault=0`
+and no automatic restart. `R00-DUR-001` passes; see
+`verification/2026-09-26_R00_60min_session_default.md`.
 
 Deliverables:
 
@@ -371,20 +373,15 @@ The physical repository move should occur only when it simplifies M1-M5 work. M0
 
 ## 5. Suggested immediate next engineering task
 
-Complete the post-M8 60-minute product-default regression, then start M9:
+Start M9 from the passed M8 plus `R00-DUR-001` baseline:
 
-1. clean-build and hash the updated Control and Audio product profiles;
-2. flash the exact candidates and confirm silent synchronized startup plus one
-   finite 3,600-second PLAY followed by a clean manual STOP;
-3. close `R00-DUR-001` using the retained M8 endurance evidence and targeted
-   candidate result;
-4. review every active document and ADR for remaining draft/TBD language that
+1. review every active document and ADR for remaining draft/TBD language that
    affects the validated R00 baseline;
-5. promote implementation and verification documentation from draft to R00
+2. promote implementation and verification documentation from draft to R00
    without changing the validated behavior or accepted `AUD-ISS-001`
    disposition;
-6. clearly remove/archive the legacy Control-local audio backend from the active
+3. clearly remove/archive the legacy Control-local audio backend from the active
    release build path while preserving required history;
-7. run the release build/document consistency checks and record exact release
+4. run the release build/document consistency checks and record exact release
    artifacts;
-8. create the R00 release commit and tag only after that review passes.
+5. create the R00 release commit and tag only after that review passes.
