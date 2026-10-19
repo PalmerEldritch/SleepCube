@@ -58,13 +58,14 @@ Retained regressions:
 
 ## Clean Control build
 
-ESP-IDF v6.0 commit `662a3be354759d9487bf4b1a629fadb766cb1800`:
+Implementation checkpoint `a3036fd` was clean-built with ESP-IDF v6.0 commit
+`662a3be354759d9487bf4b1a629fadb766cb1800`:
 
 ```sh
 cd firmware/control
 source /home/jeppe/esp/v6.0/esp-idf/export.sh
-idf.py -B /tmp/sleepcube-control-r01-final-build \
-  -D SDKCONFIG=/tmp/sleepcube-control-r01-final-sdkconfig \
+idf.py -B /tmp/sleepcube-control-r01-a3036fd-build \
+  -D SDKCONFIG=/tmp/sleepcube-control-r01-a3036fd-sdkconfig \
   -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.r01.defaults' \
   set-target esp32c6 build
 ```
@@ -73,7 +74,7 @@ Result: **PASS**.
 
 | Artifact | Target/profile | Size | SHA-256 |
 | --- | --- | ---: | --- |
-| `SleepCube_P0.bin` | ESP32-C6/8 MB, R01 defaults | 586,640 bytes | `7f44954170b7e2aa8464d866a639370bdaea691cd63ab6f527faa3ca0dc78f49` |
+| `SleepCube_P0.bin` | ESP32-C6/8 MB, R01 defaults | 586,640 bytes | `db5783c01517e3fffe2718f65ca9f39fb0498a5c13b57f985a302ebb2f570345` |
 
 The image has 1,117,296 bytes (66%) free in the smallest app partition and the
 build reports application version `R01-dev`. Generated configuration inspection

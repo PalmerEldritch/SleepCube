@@ -263,7 +263,7 @@ Verified for M10 R01 software:
 - all three timing-analyzer unit tests pass;
 - a clean ESP-IDF v6.0 ESP32-C6/8 MB R01 Control build passes with GPIO8,
   3 kHz, 5–80% duty and embedded version `R01-dev`; the 586,640-byte image has
-  SHA-256 `7f44954170b7e2aa8464d866a639370bdaea691cd63ab6f527faa3ca0dc78f49`;
+  SHA-256 `db5783c01517e3fffe2718f65ca9f39fb0498a5c13b57f985a302ebb2f570345`;
 - source/configuration inspection confirms COB LEDC timer 1/channel 1 is
   distinct from display timer 0/channel 0 and Control RGB/RMT code is removed.
 
@@ -694,6 +694,8 @@ The exact next task is:
   API, GUI, persistence and whole-strip startup/ambient/PLAY/STOP effects.
 - Added `sdkconfig.r01.defaults`, application version `R01-dev`, ADR-0009 and
   R01 updates to the active SRS/UX/SAS/ICD/VVM/plan/README.
+- Implementation checkpoint `a3036fd` contains the complete firmware/document
+  change; the exact clean build recorded below was produced from that checkpoint.
 - New mapping tests and retained settings/frame/semantic/timing tests pass. A
   clean ESP-IDF v6.0 R01 Control build passes. See
   `verification/2026-10-19_M10_cob_pwm_implementation.md` for exact artifact
