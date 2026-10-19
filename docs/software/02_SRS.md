@@ -1,6 +1,6 @@
 # SleepCube Software Requirements Specification
 
-**Revision:** R00
+**Revision:** R01 development
 
 ## 1. System and ownership
 
@@ -9,7 +9,7 @@
 | SRS-SYS-001 | PR-SYS-001 | The software shall be partitioned into a Control Controller firmware and an Audio Controller firmware communicating through a defined local interface. |
 | SRS-SYS-002 | PR-SYS-003 | The Control Controller shall own overall product/session state and user-visible state. |
 | SRS-SYS-003 | PR-AUD-001 | The Audio Controller shall own audio storage access, decoding, buffering, playback control, I2S generation and amplifier-facing audio output. |
-| SRS-SYS-004 | PR-LGT-001 | The Control Controller shall own display rendering, touch processing, external RGB lighting and ambient-light effects. |
+| SRS-SYS-004 | PR-LGT-001 | The Control Controller shall own display rendering, touch processing, external fixed-color COB lighting and ambient-light effects. |
 | SRS-SYS-005 | PR-SYS-004 | Control-side lighting operation shall not depend on successful Audio Controller initialization or continued communication with it. |
 
 ## 2. Startup and state
@@ -37,11 +37,15 @@
 
 | ID | Derived From | Requirement |
 | --- | --- | --- |
-| SRS-LGT-001 | PR-LGT-001 | The Control Controller shall provide a continuously rendered warm ambient-light effect on the external RGB lighting output. |
+| SRS-LGT-001 | PR-LGT-001 | The Control Controller shall provide a continuously rendered warm ambient-light effect on the external fixed-color COB lighting output. |
 | SRS-LGT-002 | PR-LGT-001 | User-requested brightness changes shall transition smoothly rather than as abrupt full-scale steps. |
 | SRS-LGT-003 | PR-LGT-001 | The display/backlight presentation shall be coordinated with the ambient-light presentation. |
 | SRS-LGT-004 | PR-SYS-004 | Audio start, stop, timeout or audio-link failure shall not disable the ambient-light engine. |
 | SRS-LGT-005 | PR-SYS-001 | The Control Controller may provide transient visual response to audio state changes, but such response shall not require real-time audio sample transport from the Audio Controller. |
+| SRS-LGT-011 | PR-LGT-001 | The R01 Control firmware shall drive the active-high COB MOSFET gate on Waveshare GPIO8 with 3 kHz, 13-bit hardware PWM using LEDC timer 1/channel 1, distinct from display-backlight timer 0/channel 0. |
+| SRS-LGT-012 | PR-LGT-001, PR-UI-002 | A 0% user setting shall command 0% PWM duty and suppress lighting effects; settings from 1% through 100% shall map linearly onto configurable steady-state duty limits, configured as 5% through 80% for R01. |
+| SRS-LGT-013 | PR-LGT-001 | Startup and transition-to-off fades may pass below the configured active-duty floor; all output including ambient and audio-state effects shall remain at or below the configured duty cap. |
+| SRS-LGT-014 | PR-SYS-003, PR-FLT-001 | Lighting initialization, invalid duty-limit configuration or PWM update failure shall leave or return the COB MOSFET command output to the off state. |
 
 ## 5. Audio control and playback
 
@@ -104,13 +108,14 @@
 | --- | --- | --- |
 | SRS-SYS-010 | PR-UI-002 | Normal touch actions shall be accepted by the Control Controller within 100 ms under nominal load. |
 | SRS-COM-010 | PR-UI-002 | Under nominal conditions, a user audio command shall reach the Audio Controller and receive acknowledgement/state confirmation within 250 ms. |
-| SRS-LGT-010 | PR-LGT-001 | Lighting animation shall remain visually continuous during normal UART traffic and UI interaction. |
+| SRS-LGT-010 | PR-LGT-001 | Whole-strip duty animation shall remain visually continuous during normal UART traffic and UI interaction. |
 | SRS-AUD-010 | PR-AUD-001 | Audio playback shall sustain the selected content format without buffer underrun during a 60-minute validation run under nominal conditions. |
 
 ## 11. Resolved design details
 
-No normative software requirement is intentionally deferred for R00. Items
-that were open in the initial draft are now resolved as follows:
+No normative R00 software requirement remains deferred. R01 COB target
+verification is tracked in the VVM and is not complete. R00 items that were
+open in the initial draft were resolved as follows:
 
 - ADR-0007 and `05_ICD.md` define the exact UART framing and integrity mechanism;
 - ADR-0008 and `05_ICD.md` define acknowledgement, idempotency and retry policy;

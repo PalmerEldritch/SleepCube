@@ -1,12 +1,12 @@
 # SleepCube Software Architecture Specification
 
-**Revision:** R00
+**Revision:** R01 development
 
 ## 1. Architectural drivers
 
 The architecture is driven by four constraints:
 
-1. preserve the mature Waveshare UI and lighting implementation;
+1. preserve the mature Waveshare UI and application-facing lighting behavior while replacing the physical light backend;
 2. remove real-time audio generation from the Waveshare controller;
 3. make audio playback independently bounded and fault-contained;
 4. keep the inter-controller contract small, semantic and testable.
@@ -21,7 +21,8 @@ Control Controller (Waveshare ESP32-C6)
 ├── ui_service
 ├── display/touch drivers
 ├── light_service
-├── lighting engine
+├── global-brightness/effect policy
+├── COB LEDC PWM driver
 ├── settings store
 ├── audio_service (control-side facade)
 └── audio_link / UART transport
@@ -49,7 +50,7 @@ The Control Controller owns:
 
 - touch interpretation;
 - display state and rendering;
-- external RGB lighting and effects;
+- external fixed-color COB lighting and whole-strip duty effects;
 - product/session presentation state;
 - coordination of visual response with audio state;
 - transmission of semantic audio requests;
@@ -80,7 +81,7 @@ The Audio Controller owns:
 It shall not own:
 
 - main product UI;
-- main RGB lighting;
+- main COB lighting;
 - overall visual product state;
 - track-selection UX.
 
@@ -97,7 +98,7 @@ UI ──events──> app_core ──commands──> audio_service ──> audi
 Audio link ──status/events──> audio_service/app_core ──> UI + lighting response
 ```
 
-`audio_service` is the application-facing audio abstraction and its only R00
+`audio_service` is the application-facing audio abstraction and its only active
 backend is the remote audio link. The superseded Control-local player/I2S
 backend is not part of the active release source or build graph.
 
@@ -212,15 +213,28 @@ returns output to stopped/safe startup.
   lighting and audio sample production shall communicate with it through
   non-blocking queues or bounded snapshots.
 
-## 10. Reference GPIO architecture
+## 10. Reference GPIO and power architecture
 
-The M3 UART link uses Waveshare GPIO16 (TX) and GPIO17 (RX), crossed to the
-AtomS3 Lite Grove GPIO2 (RX, yellow) and GPIO1 (TX, white), plus common ground.
-The Atom Grove 5 V contact is not connected between controllers. Both retain
-independent USB power and USB Serial/JTAG consoles. The final electrical contract
-is in `05_ICD.md`; framing is governed by ADR-0007 and semantic recovery by
-ADR-0008. GPIO8 on the Waveshare is already used by the light strip and must
-not be repurposed for this link.
+The UART link uses Waveshare GPIO16 (TX) and GPIO17 (RX), crossed to the AtomS3
+Lite Grove GPIO2 (RX, yellow) and GPIO1 (TX, white), plus common ground. The Atom
+Grove 5 V contact remains unused. GPIO8 on the Waveshare is dedicated to the
+active-high COB MOSFET gate and uses LEDC timer 1/channel 1; display backlight
+remains on LEDC timer 0/channel 0.
+
+Two power arrangements are deliberately distinct:
+
+- During development, each controller is powered only by its computer USB
+  connection. The external supply feeds only the COB 12 V rail. Its negative
+  and MOSFET source reference shall connect explicitly to Waveshare ground; the
+  external DC-DC 5 V output shall not connect to either controller.
+- In the final arrangement, the PD trigger provides the common 12 V rail and a
+  DC-DC converter supplies both controller 5 V pins. Computer USB power shall
+  be disconnected before energizing this arrangement unless simultaneous board
+  power paths have separately been verified.
+
+The GPIO8 gate requires an external pull-down so the MOSFET remains off while
+the ESP32-C6 output is floating during reset. The final electrical contract is
+in `05_ICD.md`; ADR-0009 records the lighting and power decision.
 
 ## 11. Decisions requiring ADRs
 
@@ -230,9 +244,9 @@ Accepted architecture decisions are recorded separately, including:
 - UART as inter-controller transport;
 - semantic rather than low-level remote-audio API;
 - independent Audio Controller timeout enforcement;
-- retention/migration of existing Control Controller UI and lighting implementation.
+- retention of the existing GUI and migration of the Control lighting backend.
 
 The framing/checksum and semantic session/retry decisions are captured by
-ADR-0007 and ADR-0008. M5–M8 validation did not introduce a degraded-state
-behavior beyond the current SRS/UX baseline, so no additional R00 ADR is
-required. A later durable change to that behavior would require a new ADR.
+ADR-0007 and ADR-0008. ADR-0009 supersedes the RGB-specific portions of
+ADR-0002/ADR-0003 for the R01 COB PWM variant without changing controller
+ownership, GUI behavior or the inter-controller semantic protocol.

@@ -1,6 +1,6 @@
 # SleepCube Software Product Requirements Document
 
-**Revision:** R00
+**Revision:** R01 development
 
 ## 1. Purpose
 
@@ -27,16 +27,18 @@ SleepCube software shall provide a simple bedside experience combining ambient l
 
 ## 3. Reference implementation boundary
 
-Software R00 is verified on:
+The released R00 software was verified on, and R01 development retains:
 
 - Waveshare ESP32-C6-Touch-LCD-1.47 as Control Controller;
 - M5Stack AtomS3 Lite as Audio Controller;
 - M5Stack ATOMIC Speaker Base (NS4168) as reference audio-output hardware;
 - a wired local inter-controller UART link.
 
-These devices are reference platforms for R00 rather than requirements on a future production hardware design.
+R01 additionally targets a fixed-color 12 V COB strip switched by a 3.3 V
+logic-level MOSFET from the Control Controller. These devices remain reference
+platforms rather than requirements on a future production hardware design.
 
-## 4. Out of scope for software R00
+## 4. Out of scope for software R01
 
 - enclosure geometry and industrial design;
 - production PCB architecture;

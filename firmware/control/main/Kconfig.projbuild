@@ -1,4 +1,4 @@
-menu "SleepCube P0 Configuration"
+menu "SleepCube R01 Control Configuration"
 
 choice SC_BOARD_PROFILE
     prompt "Board profile"
@@ -45,95 +45,71 @@ config SC_TRACE_TIMING
         Emits structured timing markers from key tasks (app core, audio, light, UI)
         that can be post-processed into scheduling diagrams.
 
-config SC_LIGHT_BACKEND_LED_STRIP
-    bool "Enable addressable LED strip backend"
+config SC_LIGHT_PWM_GPIO
+    int "COB MOSFET PWM GPIO"
     depends on SC_ENABLE_LIGHT
-    default y
-
-config SC_LED_STRIP_GPIO
-    int "LED strip data GPIO"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
     range 0 39
     default 8 if SC_BOARD_WAVESHARE_ESP32C6
     default 13
+    help
+        Active-high logic-level MOSFET gate output. The R01 Waveshare
+        hardware uses GPIO8 and requires an external gate pull-down.
 
-config SC_LED_COUNT
-    int "LED count"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    range 1 300
-    default 28
+config SC_LIGHT_PWM_FREQUENCY_HZ
+    int "COB PWM carrier frequency (Hz)"
+    depends on SC_ENABLE_LIGHT
+    range 100 20000
+    default 3000
+    help
+        Hardware PWM carrier frequency. R01 starts at 3 kHz; later hardware
+        evidence may justify retuning this value.
 
-choice SC_LED_PIXEL_ORDER
-    prompt "LED pixel order"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    default SC_LED_PIXEL_ORDER_GRB
+config SC_LIGHT_PWM_MIN_DUTY_PCT
+    int "Minimum active COB PWM duty percent"
+    depends on SC_ENABLE_LIGHT
+    range 0 100
+    default 5
+    help
+        A brightness selection of zero remains fully off. Logical brightness
+        from 1 to 100 percent maps linearly from this floor to the configured
+        maximum duty. Startup and shutdown ramps may pass below the floor.
 
-    config SC_LED_PIXEL_ORDER_GRB
-        bool "GRB (common for WS2812)"
-
-    config SC_LED_PIXEL_ORDER_RGB
-        bool "RGB"
-endchoice
-
-config SC_LED_MAX_BRIGHTNESS_PCT
-    int "Maximum LED brightness percent"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
+config SC_LIGHT_PWM_MAX_DUTY_PCT
+    int "Maximum COB PWM duty percent"
+    depends on SC_ENABLE_LIGHT
     range 1 100
-    default 60
-
-config SC_LED_MIN_SELECTED_BRIGHTNESS_PCT
-    int "Minimum selected LED brightness percent"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    range 0 100
-    default 26
+    default 80
     help
-        Applies only to the external LED strip output. The display retains the
-        complete user-brightness range. Keep this above the level where the
-        calibrated warm-white channels visibly separate under quantization.
-
-config SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT
-    int "Minimum post-effect LED brightness percent"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    range 0 100
-    default 17
-    help
-        Lower bound after ambient modulation and audio-state pulses once the
-        startup ramp is complete. This prevents a negative pulse from entering
-        the strip's visibly unstable low-count region.
+        Caps the physical PWM output after ambient and audio-state effects.
+        Runtime initialization fails safe when the minimum exceeds this value.
 
 config SC_LIGHT_DEFAULT_BRIGHTNESS_PCT
     int "Default light brightness percent"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    range 1 100
+    depends on SC_ENABLE_LIGHT
+    range 0 100
     default 30
 
 config SC_LIGHT_UPDATE_HZ
     int "Light update rate (Hz)"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
+    depends on SC_ENABLE_LIGHT
     range 5 200
     default 50
 
-config SC_LIGHT_RAMP_STEP_PCT
-    int "Light ramp step percent per tick"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    range 1 20
-    default 2
-
 config SC_LIGHT_STARTUP_RAMP_MS
     int "Startup ramp duration (ms)"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
+    depends on SC_ENABLE_LIGHT
     range 200 10000
     default 3000
 
 config SC_LIGHT_STARTUP_OVERSHOOT_PCT
     int "Startup overshoot amount (percent)"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
+    depends on SC_ENABLE_LIGHT
     range 0 20
     default 6
 
 config SC_LIGHT_FLUCT_ENABLE
     bool "Enable gentle ambient fluctuation"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
+    depends on SC_ENABLE_LIGHT
     default y
 
 config SC_LIGHT_FLUCT_BRIGHTNESS_PCT
@@ -141,12 +117,6 @@ config SC_LIGHT_FLUCT_BRIGHTNESS_PCT
     depends on SC_LIGHT_FLUCT_ENABLE
     range 0 20
     default 6
-
-config SC_LIGHT_FLUCT_WARMTH_PCT
-    int "Ambient fluctuation warmth amplitude (percent)"
-    depends on SC_LIGHT_FLUCT_ENABLE
-    range 0 30
-    default 10
 
 config SC_LIGHT_AMBIENT_SPEED_PCT
     int "Ambient fluctuation speed (percent)"
@@ -157,69 +127,10 @@ config SC_LIGHT_AMBIENT_SPEED_PCT
         Scales time evolution of global ambient fluctuation.
         Lower values produce slower changes.
 
-config SC_LIGHT_SPATIAL_UNDULATION_ENABLE
-    bool "Enable spatial undulation along LED strip"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    default y
-    help
-        Adds a smooth position-dependent modulation so adjacent LEDs vary together
-        with interpolation between moving control points.
-
-config SC_LIGHT_SPATIAL_UNDULATION_PCT
-    int "Spatial undulation amplitude (percent)"
-    depends on SC_LIGHT_SPATIAL_UNDULATION_ENABLE
-    range 0 40
-    default 12
-
-config SC_LIGHT_SPATIAL_KNOTS
-    int "Spatial undulation control points"
-    depends on SC_LIGHT_SPATIAL_UNDULATION_ENABLE
-    range 2 8
-    default 4
-
-config SC_LIGHT_SPATIAL_SPEED_PCT
-    int "Spatial undulation speed (percent)"
-    depends on SC_LIGHT_SPATIAL_UNDULATION_ENABLE
-    range 10 300
-    default 70
-    help
-        Scales time evolution of spatial knot movement.
-        Lower values produce slower and calmer strip movement.
-
 config SC_LIGHT_AUDIO_SWAY_ENABLE
     bool "Enable audio on/off light sway"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
+    depends on SC_ENABLE_LIGHT
     default y
-
-config SC_LIGHT_AUDIO_SWAY_PCT
-    int "Audio sway amplitude (percent)"
-    depends on SC_LIGHT_AUDIO_SWAY_ENABLE
-    range 0 100
-    default 8
-
-config SC_LIGHT_AUDIO_SWAY_MS
-    int "Audio sway duration (ms)"
-    depends on SC_LIGHT_AUDIO_SWAY_ENABLE
-    range 100 4000
-    default 1400
-
-config SC_LIGHT_WARM_R
-    int "Warm white R component"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    range 0 255
-    default 255
-
-config SC_LIGHT_WARM_G
-    int "Warm white G component"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    range 0 255
-    default 170
-
-config SC_LIGHT_WARM_B
-    int "Warm white B component"
-    depends on SC_LIGHT_BACKEND_LED_STRIP
-    range 0 255
-    default 90
 
 config SC_UI_BACKEND_LCD_TOUCH
     bool "Enable LCD + touch backend"

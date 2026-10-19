@@ -1,6 +1,7 @@
 # Architecture Decision Records (ADR)
 
-This folder contains **active architecture and design decisions for the SleepCube software R00 baseline**.
+This folder contains active architecture and design decisions for the released
+SleepCube R00 baseline and the R01 development variant.
 
 Historical decisions that no longer describe the active architecture belong under `docs/legacy/adr/` and shall not be treated as authoritative for current implementation work.
 
@@ -43,13 +44,14 @@ Routine implementation details that are already constrained by SRS/SAS/ICD and d
 
 | ADR | Status | Decision |
 | --- | --- | --- |
-| ADR-0002 | Accepted | Touch-first ambient UI on the Control Controller |
-| ADR-0003 | Accepted | Two-controller software architecture |
+| ADR-0002 | Accepted; RGB clauses superseded by ADR-0009 | Touch-first ambient UI on the Control Controller |
+| ADR-0003 | Accepted; RGB clauses superseded by ADR-0009 | Two-controller software architecture |
 | ADR-0004 | Accepted | UART semantic audio link and independent playback timeout |
 | ADR-0005 | Accepted | microSD-hosted 44.1 kHz/16-bit mono PCM WAV content |
 | ADR-0006 | Accepted | Audio Controller owns authoritative persisted volume |
 | ADR-0007 | Accepted | Bounded COBS/CRC UART framing and sequence correlation |
 | ADR-0008 | Accepted | Semantic boot sessions, idempotent commands and bounded retry recovery |
+| ADR-0009 | Accepted | R01 fixed-color COB PWM lighting and power arrangements |
 
 ## Legacy decision history
 

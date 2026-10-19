@@ -19,11 +19,10 @@ if(CONFIG_SC_ENABLE_UI AND CONFIG_SC_UI_INPUT_BUTTONS)
     list(APPEND SC_SRCS "services/ui_input_buttons.c")
 endif()
 
-if(CONFIG_SC_ENABLE_LIGHT AND CONFIG_SC_LIGHT_BACKEND_LED_STRIP)
+if(CONFIG_SC_ENABLE_LIGHT)
     list(APPEND SC_SRCS
-        "drivers/led_strip_encoder.c"
-        "drivers/led_strip_if.c"
-        "lighting/light_engine.c"
+        "drivers/cob_pwm_if.c"
+        "lighting/light_pwm_policy.c"
     )
 endif()
 
@@ -33,11 +32,9 @@ if(CONFIG_SC_ENABLE_UI AND CONFIG_SC_UI_BACKEND_LCD_TOUCH)
     )
 endif()
 
-set(SC_REQUIRES driver esp_lcd espressif__esp_lcd_touch espressif__esp_lvgl_port)
+set(SC_REQUIRES esp_driver_gpio esp_lcd espressif__esp_lcd_touch espressif__esp_lvgl_port)
 set(SC_PRIV_REQUIRES
     esp_driver_ledc
-    esp_driver_rmt
-    esp_hal_rmt
     esp_lcd_jd9853
     esp_lcd_touch_axs5106
     esp_timer

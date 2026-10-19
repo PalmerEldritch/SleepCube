@@ -1,6 +1,6 @@
 # SleepCube Software Documentation
 
-**Baseline:** R00
+**Baseline:** R01 development (derived from released `software-r00`)
 
 ## 1. Scope
 
@@ -9,7 +9,7 @@ This document set specifies the SleepCube embedded software system running on tw
 - **Control Controller** — Waveshare ESP32-C6-Touch-LCD-1.47; owns product state, touch UI, display, lighting and coordination.
 - **Audio Controller** — M5Stack AtomS3 Lite with ATOMIC Speaker Base (NS4168); owns audio storage, decoding, buffering, playback, I2S output, volume/fades and independent enforcement of finite playback duration.
 
-The physical enclosure, production hardware design, regulatory compliance, acoustic transducer design, detailed power architecture and mechanical design are outside the active software R00 specification unless explicitly required as a software interface constraint.
+The physical enclosure, production hardware design, regulatory compliance, acoustic transducer design, detailed power architecture and mechanical design are outside the active software specification unless explicitly required as a software interface constraint. R01 adds only the documented COB-light electrical/software boundary and development/final power arrangements.
 
 ## 2. Document authority
 
@@ -32,7 +32,7 @@ If documents conflict, accepted ADRs and the SRS/SAS/ICD take precedence over hi
 
 ## 3. Legacy material
 
-The former FRS/TRS/compliance matrix, P0 implementation documents and superseded architecture decisions remain under `../legacy/` as reference material only. Their useful behavioural requirements have been selectively carried into this software baseline. Hardware/product requirements not represented here are intentionally outside software R00.
+The former FRS/TRS/compliance matrix, P0 implementation documents and superseded architecture decisions remain under `../legacy/` as reference material only. Their useful behavioural requirements have been selectively carried into this software baseline. Hardware/product requirements not represented here are intentionally outside the active software baseline.
 
 Vendor examples, pin maps, datasheets and other non-normative technical source material are maintained under the repository-level `/references/` directory.
 
@@ -66,7 +66,17 @@ At the end of any session that materially changes implementation, architecture, 
 
 Detailed closeout rules are defined in the repository `AGENTS.md`.
 
-## 7. Resolved design items and remaining release issue
+## 7. Released baseline and active variant
+
+R00 remains frozen at annotated tag `software-r00`. R01 development is isolated
+on `feat/r01-cob-pwm-lighting`; it replaces only the Control-side addressable
+RGB implementation with fixed-color COB PWM control. The GUI, Audio firmware,
+semantic UART protocol and established controller ownership remain unchanged.
+
+ADR-0009 defines the R01 lighting/power decision and supersedes only the
+RGB-specific portions of ADR-0002 and ADR-0003.
+
+## 8. Resolved R00 design items and remaining release issue
 
 The design items left open after M2 are now resolved. ADR-0007 freezes binary
 COBS/CRC framing, ADR-0008 freezes semantic sessions and bounded retry/recovery,

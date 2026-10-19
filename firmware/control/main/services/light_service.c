@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <math.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
@@ -14,8 +13,8 @@
 
 #if CONFIG_SC_ENABLE_LIGHT
 #include "esp_random.h"
-#include "led_strip_if.h"
-#include "light_engine.h"
+#include "cob_pwm_if.h"
+#include "light_pwm_policy.h"
 #include "sc_trace.h"
 #endif
 
@@ -33,12 +32,6 @@ static const char *TAG = "sc_light_service";
 #define SC_LIGHT_UPDATE_HZ CONFIG_SC_LIGHT_UPDATE_HZ
 #else
 #define SC_LIGHT_UPDATE_HZ 50
-#endif
-
-#ifdef CONFIG_SC_LIGHT_RAMP_STEP_PCT
-#define SC_LIGHT_RAMP_STEP_PCT CONFIG_SC_LIGHT_RAMP_STEP_PCT
-#else
-#define SC_LIGHT_RAMP_STEP_PCT 2
 #endif
 
 #ifdef CONFIG_SC_LIGHT_STARTUP_RAMP_MS
@@ -65,12 +58,6 @@ static const char *TAG = "sc_light_service";
 #define SC_LIGHT_FLUCT_BRIGHTNESS_PCT 0
 #endif
 
-#ifdef CONFIG_SC_LIGHT_FLUCT_WARMTH_PCT
-#define SC_LIGHT_FLUCT_WARMTH_PCT CONFIG_SC_LIGHT_FLUCT_WARMTH_PCT
-#else
-#define SC_LIGHT_FLUCT_WARMTH_PCT 0
-#endif
-
 #ifdef CONFIG_SC_LIGHT_AMBIENT_SPEED_PCT
 #define SC_LIGHT_AMBIENT_SPEED_PCT CONFIG_SC_LIGHT_AMBIENT_SPEED_PCT
 #else
@@ -83,24 +70,9 @@ static const char *TAG = "sc_light_service";
 #define SC_LIGHT_AUDIO_SWAY_ENABLE 0
 #endif
 
-#ifdef CONFIG_SC_LIGHT_AUDIO_SWAY_PCT
-#define SC_LIGHT_AUDIO_SWAY_PCT CONFIG_SC_LIGHT_AUDIO_SWAY_PCT
-#else
-#define SC_LIGHT_AUDIO_SWAY_PCT 0
-#endif
-
-#ifdef CONFIG_SC_LIGHT_AUDIO_SWAY_MS
-#define SC_LIGHT_AUDIO_SWAY_MS CONFIG_SC_LIGHT_AUDIO_SWAY_MS
-#else
-#define SC_LIGHT_AUDIO_SWAY_MS 1400
-#endif
-
 static bool s_light_enabled = true;
 static int s_brightness_target_pct = SC_LIGHT_DEFAULT_BRIGHTNESS_PCT;
 static float s_brightness_current_pct = 0.0f;
-static uint16_t s_render_frame_index = 0;
-static float s_light_time_s = 0.0f;
-static uint8_t *s_rgb_buf;
 static bool s_startup_anim_active = true;
 static float s_startup_anim_elapsed_s = 0.0f;
 static float s_audio_sway_elapsed_s = 0.0f;
@@ -112,41 +84,21 @@ static uint8_t s_pulse_peak_up_pct = 19U;
 static uint8_t s_pulse_peak_down_pct = 16U;
 static float s_fluct_phase_a = 0.0f;
 static float s_fluct_phase_b = 2.1f;
-static float s_fluct_phase_c = 1.3f;
-static float s_fluct_phase_d = 3.8f;
 static float s_fluct_speed_a = 0.21f;
 static float s_fluct_speed_b = 0.11f;
-static float s_fluct_speed_c = 0.16f;
-static float s_fluct_speed_d = 0.07f;
 
 #define SC_LIGHT_BRIGHTNESS_STEP_PCT (5)
-#define SC_LIGHT_BRIGHTNESS_MIN_PCT  (5)
-#define SC_LIGHT_PI                 (3.14159265359f)
+#define SC_LIGHT_BRIGHTNESS_MIN_PCT  (0)
 #define SC_LIGHT_TRACE_DECIMATION   (5U)
 #define SC_LIGHT_SETTINGS_KEY_BRIGHTNESS "light_pct"
 #define SC_LIGHT_BRIGHTNESS_RESPONSE_S   (0.22f)
 #define SC_LIGHT_STARTUP_BLOOM_SCALE     (0.35f)
 #define SC_LIGHT_AMBIENT_BRIGHTNESS_SCALE (1.45f)
-#define SC_LIGHT_AMBIENT_WARMTH_SCALE    (0.60f)
 #define SC_LIGHT_AMBIENT_SPEED_SCALE     (1.15f)
-#define SC_LIGHT_AUDIO_PULSE_ON_SCALE    (2.35f)
-#define SC_LIGHT_AUDIO_PULSE_OFF_SCALE   (2.05f)
 #define SC_LIGHT_PULSE_ATTACK_MIN_MS     (20U)
 #define SC_LIGHT_PULSE_ATTACK_MAX_MS     (5000U)
 #define SC_LIGHT_PULSE_RELEASE_MIN_MS    (20U)
 #define SC_LIGHT_PULSE_RELEASE_MAX_MS    (8000U)
-
-#ifdef CONFIG_SC_LED_MIN_SELECTED_BRIGHTNESS_PCT
-#define SC_LED_MIN_SELECTED_BRIGHTNESS_PCT CONFIG_SC_LED_MIN_SELECTED_BRIGHTNESS_PCT
-#else
-#define SC_LED_MIN_SELECTED_BRIGHTNESS_PCT 0
-#endif
-
-#ifdef CONFIG_SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT
-#define SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT CONFIG_SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT
-#else
-#define SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT 0
-#endif
 
 static float sc_clampf(float v, float lo, float hi)
 {
@@ -243,27 +195,22 @@ static float sc_audio_sway_envelope(float dt_s)
     return s_audio_sway_peak_pct * env;
 }
 
-static void sc_fluctuation_step(float dt_s, float *brightness_pct, float *warmth_pct)
+static float sc_fluctuation_step(float dt_s)
 {
-    *brightness_pct = 0.0f;
-    *warmth_pct = 0.0f;
 #if SC_LIGHT_FLUCT_ENABLE
     const float speed_scale = ((float)SC_LIGHT_AMBIENT_SPEED_PCT / 100.0f) * SC_LIGHT_AMBIENT_SPEED_SCALE;
     const float drift_scale = dt_s * speed_scale;
     s_fluct_speed_a = sc_clampf(s_fluct_speed_a + 0.08f * drift_scale * sc_random_symm(), 0.08f, 0.18f);
     s_fluct_speed_b = sc_clampf(s_fluct_speed_b + 0.05f * drift_scale * sc_random_symm(), 0.03f, 0.11f);
-    s_fluct_speed_c = sc_clampf(s_fluct_speed_c + 0.06f * drift_scale * sc_random_symm(), 0.05f, 0.14f);
-    s_fluct_speed_d = sc_clampf(s_fluct_speed_d + 0.04f * drift_scale * sc_random_symm(), 0.02f, 0.08f);
 
     s_fluct_phase_a += s_fluct_speed_a * drift_scale;
     s_fluct_phase_b += s_fluct_speed_b * drift_scale;
-    s_fluct_phase_c += s_fluct_speed_c * drift_scale;
-    s_fluct_phase_d += s_fluct_speed_d * drift_scale;
 
-    *brightness_pct = ((float)SC_LIGHT_FLUCT_BRIGHTNESS_PCT * SC_LIGHT_AMBIENT_BRIGHTNESS_SCALE) *
-                      (0.62f * sinf(s_fluct_phase_a) + 0.38f * sinf(s_fluct_phase_b));
-    *warmth_pct = ((float)SC_LIGHT_FLUCT_WARMTH_PCT * SC_LIGHT_AMBIENT_WARMTH_SCALE) *
-                  (0.70f * sinf(s_fluct_phase_c) + 0.30f * sinf(s_fluct_phase_d));
+    return ((float)SC_LIGHT_FLUCT_BRIGHTNESS_PCT * SC_LIGHT_AMBIENT_BRIGHTNESS_SCALE) *
+           (0.62f * sinf(s_fluct_phase_a) + 0.38f * sinf(s_fluct_phase_b));
+#else
+    (void)dt_s;
+    return 0.0f;
 #endif
 }
 
@@ -284,7 +231,6 @@ static void sc_light_service_task(void *arg)
              SC_LIGHT_UPDATE_HZ, (double)effective_hz, (unsigned)period_ms, (unsigned)tick, (double)dt_s);
 
     while (1) {
-        s_light_time_s += dt_s;
         const bool trace_this_cycle = ((trace_ctr++ % SC_LIGHT_TRACE_DECIMATION) == 0U);
         if (trace_this_cycle) {
             SC_TRACE_MARK("light", "work_start", (int32_t)s_brightness_current_pct);
@@ -302,31 +248,24 @@ static void sc_light_service_task(void *arg)
         }
 
         if (s_brightness_current_pct <= 0.0f) {
-            (void)sc_led_strip_if_clear();
+            ESP_ERROR_CHECK_WITHOUT_ABORT(sc_cob_pwm_if_force_off());
         } else {
             const float startup_scale = sc_startup_envelope(dt_s);
-            const float audio_sway_pct = sc_audio_sway_envelope(dt_s);
-            float fluct_brightness_pct = 0.0f;
-            float fluct_warmth_pct = 0.0f;
-            sc_fluctuation_step(dt_s, &fluct_brightness_pct, &fluct_warmth_pct);
+            const bool effects_enabled = s_light_enabled && (s_brightness_target_pct > 0);
+            const float audio_sway_pct = effects_enabled ? sc_audio_sway_envelope(dt_s) : 0.0f;
+            const float fluct_brightness_pct = effects_enabled ? sc_fluctuation_step(dt_s) : 0.0f;
 
-            const float led_selected_brightness = s_light_enabled
-                                                      ? fmaxf(s_brightness_current_pct,
-                                                              (float)SC_LED_MIN_SELECTED_BRIGHTNESS_PCT)
-                                                      : s_brightness_current_pct;
             float effective_brightness =
-                (led_selected_brightness * startup_scale) + fluct_brightness_pct + audio_sway_pct;
-            if (s_light_enabled && !s_startup_anim_active) {
-                effective_brightness =
-                    fmaxf(effective_brightness, (float)SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT);
+                (s_brightness_current_pct * startup_scale) + fluct_brightness_pct + audio_sway_pct;
+            if (effects_enabled && !s_startup_anim_active) {
+                effective_brightness = fmaxf(effective_brightness, 1.0f);
             }
             effective_brightness = sc_clampf(effective_brightness, 0.0f, 100.0f);
-            int warmth_shift = (int)sc_clampf(fluct_warmth_pct, -100.0f, 100.0f);
-
-            sc_light_engine_render_warm(effective_brightness, (int8_t)warmth_shift,
-                                        s_light_time_s, s_render_frame_index++,
-                                        s_rgb_buf, (size_t)CONFIG_SC_LED_COUNT);
-            (void)sc_led_strip_if_write_rgb(s_rgb_buf, (size_t)CONFIG_SC_LED_COUNT);
+            const uint16_t duty_bps = sc_light_pwm_map_brightness(
+                effective_brightness,
+                (uint8_t)CONFIG_SC_LIGHT_PWM_MIN_DUTY_PCT,
+                (uint8_t)CONFIG_SC_LIGHT_PWM_MAX_DUTY_PCT);
+            ESP_ERROR_CHECK_WITHOUT_ABORT(sc_cob_pwm_if_set_duty_bps(duty_bps));
         }
         if (trace_this_cycle) {
             SC_TRACE_MARK("light", "work_end", (int32_t)s_brightness_current_pct);
@@ -338,7 +277,6 @@ static void sc_light_service_task(void *arg)
 
 esp_err_t sc_light_service_start(void)
 {
-#if CONFIG_SC_LIGHT_BACKEND_LED_STRIP
     uint8_t persisted_brightness = SC_LIGHT_DEFAULT_BRIGHTNESS_PCT;
     esp_err_t load_err = sc_settings_store_load_u8(SC_LIGHT_SETTINGS_KEY_BRIGHTNESS,
                                                    (uint8_t)SC_LIGHT_DEFAULT_BRIGHTNESS_PCT,
@@ -362,28 +300,21 @@ esp_err_t sc_light_service_start(void)
         persisted_brightness = validated_brightness;
     }
 
-    s_rgb_buf = (uint8_t *)malloc((size_t)CONFIG_SC_LED_COUNT * 3U);
-    if (s_rgb_buf == NULL) {
-        ESP_LOGE(TAG, "failed to allocate LED buffer");
-        return ESP_ERR_NO_MEM;
+    ESP_RETURN_ON_ERROR(sc_cob_pwm_if_init(CONFIG_SC_LIGHT_PWM_GPIO,
+                                           CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ),
+                        TAG, "COB PWM init failed");
+    if (!sc_light_pwm_limits_valid((uint8_t)CONFIG_SC_LIGHT_PWM_MIN_DUTY_PCT,
+                                   (uint8_t)CONFIG_SC_LIGHT_PWM_MAX_DUTY_PCT)) {
+        (void)sc_cob_pwm_if_force_off();
+        ESP_LOGE(TAG, "invalid PWM duty floor/cap; output forced off");
+        return ESP_ERR_INVALID_ARG;
     }
-
-#if CONFIG_SC_LED_PIXEL_ORDER_RGB
-    const sc_led_pixel_order_t pixel_order = SC_LED_PIXEL_ORDER_RGB;
-#else
-    const sc_led_pixel_order_t pixel_order = SC_LED_PIXEL_ORDER_GRB;
-#endif
-
-    ESP_RETURN_ON_ERROR(sc_led_strip_if_init(CONFIG_SC_LED_STRIP_GPIO, (size_t)CONFIG_SC_LED_COUNT, pixel_order),
-                        TAG, "led strip init failed");
 
     s_light_enabled = true;
     s_brightness_target_pct = (int)sc_clampf((float)persisted_brightness,
                                              (float)SC_LIGHT_BRIGHTNESS_MIN_PCT,
                                              100.0f);
     s_brightness_current_pct = 0.0f;
-    s_render_frame_index = 0;
-    s_light_time_s = 0.0f;
     s_startup_anim_active = true;
     s_startup_anim_elapsed_s = 0.0f;
     s_audio_sway_active = false;
@@ -394,14 +325,14 @@ esp_err_t sc_light_service_start(void)
     if (ok != pdPASS) {
         return ESP_FAIL;
     }
-    ESP_LOGI(TAG, "light service started: led_count=%d gpio=%d enabled=%d target_brightness=%d%%",
-             CONFIG_SC_LED_COUNT, CONFIG_SC_LED_STRIP_GPIO, s_light_enabled, s_brightness_target_pct);
-    ESP_LOGI(TAG, "LED low-level guards: selected_floor=%d%% effective_floor=%d%%",
-             SC_LED_MIN_SELECTED_BRIGHTNESS_PCT,
-             SC_LED_MIN_EFFECTIVE_BRIGHTNESS_PCT);
-#else
-    ESP_LOGI(TAG, "light service enabled, but no backend selected");
-#endif
+    ESP_LOGI(TAG,
+             "light service started: backend=cob_pwm gpio=%d frequency=%dHz duty=%d..%d%% enabled=%d target_brightness=%d%%",
+             CONFIG_SC_LIGHT_PWM_GPIO,
+             CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ,
+             CONFIG_SC_LIGHT_PWM_MIN_DUTY_PCT,
+             CONFIG_SC_LIGHT_PWM_MAX_DUTY_PCT,
+             s_light_enabled,
+             s_brightness_target_pct);
     return ESP_OK;
 }
 
@@ -411,6 +342,8 @@ esp_err_t sc_light_service_set_enabled(bool enable)
     if (enable) {
         s_startup_anim_active = true;
         s_startup_anim_elapsed_s = 0.0f;
+    } else {
+        s_audio_sway_active = false;
     }
     ESP_LOGI(TAG, "light %s", enable ? "enabled" : "disabled");
     return ESP_OK;
@@ -436,9 +369,6 @@ esp_err_t sc_light_service_change_brightness(int delta_steps)
 esp_err_t sc_light_service_set_brightness_percent(uint8_t percent)
 {
     int next = (int)percent;
-    if (next < SC_LIGHT_BRIGHTNESS_MIN_PCT) {
-        next = SC_LIGHT_BRIGHTNESS_MIN_PCT;
-    }
     if (next > 100) {
         next = 100;
     }
@@ -449,6 +379,9 @@ esp_err_t sc_light_service_set_brightness_percent(uint8_t percent)
 
     s_brightness_target_pct = next;
     s_light_enabled = true;
+    if (next == 0) {
+        s_audio_sway_active = false;
+    }
     esp_err_t save_err = sc_settings_store_save_u8(SC_LIGHT_SETTINGS_KEY_BRIGHTNESS, (uint8_t)next);
     if (save_err != ESP_OK) {
         ESP_LOGW(TAG, "brightness save failed: %s", esp_err_to_name(save_err));
@@ -460,6 +393,12 @@ esp_err_t sc_light_service_set_brightness_percent(uint8_t percent)
 esp_err_t sc_light_service_audio_sway(bool audio_enabled)
 {
 #if SC_LIGHT_AUDIO_SWAY_ENABLE
+    if (!s_light_enabled || (s_brightness_target_pct <= 0)) {
+        s_audio_sway_active = false;
+        s_audio_sway_elapsed_s = 0.0f;
+        s_audio_sway_peak_pct = 0.0f;
+        return ESP_OK;
+    }
     s_audio_sway_active = true;
     s_audio_sway_elapsed_s = 0.0f;
     s_audio_sway_peak_pct = audio_enabled

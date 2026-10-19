@@ -1,115 +1,111 @@
-# SleepCube Control Controller
+# SleepCube R01 Control Controller
 
-ESP-IDF firmware for the Waveshare ESP32-C6 touch/display controller. The
-normal product build owns touch UI, display and GPIO8 ambient lighting, and
-uses the semantic UART facade to control the separate Audio Controller. The
-superseded Waveshare-local decoder/I2S backend is not part of the active source,
-configuration or dependency graph; its pre-M9 implementation remains available
-through Git history.
+ESP-IDF firmware for the Waveshare ESP32-C6 touch/display controller. This R01
+development variant preserves the R00 GUI, brightness persistence and semantic
+UART Audio facade while replacing the addressable RGB strip with a fixed-color
+12 V COB strip controlled through an active-high logic-level MOSFET.
 
-## Toolchain and wiring
+The R00 firmware remains available unchanged at tag `software-r00`. This branch
+is COB-only; it contains no Control-side RGB/RMT lighting implementation.
+
+## Toolchain and signal mapping
 
 - ESP-IDF v6.0, commit `662a3be354759d9487bf4b1a629fadb766cb1800`
-- target: `esp32c6`
-- configured flash size: 8 MB
+- target: `esp32c6`, configured flash size: 8 MB
+- COB MOSFET gate: Waveshare GPIO8, active high
+- COB PWM: 3 kHz, 13-bit, LEDC timer 1/channel 1
+- display backlight: LEDC timer 0/channel 0
 - Control GPIO16 TX → Audio GPIO2 RX
 - Audio GPIO1 TX → Control GPIO17 RX
-- common ground; leave the Audio Grove 5 V contact disconnected
-- power both controllers independently through USB-C
+- UART/common ground retained; Atom Grove 5 V left disconnected
 
-Source ESP-IDF before building:
+The MOSFET must be suitable for a 3.3 V gate drive and must have an external
+GPIO8 gate pull-down. GPIO8 is an ESP32-C6 strapping pin, so normal reset/boot
+with the completed gate circuit must be verified before the strip is energized.
+
+## Power arrangements
+
+During development:
+
+- power Waveshare and Atom only from their respective computer USB connections;
+- use the external supply only for the COB 12 V rail;
+- connect COB positive to +12 V and COB negative through the MOSFET drain/source
+  switching path;
+- connect the external 12 V negative/MOSFET source reference explicitly to
+  Waveshare ground before applying 12 V;
+- retain the UART/common-ground wiring between controllers;
+- do not connect the external DC-DC 5 V output to either controller.
+
+Do not rely only on computer USB grounds for the MOSFET gate-source reference.
+
+For the final product, the USB-C PD trigger supplies the common 12 V rail and
+the DC-DC converter supplies both controller 5 V pins. The Atom Grove 5 V
+conductor remains unused. Disconnect computer USB power before energizing the
+external 5 V arrangement unless both boards' simultaneous-power paths have
+separately been verified.
+
+## Clean R01 build
+
+Source ESP-IDF, then use the dedicated R01 profile:
 
 ```sh
 source /home/jeppe/esp/v6.0/esp-idf/export.sh
-```
-
-## Clean product build
-
-The frozen R00 product profile carries forward the M7-verified UI/lighting
-configuration, requests a finite 3,600-second Audio session, and disables the
-development semantic console and timing trace:
-
-```sh
-idf.py -B /tmp/sleepcube-control-product-build \
-  -D SDKCONFIG=/tmp/sleepcube-control-product-sdkconfig \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.r00.defaults' \
+idf.py -B /tmp/sleepcube-control-r01-build \
+  -D SDKCONFIG=/tmp/sleepcube-control-r01-sdkconfig \
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.r01.defaults' \
   set-target esp32c6 build
 ```
 
-The timing profile adds structured touch/application traces while preserving
-the product duration and behavior:
+The profile selects GPIO8, 3 kHz, a 5% active-duty floor, an 80% cap, the
+normal finite 3,600-second Audio request, and application version `R01-dev`.
+Brightness 0% is fully off; 1–100% maps linearly to 5–80% steady-state duty.
+Startup and transition-to-off fades may pass below 5%, and all effects are
+capped at 80%. Invalid floor/cap configuration forces the output off and rejects
+lighting-service startup.
+
+For timing capture, append `sdkconfig.m7.trace` to the R01 defaults list. The
+trace overlay changes diagnostics only; it does not restore the old RGB backend.
+
+## Host tests
+
+Run the COB mapping policy test:
 
 ```sh
-idf.py -B /tmp/sleepcube-control-trace-build \
-  -D SDKCONFIG=/tmp/sleepcube-control-trace-sdkconfig \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.m7.defaults;sdkconfig.m7.trace' \
-  set-target esp32c6 build
+cc -std=c11 -Wall -Wextra -Werror -pedantic -fsanitize=undefined \
+  -Ifirmware/control/main/lighting \
+  firmware/control/main/lighting/light_pwm_policy.c \
+  firmware/control/main/lighting/tests/test_light_pwm_policy.c \
+  -lm -o /tmp/test_light_pwm_policy
+/tmp/test_light_pwm_policy
 ```
 
-The M8 endurance overlay explicitly pins the finite request to 3,600 seconds.
-After the R00 product-duration update this matches the product value, but the
-overlay is retained to reproduce the exact M8 test profile:
+Run timing-analyzer regressions from the repository root with:
 
 ```sh
-idf.py -B /tmp/sleepcube-control-endurance-build \
-  -D SDKCONFIG=/tmp/sleepcube-control-endurance-sdkconfig \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.m7.defaults;sdkconfig.m8.endurance' \
-  set-target esp32c6 build
+python3 -m unittest discover -s firmware/control/tools -p 'test_*.py' -v
 ```
 
-## Flash and monitor
+## Flash and staged hardware verification
 
 Identify the Waveshare by its stable entry under `/dev/serial/by-id/`; do not
-assume `/dev/ttyACM0`. The ESP32-C6 normally enters download mode automatically:
+assume `/dev/ttyACM0`.
 
 ```sh
-idf.py -B /tmp/sleepcube-control-product-build \
-  -D SDKCONFIG=/tmp/sleepcube-control-product-sdkconfig \
+idf.py -B /tmp/sleepcube-control-r01-build \
+  -D SDKCONFIG=/tmp/sleepcube-control-r01-sdkconfig \
   -p /dev/ttyACM0 flash
 
-idf.py -B /tmp/sleepcube-control-product-build \
-  -D SDKCONFIG=/tmp/sleepcube-control-product-sdkconfig \
+idf.py -B /tmp/sleepcube-control-r01-build \
+  -D SDKCONFIG=/tmp/sleepcube-control-r01-sdkconfig \
   -p /dev/ttyACM0 monitor --no-reset
 ```
 
-Exit the monitor with `Ctrl-]`. Flashing the Control Controller does not require
-flashing the Audio Controller when the ICD semantic version is unchanged. NVS
-is preserved by a normal application flash.
+With the external 12 V supply off, first verify GPIO8 stays low through reset
+and produces approximately 3 kHz at expected duties. Then apply 12 V and check
+for no boot flash, correct off/minimum/midpoint/maximum output, smooth fades and
+effects, flicker, MOSFET heating and PWM-related noise. Repeat the GUI,
+persistence, UART/audio and Audio-disconnected regressions. The final
+PD-trigger/DC-DC power-cycle smoke is a separate last step with computer USB
+power disconnected.
 
-## M8 timing capture
-
-Flash the timing profile, capture a nominal run containing at least 20 touch
-actions and 20 acknowledged audio commands, then analyze the saved monitor log:
-
-```sh
-python3 tools/analyze_m8_timing.py /path/to/control-monitor.log
-```
-
-The analyzer checks the maximum UI-event queue time against 100 ms and the
-complete user-event-to-correlated-acknowledgement time against 250 ms. It also
-reports the UART request/response RTT. Slider traffic is intentionally
-coalesced, so a transmitted volume command is paired with the most recent
-preceding volume event.
-
-Run its host tests with:
-
-```sh
-python3 -m unittest discover -s tools -p 'test_*.py' -v
-```
-
-The trace and endurance profiles are historical verification profiles, not
-release overlays. Rebuild the exact `sdkconfig.r00.defaults` product profile
-after using either one.
-
-## M4 diagnostic console isolation
-
-The historical single-character semantic-audio USB console is compiled only
-when `CONFIG_SC_ENABLE_SEMANTIC_CONSOLE=y`. It is enabled by
-`sdkconfig.m4.defaults` for isolated protocol bring-up and is deliberately
-disabled in product, timing and endurance profiles. Do not enable it in a
-release image: arbitrary host serial input must never be interpreted as a
-product audio command.
-
-The custom partition table retains its previously validated, unused `storage`
-partition so M9 does not introduce a flash-layout change. The release build
-does not create, flash, mount or read a Control-side SPIFFS image.
+Do not create an R01 release tag until the target and final-power gates pass.

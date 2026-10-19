@@ -5,10 +5,10 @@
 #include "driver/spi_common.h"
 
 /**
- * @brief Default GPIO map for LED strip and temporary button UI on ESP32 DevKitC.
+ * @brief Default GPIO map for COB PWM and temporary button UI on ESP32 DevKitC.
  *
  * These values mirror the defaults in menuconfig (`Kconfig.projbuild`):
- * - LED data: GPIO13
+ * - COB MOSFET PWM: GPIO13
  * - Audio toggle button: GPIO0
  * - Legacy light button: GPIO32 (currently unused in the primary UI model)
  * - Volume up/down buttons: GPIO33 / GPIO21
@@ -18,7 +18,7 @@
  * documents the default bring-up wiring for quick reference.
  */
 #if CONFIG_SC_BOARD_DEVKITC_ESP32
-#define SC_LED_STRIP_DATA_GPIO_DEFAULT     GPIO_NUM_13
+#define SC_COB_PWM_GPIO_DEFAULT            GPIO_NUM_13
 #define SC_BTN_AUDIO_GPIO_DEFAULT          GPIO_NUM_0
 #define SC_BTN_LIGHT_GPIO_DEFAULT          GPIO_NUM_32
 #define SC_BTN_VOL_UP_GPIO_DEFAULT         GPIO_NUM_33
@@ -34,7 +34,7 @@
  * `docs/ESP32-C6-Touch-LCD-1.47-Demo/03_lvgl_example/components/esp_bsp/`.
  */
 #if CONFIG_SC_BOARD_WAVESHARE_ESP32C6
-#define SC_LED_STRIP_DATA_GPIO_DEFAULT     GPIO_NUM_8
+#define SC_COB_PWM_GPIO_DEFAULT            GPIO_NUM_8
 #define SC_LCD_SPI_HOST                    SPI2_HOST
 #define SC_LCD_DIN_GPIO                    GPIO_NUM_2
 #define SC_LCD_MISO_GPIO                   GPIO_NUM_3

@@ -1,12 +1,14 @@
 # SleepCube Software Implementation Plan
 
-**Revision:** R00
+**Revision:** R01 development
 
 ## 1. Development strategy
 
 Development shall proceed in bounded milestones. Each milestone must preserve a buildable repository and produce evidence appropriate to the milestone before the next architectural dependency is added.
 
-The existing Waveshare UI and lighting implementation is treated as retained functionality. The existing local audio implementation is treated as legacy/reference material and shall be removed or disabled only after replacement behaviour is demonstrated on the Audio Controller.
+The released R00 Waveshare GUI and application-facing lighting behavior are
+retained. M10 replaces only the physical RGB backend and RGB-specific rendering
+with fixed-color COB PWM. The Audio firmware and UART protocol remain unchanged.
 
 ## 2. Milestones
 
@@ -365,7 +367,45 @@ Deliverables:
 - legacy P0 audio code clearly archived/removed from active build path;
 - tagged release.
 
-## 3. Released repository layout
+### M10 — R01 COB PWM lighting migration
+
+**Goal:** Replace the R00 addressable RGB backend with the fixed-color 12 V COB
+hardware while preserving the GUI, persistence, audio behavior and controller
+ownership boundaries.
+
+**Status (2026-10-19): SOFTWARE COMPLETE; TARGET VERIFICATION PENDING.** Branch
+`feat/r01-cob-pwm-lighting` was created from clean tag `software-r00`. The
+Control firmware now uses an active-high GPIO8 LEDC driver at 3 kHz/13-bit on
+timer 1/channel 1, retains the `light_service` API and whole-strip effects, maps
+logical 0% to off and 1–100% to configurable 5–80% steady-state duty, and
+fails off for invalid limits or output errors. RGB buffers, per-pixel rendering,
+RMT sources/configuration and RGB-only settings are removed from the active
+Control implementation. The GUI, Audio firmware and UART protocol are unchanged.
+
+Strict mapping/policy tests, retained host regressions and a clean ESP-IDF v6.0
+R01 Control build pass. The image embeds `R01-dev`; exact software evidence is
+recorded in `verification/2026-10-19_M10_cob_pwm_implementation.md`.
+
+Deliverables:
+
+- COB LEDC driver and host-tested brightness/duty policy;
+- R01 GPIO8/3 kHz/5–80% product configuration;
+- ADR-0009 and active specification/verification updates;
+- development-topology GPIO measurements before applying 12 V;
+- powered-strip behavioral and regression checks;
+- final PD-trigger/DC-DC integrated power-cycle smoke.
+
+Exit criteria:
+
+- GPIO8 initializes low and measures approximately 3 kHz at expected duties;
+- reset/boot produces no unintended COB flash;
+- off, minimum, midpoint, maximum, fades, ambient movement and PLAY/STOP pulses
+  pass without visible flicker, excessive MOSFET heating or objectionable noise;
+- unchanged GUI, persistence, UART/audio and Audio-unavailable behavior pass;
+- final USB-disconnected PD/DC-DC power-cycle smoke passes;
+- exact evidence is recorded before any R01 release tag is created.
+
+## 3. Repository layout
 
 ```text
 firmware/
@@ -375,11 +415,12 @@ firmware/
     └── protocol/            # wire-level types/constants if safely shareable
 ```
 
-M0 established this two-controller layout, and M9 releases it unchanged.
+M0 established this two-controller layout, M9 released it unchanged, and M10
+changes only the Control-side lighting implementation within it.
 
 ## 4. Development constraints
 
-- Do not rewrite working Waveshare UI/lighting code without a demonstrated requirement.
+- Preserve working Waveshare GUI and application-facing lighting behavior unless a requirement explicitly changes it.
 - Do not implement low-level remote filesystem/decoder control in the Control Controller.
 - Do not allow PLAY without a finite Audio Controller deadline.
 - Do not make normal lighting behaviour depend on UART availability.
@@ -388,15 +429,8 @@ M0 established this two-controller layout, and M9 releases it unchanged.
 
 ## 5. Suggested immediate next engineering task
 
-R00 is released. Begin post-R00 planning with a narrowly scoped decision on the
-next release objective before changing product behavior. The two recorded
-candidates are:
-
-1. investigate and, if justified by evidence, mitigate the accepted low-level
-   `AUD-ISS-001` playback noise; or
-2. specify the deferred SD-card configuration and bounded diagnostic-log
-   facility, including validation, defaults, ownership, write-lifetime and
-   fault-containment requirements, before implementation.
-
-Either candidate should begin with updated requirements and an ADR if it
-changes ownership, persistent-data policy or the inter-controller contract.
+Execute M10-HWT-001 with both controllers USB-powered and the external 12 V
+supply initially off. Confirm the external GPIO8 gate pull-down and explicit
+external-source-to-Waveshare ground connection, flash the exact R01 image, then
+measure reset/boot low level, approximately 3 kHz frequency and expected duties.
+Only after this passes should 12 V be applied for the COB behavior checks.

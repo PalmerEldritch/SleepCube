@@ -1,54 +1,35 @@
 # SleepCube Software Development Status
 
-**Baseline:** R00
+**Baseline:** R01 development from released `software-r00`
 
-**Last updated:** 2026-09-27
+**Last updated:** 2026-10-19
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M9 passes; software R00 is released as `software-r00`**
+**M10 R01 COB PWM migration: software/build pass; target verification pending**
 
-Status: **M1 through M9 pass. The active software baseline is R00 and annotated
-tag `software-r00` identifies the release. Implementation checkpoint `2bb7fd0`
-removes the superseded Control-local audio stack from the active source/build
-graph, adds an explicit R00 Control profile, and pins both embedded application
-versions to `R00`. Strict host regressions, exact ESP-IDF v6.0 release builds
-and the integrated exact-image target smoke pass.**
+Status: **Branch `feat/r01-cob-pwm-lighting` was created from clean annotated
+tag `software-r00`. The COB-only Control implementation and active R01 documents
+are complete. New mapping tests and retained settings/protocol/timing tests pass.
+A clean ESP-IDF v6.0 ESP32-C6/8 MB build passes and embeds `R01-dev`. No R01
+firmware has yet been flashed or measured on target, so M10 and R01 release are
+not complete. No R01 release tag exists or should be created yet.**
 
-The M8 audit maps all 55 SRS, 24 UX and 29 ICD IDs and found every then-active
-non-deferred requirement ready for R00 release preparation.
-Quantitative target timing passes with 0.453 ms maximum touch acceptance and
-59.710 ms maximum complete command acknowledgement. Five independent resets of
-each controller pass, including active-playback cases. Missing-file and
-truncated-WAV boots fail silent with actionable diagnostics; the canonical
-asset is restored. The corrected product excludes the M4 semantic USB console,
-and TX/RX/common ground were inspected with no inter-controller 5 V connection.
-The integrated 3,600-second distributed session reached timer-expired
-`STOPPED`, `fault=0`, with no user-observed audible or visual artifact. The
-exact Control product image was restored and three coordinated dual-controller
-power cycles retained silent `STOPPED`, no automatic PLAY, normal display/strip
-operation and stable persisted settings. `AUD-ISS-001` is accepted as a
-documented low-level R00 limitation; its physical root cause remains a post-R00
-improvement. The last M8 candidate identities are Control `b69d1a9`,
-603,216 bytes, SHA-256
-`0a6b91a7ce86003a4a4d79d3c5b79151927fe06960ad192a3a708f9ba7585306`,
-and Audio `057f1c5`, 341,952 bytes, SHA-256
-`efd3c6cecf66b3ce220d73f9e3fe9929d9cc221550805138a96e4ed3a81cca2f`.
-The final targeted-regression candidates are Control `3348213`, 603,216 bytes,
-SHA-256 `c526231c244d70e2036069c90cd709019b1472d947b4c5e5918dcb20958e0036`,
-and Audio `3348213`, 341,952 bytes, SHA-256
-`d62b3d311f9de8366e794b4212019447f3c16834ac6328db31096d75d6e0dd74`.
-Exact M9 build identities are Control 603,200 bytes, SHA-256
-`63f1b0bd27ca47ca9583d4c90ca6a13da16dfe5577c937af4a0c4bc5d5836ef3`,
-and Audio 341,952 bytes, SHA-256
-`bf088239b393820beb72b29635f940d6c03de9d9a80ef5142271354a5b28c2af`.
-Both embed version `R00`. Both images flashed with hash verification and passed
-silent synchronized startup, finite 3,600-second PLAY establishment and clean
-manual STOP to silent `STOPPED`, `remaining=0`, `fault=0`; the user reported
-normal audio, display and LED-strip operation. Active documents are promoted,
-the final release consistency review passes, and M9 is complete.
+The Control backend now drives an active-high logic-level MOSFET on GPIO8 using
+LEDC timer 1/channel 1 at 3 kHz and 13-bit resolution, distinct from display
+timer 0/channel 0. Logical brightness 0% is off and suppresses effects; 1–100%
+maps linearly to configurable 5–80% steady-state duty. Startup/shutdown fades
+may pass below 5%; ambient and PLAY/STOP effects remain capped at 80%. Invalid
+floor/cap configuration and PWM update failure are fail-off paths. RGB buffers,
+color/warmth/dithering, LED count/order, spatial animation and project RMT
+sources/dependencies are absent from the active Control implementation.
+
+The GUI, persistence API, Audio firmware, semantic UART protocol and controller
+ownership are unchanged. ADR-0009 records the COB PWM architecture and the
+separate development/final power arrangements. Historical R00 target evidence
+remains valid only for R00 and is preserved below and in the existing reports.
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -109,7 +90,7 @@ Repository organization now reflects the two-controller architecture:
 
 - `firmware/control/` — Waveshare ESP32-C6 Control Controller firmware;
 - `firmware/audio/` — AtomS3 Lite Audio Controller ESP-IDF project and M1 diagnostic;
-- `docs/software/` — active software R00 documentation;
+- `docs/software/` — active R01 development documentation, with R00 reports retained;
 - `docs/software/adr/` — active architecture/design decisions;
 - `docs/legacy/` — superseded product/prototype documentation and historical implementation records;
 - `references/` — non-normative vendor examples, pin maps, datasheets and reference source material.
@@ -118,21 +99,27 @@ Repository organization now reflects the two-controller architecture:
 
 ### Control Controller — Waveshare ESP32-C6
 
-Existing P0 firmware has been reorganized under `firmware/control/` and remains the active control-side implementation.
+The R01 Control firmware remains under `firmware/control/`.
 
 Working/valuable implementation to preserve:
 
 - touch LCD bring-up and LVGL integration;
 - touch-first ambient UI;
 - rest view and temporary volume/brightness adjustment view;
-- RGB lighting service and lighting-effects engine;
+- unchanged `light_service` API with COB duty effects;
 - persistent light brightness handling;
 - application event queue / `app_core` structure.
 
 The superseded Control-local storage/decoder/player/I2S implementation is no
 longer present in the active source or build graph. Its history remains in Git.
-The Control `audio_service` has one R00 backend: the Audio Controller semantic
+The Control `audio_service` has one backend: the Audio Controller semantic
 facade.
+
+M10 replaces the old RMT/addressable-strip layer with `cob_pwm_if` plus the
+host-testable `light_pwm_policy`. `sdkconfig.r01.defaults` selects GPIO8, 3 kHz,
+5–80% duty, normal UI/audio behavior and `R01-dev`. The addressable-strip
+encoder/driver and RGB lighting engine are removed on this branch; recover them
+from `software-r00` if R00 behavior is needed.
 
 For M4, `sdkconfig.m4.defaults` selects the 8 MB ESP32-C6/USB Serial-JTAG build
 with UI and lighting enabled and legacy local audio disabled. A dedicated UART
@@ -267,11 +254,32 @@ Planned ownership:
 
 ## 3. Verified state
 
+Verified for M10 R01 software:
+
+- COB mapping policy tests pass under strict C11 warnings and UBSan for 0%, 1%,
+  midpoint, 100%, lower/upper saturation, sub-floor fade values, non-finite
+  input and invalid floor/cap fail-off;
+- retained frame, semantic-protocol and settings-policy suites pass unchanged;
+- all three timing-analyzer unit tests pass;
+- a clean ESP-IDF v6.0 ESP32-C6/8 MB R01 Control build passes with GPIO8,
+  3 kHz, 5–80% duty and embedded version `R01-dev`; the 586,640-byte image has
+  SHA-256 `7f44954170b7e2aa8464d866a639370bdaea691cd63ab6f527faa3ca0dc78f49`;
+- source/configuration inspection confirms COB LEDC timer 1/channel 1 is
+  distinct from display timer 0/channel 0 and Control RGB/RMT code is removed.
+
+Not yet verified for R01: target flash identity, GPIO8 reset/boot low state,
+actual frequency/duties, no-flash behavior with 12 V, visual effects, MOSFET
+temperature, flicker/noise, unchanged integrated GUI/settings/audio behavior,
+Audio-disconnected operation, and final PD/DC-DC power-cycle behavior.
+
+Historical R00/prototype evidence follows and does not substitute for R01 COB
+target verification.
+
 Verified from the previous Waveshare prototype development:
 
 - Waveshare display/touch stack is operational;
 - current UI interaction model is usable and should be preserved unless requirements change;
-- RGB lighting engine is operational and suitable for reuse;
+- the R00 RGB lighting engine was operational before the R01 backend migration;
 - the original Waveshare-local audio path did not achieve acceptable audio quality despite substantial investigation.
 
 Verified structurally for the R00 repository baseline:
@@ -584,6 +592,8 @@ Accepted active ADRs:
   M3-only diagnostic PING/PONG types.
 - ADR-0008: per-boot semantic sessions, state-changing command IDs, Audio-side
   duplicate suppression, bounded retries and status-only recovery.
+- ADR-0009: R01 fixed-color COB PWM lighting and distinct development/final
+  power arrangements; supersedes only RGB-specific ADR-0002/ADR-0003 clauses.
 
 Historical decision:
 
@@ -639,11 +649,14 @@ The R00 volume curve and transition timings are no longer open placeholders.
 Any later perceptual retuning is an intentional behavior change that requires
 repeating the affected target evidence.
 
-M7's LED output floors are intentional closed tuning, not an open blocker. At
-the corrected minimum, external-strip modulation can appear slightly coarser
-because of low digital channel counts; the user accepted that characteristic
-after confirming stable warm-white color. The display still uses the complete
-selected brightness range.
+R01 target lighting behavior is the current release blocker. GPIO8 is an
+ESP32-C6 strapping pin; an external gate pull-down is mandatory, and reset/boot
+must be scoped before 12 V is applied. Carrier accuracy, duty points, unintended
+flash, visible flicker, MOSFET heating and PWM-related noise are unverified.
+Final common-supply operation is also unverified. During development, do not
+connect the external DC-DC 5 V output to either controller, and establish an
+explicit external-source/MOSFET-source connection to Waveshare ground before
+applying 12 V.
 
 Observed M3 setup issue: the Waveshare USB Serial/JTAG endpoint failed to
 enumerate after manual BOOT/RESET (kernel error `-71`), then returned after a
@@ -656,18 +669,39 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Select and specify the first post-R00 objective.**
+**Execute the unpowered-strip R01 GPIO8 measurement gate.**
 
 The exact next task is:
 
-1. Choose between investigating `AUD-ISS-001` or specifying the deferred
-   SD-card configuration/diagnostic-log feature as the next release objective.
-2. Update the PRD/SRS and, when ownership or persistent-data policy changes,
-   add an ADR before implementation.
-3. Define a new milestone and verification gate without modifying the tagged
-   R00 baseline or retroactively changing its evidence.
+1. Keep both controllers powered only from their computer USB connections and
+   keep the external 12 V supply off.
+2. Verify the external GPIO8 gate pull-down and the explicit external 12 V
+   negative/MOSFET-source-to-Waveshare-ground connection; leave external DC-DC
+   5 V disconnected.
+3. Flash the exact R01 build and record its hash verification and boot identity.
+4. Scope GPIO8 through reset/boot and at off, 1%, midpoint and 100% settings;
+   record low state, frequency and duty values.
+5. Apply 12 V only after steps 1–4 pass, then continue M10-IT-001.
 
 ## 7. Session closeout record
+
+### 2026-10-19 — M10 COB PWM software implementation
+
+- Created `feat/r01-cob-pwm-lighting` from clean tag `software-r00`; existing
+  R00 branches, reports and tag were not changed.
+- Replaced Control RGB/RMT lighting with a GPIO8 active-high LEDC PWM driver and
+  host-testable logical-brightness mapping while retaining the `light_service`
+  API, GUI, persistence and whole-strip startup/ambient/PLAY/STOP effects.
+- Added `sdkconfig.r01.defaults`, application version `R01-dev`, ADR-0009 and
+  R01 updates to the active SRS/UX/SAS/ICD/VVM/plan/README.
+- New mapping tests and retained settings/frame/semantic/timing tests pass. A
+  clean ESP-IDF v6.0 R01 Control build passes. See
+  `verification/2026-10-19_M10_cob_pwm_implementation.md` for exact artifact
+  identity and commands.
+- No target flash, frequency/duty measurement or powered-strip test was
+  performed. M10-HWT-001, M10-IT-001 and M10-PWR-001 remain pending.
+- Exact next task is the five-step unpowered-strip GPIO8 measurement gate in
+  section 6; do not apply 12 V or create an R01 tag before that gate passes.
 
 ### 2026-09-27 — M9 passes and software R00 is released
 

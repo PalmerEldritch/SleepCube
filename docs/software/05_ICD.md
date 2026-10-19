@@ -1,14 +1,15 @@
 # SleepCube Inter-Controller Interface Control Document
 
-**Revision:** R00
+**Revision:** R01 development
 
 ## 1. Purpose
 
 This document defines the logical and electrical contract between the Control Controller and Audio Controller.
 
-This revision freezes the physical mapping, ADR-0007 transport framing and the
-M4 semantic audio contract. ADR-0008 defines session identity, idempotent
-command handling, retry limits and reset reconciliation.
+This revision retains the released physical UART mapping, ADR-0007 transport
+framing and semantic audio contract unchanged. ADR-0008 defines session
+identity, idempotent command handling, retry limits and reset reconciliation.
+ADR-0009 adds the R01 COB-light and power-interface constraints.
 
 ## 2. Physical interface
 
@@ -16,8 +17,13 @@ command handling, retry limits and reset reconciliation.
 | --- | --- |
 | ICD-PHY-001 | The interface shall use 3.3 V logic-level full-duplex UART and a common ground. |
 | ICD-PHY-002 | The nominal UART configuration shall be 115200 baud, 8 data bits, no parity, 1 stop bit (115200 8N1). |
-| ICD-PHY-003 | R00 shall use dedicated GPIO not shared with real-time audio output, display/touch or external RGB-light timing. |
+| ICD-PHY-003 | The UART shall use dedicated GPIO not shared with real-time audio output, display/touch or the external COB PWM output. |
 | ICD-PHY-004 | Final TX/RX GPIO assignments shall be documented before M3 integration testing. |
+| ICD-PHY-005 | During R01 development, both controllers shall be powered exclusively by their respective computer USB connections; the external supply shall feed only the COB 12 V rail and its DC-DC 5 V output shall remain disconnected from both controllers. |
+| ICD-PHY-006 | The external 12 V negative/MOSFET source reference shall connect explicitly to Waveshare ground, which shall remain common with Atom ground through the UART wiring. |
+| ICD-PHY-007 | The GPIO8 MOSFET-gate circuit shall include an external pull-down and shall not rely solely on computer USB grounds to establish its gate-source reference. |
+| ICD-PHY-008 | In the final-product arrangement, the PD trigger shall supply the common 12 V rail and the DC-DC converter shall supply both controllers through their 5 V pins; computer USB power shall be disconnected unless simultaneous power paths are separately verified. |
+| ICD-PHY-009 | The Atom Grove 5 V conductor shall remain unused in both power arrangements. |
 
 The selected three-wire mapping is:
 
@@ -28,11 +34,21 @@ The selected three-wire mapping is:
 | Common ground | Pin 6, GND | Black, GND |
 
 The Atom Grove red 5 V contact is left disconnected and insulated; neither
-board's 5 V nor 3.3 V rail shall be connected across the link. Each board is
-powered by its own USB-C cable. Both UART drivers may select a free peripheral
-and map it to these GPIOs; the Waveshare's `ESP_TXD`/`ESP_RXD` labels describe
-its header nets, not a mandatory peripheral instance. The USB Serial/JTAG
-console remains separate. Verify physical header orientation before power.
+board's 5 V nor 3.3 V rail is connected across the UART link. During development
+each board is powered by its own USB-C cable. The separate external 12 V supply
+connects COB positive to +12 V and COB negative through the MOSFET drain/source
+switching path; its negative/MOSFET source reference connects directly to
+Waveshare ground before 12 V is applied. GPIO8 drives the MOSFET gate and an
+external gate pull-down holds it off through reset.
+
+In the final-product topology, the PD-triggered 12 V rail feeds both the COB
+path and the DC-DC converter; the converter supplies both controller 5 V pins.
+Disconnect computer USB power before applying this external 5 V arrangement
+unless the board power paths have separately been verified for simultaneous
+power. Both UART drivers may select a free peripheral and map it to these GPIOs;
+the Waveshare's `ESP_TXD`/`ESP_RXD` labels describe its header nets, not a
+mandatory peripheral instance. Verify physical header orientation and explicit
+ground continuity before power.
 
 ## 3. Protocol principles
 

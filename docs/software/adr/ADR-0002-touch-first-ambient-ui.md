@@ -4,6 +4,9 @@
 
 Accepted
 
+RGB-specific lighting clauses are superseded for the R01 COB variant by
+ADR-0009. The touch-first UI decision remains accepted and unchanged.
+
 ## Context
 
 The original requirements set described SleepCube as a minimal bedside device with physical-button interaction and no display requirement. The validated control-side firmware and active hardware direction use the Waveshare ESP32-C6 touch LCD board as the local user-interface platform:

@@ -1,6 +1,6 @@
 # SleepCube Software Verification and Validation Matrix
 
-**Revision:** R00
+**Revision:** R01 development
 
 ## 1. Verification method codes
 
@@ -21,7 +21,7 @@
 | SRS-SYS-001 | INS, HWT | Two independently flashable controller firmwares with defined UART interface |
 | SRS-SYS-002 | INS | Control architecture/state ownership documented and implemented |
 | SRS-SYS-003 | INS, HWT | Audio storage/decode/I2S confined to Audio Controller |
-| SRS-SYS-004 | INS, HWT | Display, touch and external RGB-light drivers/tasks exist only on Control and remain operational during Audio faults |
+| SRS-SYS-004 | INS, HWT | Display, touch and external COB-light drivers/tasks exist only on Control and remain operational during Audio faults |
 | SRS-SYS-005 | FI, HWT | Disconnect/reset Audio Controller; UI and lighting remain usable |
 | SRS-STA-001 | HWT, LOG | Control boot with Audio absent reports unknown/unavailable; no false playing state |
 | SRS-STA-002 | HWT, LOG | Normal startup and power-cycle reconciliation remain silent/STOPPED without issuing PLAY |
@@ -39,6 +39,10 @@
 | SRS-LGT-003 | HWT, MAN | Display/backlight and external strip respond together to selected brightness and audio-state effects |
 | SRS-LGT-004 | FI | Audio stop/timeout/reset does not disable lighting engine |
 | SRS-LGT-005 | INS, HWT | Transient visual response is driven by semantic state events; protocol carries no audio samples |
+| SRS-LGT-011 | INS, HWT | Build/resource inspection confirms GPIO8, 3 kHz, 13-bit LEDC timer 1/channel 1 and display timer 0/channel 0; scope confirms carrier |
+| SRS-LGT-012 | UT, HWT | Host boundary mapping passes; target measures off, 1%, midpoint and 100% at expected 0%, 5%, intermediate and 80% duties |
+| SRS-LGT-013 | UT, HWT, MAN | Host saturation/sub-floor cases pass; scope and visual checks confirm fades below floor and effects never exceed cap |
+| SRS-LGT-014 | UT, INS, HWT | Invalid floor/cap maps off and service rejects it after forcing off; reset/boot and update-fault checks leave GPIO8 low |
 | SRS-AUD-001 | INS | No control-side remote filesystem/decoder/I2S API exposed through audio service |
 | SRS-AUD-002 | IT | PLAY, STOP and SET_VOLUME operate across UART |
 | SRS-AUD-003 | IT | Control can distinguish unavailable, stopped and playing |
@@ -96,17 +100,17 @@
 | UX-AUD-003 | FI, MAN | Link loss selects neutral/degraded presentation without false playback feedback |
 | UX-AUD-004 | HWT, MAN | M6 timeout returns to STOPPED with only a transient lighting response and unchanged selected brightness |
 | UX-LGT-001 | HWT, MAN | Ambient display and strip modulation is smooth and suitable in dark-room observation |
-| UX-LGT-002 | HWT, MAN | Display and strip track brightness changes together; the strip uses a verified low-output chromatic-stability floor |
+| UX-LGT-002 | HWT, MAN | Display and COB strip track brightness changes together while preserving the unchanged 0–100% GUI control |
 | UX-LGT-003 | MAN | Rest and adjustment operation leave no persistent bright status indicator |
-| UX-LGT-004 | HWT, MAN | PLAY/STOP responses decay; corrected STOP dip remains stable warm white at minimum output |
+| UX-LGT-004 | HWT, MAN | PLAY/STOP duty responses decay automatically and never exceed the configured COB duty cap |
 | UX-STA-001 | HWT, MAN | Product startup shows the ambient view and remains silent/STOPPED |
 | UX-STA-002 | FI, HWT | Audio absence does not block rest view or brightness control |
 | UX-STA-003 | FI, IT | UART recovery reacquires STOPPED state without Control reset or PLAY replay |
 
 ## 4. Development milestone evidence
 
-The following evidence supports milestone progression but does not by itself
-close the associated R00 requirements.
+The following evidence supports milestone progression. Historical R00 entries
+retain their original scope; they do not verify the replacement R01 COB output.
 
 | Evidence ID | Scope | Result | Record |
 | --- | --- | --- | --- |
@@ -163,6 +167,12 @@ close the associated R00 requirements.
 | M9-BLD-001 | Exact R00 host regression and target builds | PASS — strict frame, semantic-protocol and settings-policy C11/UBSan suites plus all timing-analyzer tests pass; exact ESP32-C6/8 MB and ESP32-S3/8 MB product artifacts embed `R00` and have recorded sizes/SHA-256 identities | `verification/2026-09-27_M9_R00_release.md` |
 | M9-HWT-001 | Exact R00 integrated startup, 3,600-second PLAY establishment and manual STOP smoke | PASS — both images flash with hash verification; synchronized startup is silent/STOPPED; PLAY establishes the Audio-owned 3,600-second deadline; manual STOP fades cleanly to silent `STOPPED`, reason 1, `remaining=0`, `fault=0`; display/strip remain normal | `verification/2026-09-27_M9_R00_release.md` |
 | M9-REL-001 | R00 document promotion and release tag | PASS — active document headers are R00, implementation documentation matches the release path, superseded Control-local audio is absent from the active graph, and annotated tag `software-r00` identifies the release | `verification/2026-09-27_M9_R00_release.md` |
+| M10-UT-001 | R01 COB mapping and safety policy host tests | PASS — strict C11/UBSan tests cover 0%, 1%, midpoint, 100%, sub-floor fade, upper/lower saturation, non-finite input and invalid floor/cap fail-off | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
+| M10-REG-001 | Retained settings, protocol and timing-analyzer host regressions | PASS — strict settings/frame/semantic suites and all timing-analyzer unit tests pass unchanged | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
+| M10-BLD-001 | Clean ESP-IDF v6.0 R01 Control build and configuration/source inspection | PASS — ESP32-C6/8 MB image builds at 586,640 bytes, embeds `R01-dev`, selects GPIO8/3 kHz/5–80%, uses distinct LEDC resources and contains no Control RGB/RMT implementation or dependency | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
+| M10-HWT-001 | USB-powered Waveshare GPIO8 reset level, carrier frequency and duty measurements before 12 V | PENDING — requires target, explicit source-ground reference and oscilloscope/logic-analyzer evidence | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
+| M10-IT-001 | 12 V COB behavior, effects, GUI/audio regression and Audio-disconnected operation | PENDING — no R01 target flash or powered-strip observation has been performed | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
+| M10-PWR-001 | Final PD-trigger/DC-DC integrated power-cycle smoke with USB disconnected | PENDING — run only after development topology passes | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
 
 Developmental issue `AUD-ISS-001` is not a failure of the M3/M4 transport or M5
 facade gates. M8 closes its release-blocking status through an explicit accepted
@@ -183,6 +193,11 @@ SRS-AUD-010 endurance requirement.
 | ICD-PHY-002 | INS, HWT | Both endpoints configure UART1 for 115200 8N1 and exchange valid frames |
 | ICD-PHY-003 | INS, HWT | GPIO16/17 and GPIO1/2 are distinct from display/touch, GPIO8 strip and I2S pins; concurrent operation passes |
 | ICD-PHY-004 | INS | Final mapping is frozen in `05_ICD.md` and board configuration before integration evidence |
+| ICD-PHY-005 | INS, HWT | Development inspection confirms separate controller USB power, 12 V only to COB path and external DC-DC 5 V disconnected |
+| ICD-PHY-006 | INS, HWT | Continuity/inspection confirms external source reference tied explicitly to Waveshare/UART common ground before 12 V |
+| ICD-PHY-007 | INS, HWT | External GPIO8 gate pull-down is present and reset/boot scope trace remains off |
+| ICD-PHY-008 | INS, HWT | Final PD/DC-DC smoke uses controller 5 V inputs with computer USB power disconnected unless dual-power paths are verified |
+| ICD-PHY-009 | INS | Atom Grove red 5 V conductor is disconnected and insulated in both arrangements |
 | ICD-PRO-001 | INS, UT | Type catalog is semantic-only and contains no audio-sample payload path |
 | ICD-PRO-002 | UT, HWT | COBS zero delimiter and message type decode provide unambiguous boundaries/types |
 | ICD-PRO-003 | UT, FI | Version 1 is encoded and incompatible versions are rejected |
@@ -228,3 +243,11 @@ The M8 evidence review found all six conditions satisfied for entry into M9.
 M9 repeated the release-sensitive host/build and exact-image smoke checks,
 promoted the active document set and completed the annotated `software-r00`
 release. All six R00 release conditions remain satisfied.
+
+## 7. R01 release gate
+
+R01 shall not receive a release tag until M10-HWT-001, M10-IT-001 and
+M10-PWR-001 pass with recorded frequency/duty measurements, boot/reset behavior,
+GUI/settings/audio regression, flicker/noise/thermal observations and exact
+flashed artifact identity. Software-only evidence is complete; this target gate
+remains open.

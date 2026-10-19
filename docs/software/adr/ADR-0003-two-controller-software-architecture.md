@@ -3,6 +3,9 @@
 **Status:** Accepted  
 **Date:** 2026-09-08
 
+RGB-specific lighting clauses are superseded for the R01 COB variant by
+ADR-0009. Controller ownership and the two-controller decision remain accepted.
+
 ## Context
 
 The original SleepCube prototype placed product logic, touch UI, lighting and audio playback on the Waveshare ESP32-C6 controller. The UI and lighting implementation matured successfully, but the board-specific audio path remained problematic and accumulated significant diagnostic and workaround complexity.

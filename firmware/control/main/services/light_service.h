@@ -8,6 +8,7 @@ esp_err_t sc_light_service_start(void);
 esp_err_t sc_light_service_set_enabled(bool enable);
 esp_err_t sc_light_service_toggle(void);
 esp_err_t sc_light_service_change_brightness(int delta_steps);
+/** Set the persisted logical brightness; 0 is off and 100 is maximum. */
 esp_err_t sc_light_service_set_brightness_percent(uint8_t percent);
 esp_err_t sc_light_service_audio_sway(bool audio_enabled);
 esp_err_t sc_light_service_set_pulse_attack_ms(uint16_t attack_ms);

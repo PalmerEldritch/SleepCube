@@ -17,22 +17,28 @@ static const char *TAG = "sc_hw_profile";
 #define SC_CFG_UI_BUTTONS 0
 #endif
 
-#ifdef CONFIG_SC_LIGHT_BACKEND_LED_STRIP
-#define SC_CFG_LED_STRIP 1
+#ifdef CONFIG_SC_LIGHT_PWM_GPIO
+#define SC_CFG_LIGHT_PWM_GPIO CONFIG_SC_LIGHT_PWM_GPIO
 #else
-#define SC_CFG_LED_STRIP 0
+#define SC_CFG_LIGHT_PWM_GPIO -1
 #endif
 
-#ifdef CONFIG_SC_LED_COUNT
-#define SC_CFG_LED_COUNT CONFIG_SC_LED_COUNT
+#ifdef CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ
+#define SC_CFG_LIGHT_PWM_FREQUENCY_HZ CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ
 #else
-#define SC_CFG_LED_COUNT 0
+#define SC_CFG_LIGHT_PWM_FREQUENCY_HZ 0
 #endif
 
-#ifdef CONFIG_SC_LED_STRIP_GPIO
-#define SC_CFG_LED_GPIO CONFIG_SC_LED_STRIP_GPIO
+#ifdef CONFIG_SC_LIGHT_PWM_MIN_DUTY_PCT
+#define SC_CFG_LIGHT_PWM_MIN_DUTY_PCT CONFIG_SC_LIGHT_PWM_MIN_DUTY_PCT
 #else
-#define SC_CFG_LED_GPIO -1
+#define SC_CFG_LIGHT_PWM_MIN_DUTY_PCT 0
+#endif
+
+#ifdef CONFIG_SC_LIGHT_PWM_MAX_DUTY_PCT
+#define SC_CFG_LIGHT_PWM_MAX_DUTY_PCT CONFIG_SC_LIGHT_PWM_MAX_DUTY_PCT
+#else
+#define SC_CFG_LIGHT_PWM_MAX_DUTY_PCT 0
 #endif
 
 #ifdef CONFIG_SC_ENABLE_LIGHT
@@ -66,10 +72,14 @@ void sc_hw_profile_log(void)
     ESP_LOGI(TAG, "board profile: %s", board);
     ESP_LOGI(TAG, "services: audio=remote light=%d ui=%d",
              SC_CFG_LIGHT, SC_CFG_UI);
-    ESP_LOGI(TAG, "backends: led_strip=%d lcd_touch=%d buttons=%d",
-             SC_CFG_LED_STRIP,
+    ESP_LOGI(TAG, "backends: cob_pwm=%d lcd_touch=%d buttons=%d",
+             SC_CFG_LIGHT,
              SC_CFG_LCD_TOUCH,
              SC_CFG_UI_BUTTONS);
-    ESP_LOGI(TAG, "light cfg: led_count=%d led_gpio=%d", SC_CFG_LED_COUNT, SC_CFG_LED_GPIO);
+    ESP_LOGI(TAG, "light cfg: pwm_gpio=%d frequency=%dHz duty=%d..%d%%",
+             SC_CFG_LIGHT_PWM_GPIO,
+             SC_CFG_LIGHT_PWM_FREQUENCY_HZ,
+             SC_CFG_LIGHT_PWM_MIN_DUTY_PCT,
+             SC_CFG_LIGHT_PWM_MAX_DUTY_PCT);
     ESP_LOGI(TAG, "light anim: startup_ramp_ms=%d", SC_CFG_LIGHT_STARTUP_RAMP_MS);
 }
