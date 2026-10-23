@@ -17,9 +17,10 @@ A clean ESP-IDF v6.0 ESP32-C6/8 MB build passes and embeds `R01-dev`. The exact
 image has now flashed to the USB-powered Waveshare with write-hash verification,
 and reset boot/init plus UART reconciliation pass with 12 V disconnected. GPIO8
 scope measurements confirm stable 0–3.3 V PWM at 3.012 kHz plus responsive
-ambient and PLAY/STOP duty effects. Explicit settled-off and reset/boot-low
-captures and all powered-strip/final-power tests remain pending, so M10 and R01
-release are not complete. No R01 release tag exists or should be created yet.**
+ambient and PLAY/STOP duty effects, the 5% active floor and 0 V at reset.
+Explicit settled-off and all powered-strip/final-power tests remain pending, so
+M10 and R01 release are not complete. No R01 release tag exists or should be
+created yet.**
 
 The Control backend now drives an active-high logic-level MOSFET on GPIO8 using
 LEDC timer 1/channel 1 at 3 kHz and 13-bit resolution, distinct from display
@@ -289,17 +290,20 @@ Verified at the GPIO8 gate with a 20 MHz/20 MSa/s PC oscilloscope on 2026-10-24:
 - maximum setting varied slowly from approximately 73.5% to 80% duty over
   irregular 20–40 s cycles, consistent with the configured ambient modulation
   and physical duty cap;
-- reported minimum setting varied slowly from approximately 0.5% to 12.5% duty;
+- at the minimum active setting, the lowest observed duty was just above 5%,
+  confirming the configured active-output floor (the earlier 0.5% report was a
+  transcription error);
+- at the midpoint brightness setting, ambient variation was approximately
+  ±7.5 duty-cycle percentage points;
+- GPIO8 sat at 0 V on reset;
 - brightness adjustment changed duty responsively, and PLAY/STOP touch actions
   produced the expected smooth positive/negative duty pulse.
 
-Not yet verified for R01: explicit settled 0%, 1% and midpoint duty captures,
-GPIO8 electrical state through reset/boot, no-flash behavior with 12 V, powered
-visual effects, MOSFET temperature, flicker/noise, complete unchanged integrated
-GUI/settings/audio behavior, Audio-disconnected operation, and final PD/DC-DC
-power-cycle behavior. A settled nonzero setting should remain at or above the 5%
-duty floor, while exact 0% should settle fully off; the reported 0.5–12.5% minimum
-therefore requires clarification and a controlled repeat.
+Not yet verified for R01: explicit settled 0% duty, no-flash behavior with 12 V,
+powered visual effects, MOSFET temperature, flicker/noise, complete unchanged
+integrated GUI/settings/audio behavior, Audio-disconnected operation, and final
+PD/DC-DC power-cycle behavior. The reset-low observation was made without the
+12 V strip supply; powered boot behavior remains part of M10-IT-001.
 
 Historical R00/prototype evidence follows and does not substitute for R01 COB
 target verification.
@@ -707,9 +711,8 @@ The exact next task is:
 2. Verify the external GPIO8 gate pull-down and the explicit external 12 V
    negative/MOSFET-source-to-Waveshare-ground connection; leave external DC-DC
    5 V disconnected.
-3. Complete the remaining scope captures: settled 0%/off, 1%, midpoint and GPIO8
-   through reset/boot. Confirm whether the reported minimum-setting modulation
-   was taken at exact 0%, during a transition or at a settled nonzero value.
+3. Complete the remaining unpowered scope capture at settled 0%/off. The active
+   minimum floor, midpoint modulation and reset-low state are now observed.
 4. Apply 12 V only after steps 1–3 pass, then continue M10-IT-001.
 
 ## 7. Session closeout record
@@ -721,15 +724,18 @@ The exact next task is:
 - Carrier measured 3.012 kHz (332 µs), within approximately +0.4% of the 3 kHz
   target, with a stable period.
 - Maximum brightness slowly varied from approximately 73.5% to the 80% cap over
-  variable 20–40 s cycles. The reported minimum setting varied approximately
-  0.5–12.5%. Adjustment response and the smooth PLAY/STOP kick were observed.
+  variable 20–40 s cycles. The minimum active output remained just above the 5%
+  floor; an earlier 0.5% value was corrected as a transcription error. At the
+  midpoint brightness setting, ambient excursion was approximately ±7.5 duty
+  points. Adjustment response and the smooth PLAY/STOP kick were observed.
+- GPIO8 was observed at 0 V on reset.
 - These results verify carrier/logic levels and demonstrate ambient/audio duty
-  effects. They do not yet verify exact 0% off, the 1% floor, midpoint mapping or
-  GPIO8 through reset/boot. The 0.5–12.5% reported minimum requires clarification:
-  exact 0% should settle off and a settled nonzero value should not cross the 5%
-  floor. No powered 12 V COB observation was reported.
-- Exact next task is the remaining unpowered scope captures in section 6, then
-  the powered development-topology checks only if reset/boot remains safely low.
+  effects, the active 5% floor, midpoint modulation and reset-low behavior. They
+  do not yet verify exact settled 0% off or powered reset/boot behavior. No
+  powered 12 V COB observation was reported.
+- Exact next task is the remaining unpowered settled-off scope capture in
+  section 6, then the powered development-topology checks only if reset/boot
+  remains safely low.
 
 ### 2026-10-23 — Exact R01 Control flash and boot initialization pass
 
