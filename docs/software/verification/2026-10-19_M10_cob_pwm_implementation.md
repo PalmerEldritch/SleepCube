@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19
 
-**Status:** SOFTWARE/BUILD/FLASH PASS; ELECTRICAL AND POWERED-STRIP VERIFICATION PENDING
+**Status:** SOFTWARE/BUILD/FLASH PASS; PWM VERIFICATION PARTIAL; POWERED-STRIP VERIFICATION PENDING
 
 ## Scope
 
@@ -97,7 +97,8 @@ driver/encoder and RGB lighting-engine sources are deleted from this branch.
 | Evidence | State | Required next action |
 | --- | --- | --- |
 | Exact R01 flash and logged boot initialization with 12 V off | PASS | 2026-10-23 esptool writes hash-verified; reset boot reports `R01-dev`, GPIO8/3 kHz/13-bit, 5–80% limits and normal UART reconciliation |
-| USB-powered GPIO8 reset/boot low and approximately 3 kHz duty measurements with 12 V off | PENDING | Verify external gate pull-down and explicit source-reference ground; scope off/1%/midpoint/100% |
+| GPIO8 logic levels, carrier and dynamic duty behavior | PASS | 0–3.3 V clean/stable waveform; 3.012 kHz / 332 µs; expected capped ambient movement and PLAY/STOP pulses |
+| Explicit off/1%/midpoint and reset/boot-low captures | PENDING | Capture settled exact 0%, 1%, midpoint and GPIO8 through reset/boot; identify whether the reported modulated minimum was exact 0%, transitional or settled nonzero |
 | Powered 12 V COB behavior and effects | PENDING | Apply 12 V only after the unpowered measurement gate passes; observe flash, levels, fades, flicker, heat and noise |
 | Unchanged GUI, persistence, audio/UART and Audio-disconnected behavior | PENDING | Repeat integrated product regression on R01 target |
 | Final PD-trigger/DC-DC topology with USB disconnected | PENDING | Run last, after development topology passes |
@@ -133,9 +134,39 @@ This is firmware initialization evidence only. No instrument measurement proves
 GPIO8 reset-low voltage, actual carrier frequency or physical duty yet, and no
 12 V was applied.
 
+## 2026-10-24 GPIO8 scope record
+
+The user measured the MOSFET gate with a basic PC oscilloscope specified at
+20 MHz analog bandwidth and 20 MSa/s. This is adequate for the following PWM
+timing and logic-level observations but is not treated as advanced signal-
+integrity evidence.
+
+| Observation | Result |
+| --- | --- |
+| Waveform | Visually clean and stable with sharp edges |
+| Logic low/high | 0 V / 3.3 V |
+| Carrier | 3.012 kHz, 332 µs stable period; approximately +0.4% from the 3 kHz target |
+| Maximum brightness | Slowly varying approximately 73.5–80% duty |
+| Ambient period | Variable, approximately 20–40 s |
+| Reported minimum brightness | Slowly varying approximately 0.5–12.5% duty |
+| Brightness adjustment | Duty responds promptly to adjustment |
+| PLAY/STOP response | Smooth positive/negative PWM-duty kick visible |
+
+The maximum trace is consistent with the low-frequency ambient fluctuation and
+the configured hard 80% output cap. The reported minimum trace does not yet
+close either the exact-off or 1% floor requirement: exact logical 0% suppresses
+effects and shall settle at zero duty, while any settled nonzero setting shall
+remain at or above 5% duty. The 0.5–12.5% observation therefore needs a controlled
+repeat that records the selected GUI value, allows the transition to settle and
+distinguishes a real narrow pulse from an oscilloscope automatic-measurement
+artifact. GPIO8 must also be observed through reset/boot before 12 V is applied.
+No powered-strip observation was provided with this evidence.
+
 ## Disposition
 
-M10 software, build and exact-image flash/boot initialization pass. M10-HWT-001
-is partial; M10-IT-001 and M10-PWR-001 remain open. Do not create an R01 release
-tag until all three target gates pass and this report is extended with measured
-frequency/duty values and powered observations.
+M10 software, build, exact-image flash/boot initialization, PWM carrier/logic
+levels and dynamic duty-response checks pass. M10-HWT-001 remains partial until
+explicit off/1%/midpoint and reset/boot-low captures pass; M10-IT-001 and
+M10-PWR-001 remain open. Do not create an R01 release tag until all target gates
+pass and this report is extended with the remaining captures and powered
+observations.
