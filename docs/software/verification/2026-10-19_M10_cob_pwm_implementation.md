@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19
 
-**Status:** SOFTWARE/BUILD/FLASH PASS; PWM VERIFICATION PARTIAL; POWERED-STRIP VERIFICATION PENDING
+**Status:** SOFTWARE/BUILD/FLASH/PWM PASS; POWERED-STRIP VERIFICATION PENDING
 
 ## Scope
 
@@ -99,7 +99,6 @@ driver/encoder and RGB lighting-engine sources are deleted from this branch.
 | Exact R01 flash and logged boot initialization with 12 V off | PASS | 2026-10-23 esptool writes hash-verified; reset boot reports `R01-dev`, GPIO8/3 kHz/13-bit, 5–80% limits and normal UART reconciliation |
 | GPIO8 logic levels, carrier and dynamic duty behavior | PASS | 0–3.3 V clean/stable waveform; 3.012 kHz / 332 µs; expected capped ambient movement and PLAY/STOP pulses |
 | Active minimum, midpoint modulation and reset-low captures | PASS | Minimum active output remains just above the 5% floor; midpoint setting varies approximately ±7.5 duty points; GPIO8 is 0 V on reset |
-| Explicit settled-off capture | PENDING | Select exact 0%, allow the transition to settle and confirm constant 0 V/no PWM |
 | Powered 12 V COB behavior and effects | PENDING | Apply 12 V only after the unpowered measurement gate passes; observe flash, levels, fades, flicker, heat and noise |
 | Unchanged GUI, persistence, audio/UART and Audio-disconnected behavior | PENDING | Repeat integrated product regression on R01 target |
 | Final PD-trigger/DC-DC topology with USB disconnected | PENDING | Run last, after development topology passes |
@@ -159,15 +158,15 @@ The maximum trace is consistent with the low-frequency ambient fluctuation and
 the configured hard 80% output cap. The corrected minimum trace confirms that
 the active output remains above the configured 5% duty floor, and the midpoint
 excursion confirms retained whole-strip ambient modulation. GPIO8 at 0 V on
-reset confirms the unpowered reset-low condition. Exact logical 0% still needs a
-settled capture confirming constant 0 V/no PWM. No powered-strip observation was
-provided with this evidence, so no-flash behavior through powered reset/boot
-remains open.
+reset confirms the unpowered reset-low condition. ADR-0010 confirms that the
+normal GUI intentionally has no off selection, so a GUI-selected settled 0%
+capture is not applicable. Internal 0% mapping remains covered by host tests.
+No powered-strip observation was provided with this evidence, so no-flash
+behavior through powered reset/boot remains open.
 
 ## Disposition
 
 M10 software, build, exact-image flash/boot initialization, PWM carrier/logic
-levels and dynamic duty-response checks pass. M10-HWT-001 remains partial until
-the explicit settled-off capture passes; M10-IT-001 and M10-PWR-001 remain open.
-Do not create an R01 release tag until all target gates pass and this report is
-extended with the remaining capture and powered observations.
+levels and dynamic duty-response checks pass, closing M10-HWT-001. M10-IT-001
+and M10-PWR-001 remain open. Do not create an R01 release tag until both powered
+target gates pass and this report is extended with the powered observations.

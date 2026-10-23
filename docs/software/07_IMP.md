@@ -373,14 +373,17 @@ Deliverables:
 hardware while preserving the GUI, persistence, audio behavior and controller
 ownership boundaries.
 
-**Status (2026-10-19): SOFTWARE COMPLETE; TARGET VERIFICATION PENDING.** Branch
+**Status (2026-10-24): SOFTWARE COMPLETE; UNPOWERED TARGET GATE PASS; POWERED
+TARGET VERIFICATION PENDING.** Branch
 `feat/r01-cob-pwm-lighting` was created from clean tag `software-r00`. The
 Control firmware now uses an active-high GPIO8 LEDC driver at 3 kHz/13-bit on
 timer 1/channel 1, retains the `light_service` API and whole-strip effects, maps
-logical 0% to off and 1–100% to configurable 5–80% steady-state duty, and
-fails off for invalid limits or output errors. RGB buffers, per-pixel rendering,
-RMT sources/configuration and RGB-only settings are removed from the active
-Control implementation. The GUI, Audio firmware and UART protocol are unchanged.
+internal logical 0% to off and nonzero values to configurable 5–80% steady-state
+duty, and fails off for invalid limits or output errors. ADR-0010 retains the
+existing nonzero GUI minimum; no user-accessible off state is added. RGB
+buffers, per-pixel rendering, RMT sources/configuration and RGB-only settings
+are removed from the active Control implementation. The GUI, Audio firmware and
+UART protocol are unchanged.
 
 Strict mapping/policy tests, retained host regressions and a clean ESP-IDF v6.0
 R01 Control build pass. The image embeds `R01-dev`; exact software evidence is
@@ -399,7 +402,7 @@ Exit criteria:
 
 - GPIO8 initializes low and measures approximately 3 kHz at expected duties;
 - reset/boot produces no unintended COB flash;
-- off, minimum, midpoint, maximum, fades, ambient movement and PLAY/STOP pulses
+- reset-low, GUI minimum, midpoint, maximum, fades, ambient movement and PLAY/STOP pulses
   pass without visible flicker, excessive MOSFET heating or objectionable noise;
 - unchanged GUI, persistence, UART/audio and Audio-unavailable behavior pass;
 - final USB-disconnected PD/DC-DC power-cycle smoke passes;

@@ -6,7 +6,7 @@
 
 **Supersedes:** RGB-specific portions of ADR-0002 and ADR-0003
 
-**Superseded by:** None
+**Superseded by:** ADR-0010 (normal-GUI off-selection clause only)
 
 ## Context
 

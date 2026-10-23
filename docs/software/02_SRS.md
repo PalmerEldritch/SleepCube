@@ -43,7 +43,7 @@
 | SRS-LGT-004 | PR-SYS-004 | Audio start, stop, timeout or audio-link failure shall not disable the ambient-light engine. |
 | SRS-LGT-005 | PR-SYS-001 | The Control Controller may provide transient visual response to audio state changes, but such response shall not require real-time audio sample transport from the Audio Controller. |
 | SRS-LGT-011 | PR-LGT-001 | The R01 Control firmware shall drive the active-high COB MOSFET gate on Waveshare GPIO8 with 3 kHz, 13-bit hardware PWM using LEDC timer 1/channel 1, distinct from display-backlight timer 0/channel 0. |
-| SRS-LGT-012 | PR-LGT-001, PR-UI-002 | A 0% user setting shall command 0% PWM duty and suppress lighting effects; settings from 1% through 100% shall map linearly onto configurable steady-state duty limits, configured as 5% through 80% for R01. |
+| SRS-LGT-012 | PR-LGT-001, PR-UI-002 | The normal GUI shall retain a nonzero minimum lighting selection whose active output is bounded by the configured 5% duty floor. Internal 0% commands shall produce 0% PWM duty and suppress lighting effects; nonzero logical values shall map onto configurable steady-state duty limits, configured as 5% through 80% for R01. |
 | SRS-LGT-013 | PR-LGT-001 | Startup and transition-to-off fades may pass below the configured active-duty floor; all output including ambient and audio-state effects shall remain at or below the configured duty cap. |
 | SRS-LGT-014 | PR-SYS-003, PR-FLT-001 | Lighting initialization, invalid duty-limit configuration or PWM update failure shall leave or return the COB MOSFET command output to the off state. |
 

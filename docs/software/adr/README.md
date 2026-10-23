@@ -51,7 +51,8 @@ Routine implementation details that are already constrained by SRS/SAS/ICD and d
 | ADR-0006 | Accepted | Audio Controller owns authoritative persisted volume |
 | ADR-0007 | Accepted | Bounded COBS/CRC UART framing and sequence correlation |
 | ADR-0008 | Accepted | Semantic boot sessions, idempotent commands and bounded retry recovery |
-| ADR-0009 | Accepted | R01 fixed-color COB PWM lighting and power arrangements |
+| ADR-0009 | Accepted; GUI-off clause superseded by ADR-0010 | R01 fixed-color COB PWM lighting and power arrangements |
+| ADR-0010 | Accepted | Retain a nonzero minimum brightness in the normal GUI |
 
 ## Legacy decision history
 

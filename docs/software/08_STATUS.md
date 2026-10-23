@@ -8,7 +8,8 @@
 
 ## 1. Current milestone
 
-**M10 R01 COB PWM migration: software/build pass; target verification pending**
+**M10 R01 COB PWM migration: software/build and unpowered target gate pass;
+powered target verification pending**
 
 Status: **Branch `feat/r01-cob-pwm-lighting` was created from clean annotated
 tag `software-r00`. The COB-only Control implementation and active R01 documents
@@ -18,23 +19,26 @@ image has now flashed to the USB-powered Waveshare with write-hash verification,
 and reset boot/init plus UART reconciliation pass with 12 V disconnected. GPIO8
 scope measurements confirm stable 0–3.3 V PWM at 3.012 kHz plus responsive
 ambient and PLAY/STOP duty effects, the 5% active floor and 0 V at reset.
-Explicit settled-off and all powered-strip/final-power tests remain pending, so
-M10 and R01 release are not complete. No R01 release tag exists or should be
-created yet.**
+ADR-0010 retains the nonzero GUI minimum, so a GUI-selected settled-off capture
+is not applicable. All powered-strip/final-power tests remain pending, so M10
+and R01 release are not complete. No R01 release tag exists or should be created
+yet.**
 
 The Control backend now drives an active-high logic-level MOSFET on GPIO8 using
 LEDC timer 1/channel 1 at 3 kHz and 13-bit resolution, distinct from display
-timer 0/channel 0. Logical brightness 0% is off and suppresses effects; 1–100%
-maps linearly to configurable 5–80% steady-state duty. Startup/shutdown fades
-may pass below 5%; ambient and PLAY/STOP effects remain capped at 80%. Invalid
-floor/cap configuration and PWM update failure are fail-off paths. RGB buffers,
-color/warmth/dithering, LED count/order, spatial animation and project RMT
-sources/dependencies are absent from the active Control implementation.
+timer 0/channel 0. Internal logical brightness 0% is off and suppresses effects;
+nonzero values map to configurable 5–80% steady-state duty. The normal GUI
+retains its nonzero minimum and does not expose off. Startup/internal shutdown
+fades may pass below 5%; ambient and PLAY/STOP effects remain capped at 80%.
+Invalid floor/cap configuration and PWM update failure are fail-off paths. RGB
+buffers, color/warmth/dithering, LED count/order, spatial animation and project
+RMT sources/dependencies are absent from the active Control implementation.
 
 The GUI, persistence API, Audio firmware, semantic UART protocol and controller
 ownership are unchanged. ADR-0009 records the COB PWM architecture and the
-separate development/final power arrangements. Historical R00 target evidence
-remains valid only for R00 and is preserved below and in the existing reports.
+separate development/final power arrangements; ADR-0010 records the retained
+nonzero GUI minimum. Historical R00 target evidence remains valid only for R00
+and is preserved below and in the existing reports.
 
 M0 remains complete on the underlying software R00 baseline. M1 now has a
 button-triggered, finite generated-tone diagnostic and a reproducible ESP32-S3
@@ -299,11 +303,12 @@ Verified at the GPIO8 gate with a 20 MHz/20 MSa/s PC oscilloscope on 2026-10-24:
 - brightness adjustment changed duty responsively, and PLAY/STOP touch actions
   produced the expected smooth positive/negative duty pulse.
 
-Not yet verified for R01: explicit settled 0% duty, no-flash behavior with 12 V,
-powered visual effects, MOSFET temperature, flicker/noise, complete unchanged
-integrated GUI/settings/audio behavior, Audio-disconnected operation, and final
-PD/DC-DC power-cycle behavior. The reset-low observation was made without the
-12 V strip supply; powered boot behavior remains part of M10-IT-001.
+Not yet verified for R01: no-flash behavior with 12 V, powered visual effects,
+MOSFET temperature, flicker/noise, complete unchanged integrated
+GUI/settings/audio behavior, Audio-disconnected operation, and final PD/DC-DC
+power-cycle behavior. The reset-low observation was made without the 12 V strip
+supply; powered boot behavior remains part of M10-IT-001. ADR-0010 confirms that
+a settled 0% target selection through the normal GUI is not applicable.
 
 Historical R00/prototype evidence follows and does not substitute for R01 COB
 target verification.
@@ -702,22 +707,22 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Execute the unpowered-strip R01 GPIO8 measurement gate.**
+**Execute the powered development-topology R01 COB checks.**
 
 The exact next task is:
 
 1. Keep both controllers powered only from their computer USB connections and
-   keep the external 12 V supply off.
-2. Verify the external GPIO8 gate pull-down and the explicit external 12 V
-   negative/MOSFET-source-to-Waveshare-ground connection; leave external DC-DC
-   5 V disconnected.
-3. Complete the remaining unpowered scope capture at settled 0%/off. The active
-   minimum floor, midpoint modulation and reset-low state are now observed.
-4. Apply 12 V only after steps 1–3 pass, then continue M10-IT-001.
+   leave the external DC-DC 5 V output disconnected.
+2. Reconfirm the external GPIO8 gate pull-down and the explicit external 12 V
+   negative/MOSFET-source-to-Waveshare-ground connection.
+3. Apply the external 12 V strip supply and observe reset/boot for unintended
+   flash, then check GUI minimum, midpoint, maximum and dynamic effects.
+4. Record visible flicker, MOSFET temperature, PWM-related noise and unchanged
+   GUI/audio behavior for M10-IT-001.
 
 ## 7. Session closeout record
 
-### 2026-10-24 — GPIO8 PWM scope behavior partially verified
+### 2026-10-24 — GPIO8 PWM scope gate passed; GUI minimum clarified
 
 - User measured GPIO8 with a 20 MHz analog-bandwidth / 20 MSa/s PC oscilloscope.
   The waveform was clean and stable with sharp 0 V/3.3 V transitions.
@@ -730,12 +735,13 @@ The exact next task is:
   points. Adjustment response and the smooth PLAY/STOP kick were observed.
 - GPIO8 was observed at 0 V on reset.
 - These results verify carrier/logic levels and demonstrate ambient/audio duty
-  effects, the active 5% floor, midpoint modulation and reset-low behavior. They
-  do not yet verify exact settled 0% off or powered reset/boot behavior. No
-  powered 12 V COB observation was reported.
-- Exact next task is the remaining unpowered settled-off scope capture in
-  section 6, then the powered development-topology checks only if reset/boot
-  remains safely low.
+  effects, the active 5% floor, midpoint modulation and reset-low behavior.
+- The user confirmed the latest intended GUI decision: normal brightness
+  adjustment retains the 5% active minimum and does not expose an off setting.
+  ADR-0010 records the distinction between GUI minimum and internal/reset/fail-
+  safe 0% duty. A GUI-selected settled-off capture is therefore not applicable.
+- M10-HWT-001 passes. No powered 12 V COB observation was reported; the exact
+  next task is the powered development-topology check in section 6.
 
 ### 2026-10-23 — Exact R01 Control flash and boot initialization pass
 

@@ -58,10 +58,11 @@ idf.py -B /tmp/sleepcube-control-r01-build \
 
 The profile selects GPIO8, 3 kHz, a 5% active-duty floor, an 80% cap, the
 normal finite 3,600-second Audio request, and application version `R01-dev`.
-Brightness 0% is fully off; 1–100% maps linearly to 5–80% steady-state duty.
-Startup and transition-to-off fades may pass below 5%, and all effects are
-capped at 80%. Invalid floor/cap configuration forces the output off and rejects
-lighting-service startup.
+The retained normal GUI has a nonzero minimum and does not expose lighting off.
+Internal brightness 0% is fully off; nonzero values map to 5–80% steady-state
+duty. Startup and internal transition-to-off fades may pass below 5%, and all
+effects are capped at 80%. Invalid floor/cap configuration forces the output
+off and rejects lighting-service startup.
 
 For timing capture, append `sdkconfig.m7.trace` to the R01 defaults list. The
 trace overlay changes diagnostics only; it does not restore the old RGB backend.

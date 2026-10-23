@@ -40,7 +40,7 @@
 | SRS-LGT-004 | FI | Audio stop/timeout/reset does not disable lighting engine |
 | SRS-LGT-005 | INS, HWT | Transient visual response is driven by semantic state events; protocol carries no audio samples |
 | SRS-LGT-011 | INS, HWT | Build/resource inspection confirms GPIO8, 3 kHz, 13-bit LEDC timer 1/channel 1 and display timer 0/channel 0; scope confirms carrier |
-| SRS-LGT-012 | UT, HWT | Host boundary mapping passes; target measures off, 1%, midpoint and 100% at expected 0%, 5%, intermediate and 80% duties |
+| SRS-LGT-012 | UT, HWT | Host boundary mapping verifies internal off and nonzero limits; target measures reset-low plus GUI minimum, midpoint and maximum at the expected active floor, intermediate range and 80% cap |
 | SRS-LGT-013 | UT, HWT, MAN | Host saturation/sub-floor cases pass; scope and visual checks confirm fades below floor and effects never exceed cap |
 | SRS-LGT-014 | UT, INS, HWT | Invalid floor/cap maps off and service rejects it after forcing off; reset/boot and update-fault checks leave GPIO8 low |
 | SRS-AUD-001 | INS | No control-side remote filesystem/decoder/I2S API exposed through audio service |
@@ -100,7 +100,7 @@
 | UX-AUD-003 | FI, MAN | Link loss selects neutral/degraded presentation without false playback feedback |
 | UX-AUD-004 | HWT, MAN | M6 timeout returns to STOPPED with only a transient lighting response and unchanged selected brightness |
 | UX-LGT-001 | HWT, MAN | Ambient display and strip modulation is smooth and suitable in dark-room observation |
-| UX-LGT-002 | HWT, MAN | Display and COB strip track brightness changes together while preserving the unchanged 0–100% GUI control |
+| UX-LGT-002 | HWT, MAN | Display and COB strip track brightness changes together while preserving the unchanged GUI layout/gestures and nonzero minimum behavior |
 | UX-LGT-003 | MAN | Rest and adjustment operation leave no persistent bright status indicator |
 | UX-LGT-004 | HWT, MAN | PLAY/STOP duty responses decay automatically and never exceed the configured COB duty cap |
 | UX-STA-001 | HWT, MAN | Product startup shows the ambient view and remains silent/STOPPED |
@@ -170,7 +170,7 @@ retain their original scope; they do not verify the replacement R01 COB output.
 | M10-UT-001 | R01 COB mapping and safety policy host tests | PASS — strict C11/UBSan tests cover 0%, 1%, midpoint, 100%, sub-floor fade, upper/lower saturation, non-finite input and invalid floor/cap fail-off | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
 | M10-REG-001 | Retained settings, protocol and timing-analyzer host regressions | PASS — strict settings/frame/semantic suites and all timing-analyzer unit tests pass unchanged | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
 | M10-BLD-001 | Clean ESP-IDF v6.0 R01 Control build and configuration/source inspection | PASS — ESP32-C6/8 MB image builds at 586,640 bytes, embeds `R01-dev`, selects GPIO8/3 kHz/5–80%, uses distinct LEDC resources and contains no Control RGB/RMT implementation or dependency | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
-| M10-HWT-001 | USB-powered Waveshare GPIO8 reset level, carrier frequency and duty measurements before 12 V | PARTIAL — exact R01 image flashed/booted; scope shows clean stable 0–3.3 V PWM at 3.012 kHz (332 µs), GPIO8 at 0 V on reset, 73.5–80% at maximum, a minimum just above the 5% floor, approximately ±7.5 duty points at the midpoint setting, responsive adjustment and PLAY/STOP pulses. Explicit settled 0% remains open | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
+| M10-HWT-001 | USB-powered Waveshare GPIO8 reset level, carrier frequency and duty measurements before 12 V | PASS — exact R01 image flashed/booted; scope shows clean stable 0–3.3 V PWM at 3.012 kHz (332 µs), GPIO8 at 0 V on reset, 73.5–80% at maximum, a minimum just above the 5% floor, approximately ±7.5 duty points at the midpoint setting, responsive adjustment and PLAY/STOP pulses. ADR-0010 confirms that normal GUI operation has no 0% selection | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
 | M10-IT-001 | 12 V COB behavior, effects, GUI/audio regression and Audio-disconnected operation | PENDING — no powered-strip observation has been performed | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
 | M10-PWR-001 | Final PD-trigger/DC-DC integrated power-cycle smoke with USB disconnected | PENDING — run only after development topology passes | `verification/2026-10-19_M10_cob_pwm_implementation.md` |
 
