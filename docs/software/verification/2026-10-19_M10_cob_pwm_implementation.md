@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19
 
-**Status:** SOFTWARE/BUILD PASS; TARGET VERIFICATION PENDING
+**Status:** SOFTWARE/BUILD/FLASH PASS; ELECTRICAL AND POWERED-STRIP VERIFICATION PENDING
 
 ## Scope
 
@@ -96,7 +96,8 @@ driver/encoder and RGB lighting-engine sources are deleted from this branch.
 
 | Evidence | State | Required next action |
 | --- | --- | --- |
-| USB-powered GPIO8 reset/boot low and approximately 3 kHz duty measurements with 12 V off | PENDING | Verify external gate pull-down and explicit source-reference ground, flash exact artifact, scope off/1%/midpoint/100% |
+| Exact R01 flash and logged boot initialization with 12 V off | PASS | 2026-10-23 esptool writes hash-verified; reset boot reports `R01-dev`, GPIO8/3 kHz/13-bit, 5–80% limits and normal UART reconciliation |
+| USB-powered GPIO8 reset/boot low and approximately 3 kHz duty measurements with 12 V off | PENDING | Verify external gate pull-down and explicit source-reference ground; scope off/1%/midpoint/100% |
 | Powered 12 V COB behavior and effects | PENDING | Apply 12 V only after the unpowered measurement gate passes; observe flash, levels, fades, flicker, heat and noise |
 | Unchanged GUI, persistence, audio/UART and Audio-disconnected behavior | PENDING | Repeat integrated product regression on R01 target |
 | Final PD-trigger/DC-DC topology with USB disconnected | PENDING | Run last, after development topology passes |
@@ -106,9 +107,35 @@ both controllers. The external 12 V negative/MOSFET source reference must be
 connected explicitly to Waveshare ground before 12 V is applied; computer USB
 grounds alone are not accepted as that reference.
 
+## 2026-10-23 target flash record
+
+Both controllers were connected to the laptop by USB and the user confirmed
+that 12 V was disconnected. Stable USB identities resolved as:
+
+- Waveshare Control: `AC:EB:E6:1E:67:C4` on `/dev/ttyACM0`;
+- Atom Audio: `44:1B:F6:F4:FE:C8` on `/dev/ttyACM1`.
+
+The staged application SHA-256 was rechecked as
+`db5783c01517e3fffe2718f65ca9f39fb0498a5c13b57f985a302ebb2f570345`
+before flashing. Esptool identified ESP32-C6FH8 revision v0.2 with embedded
+8 MB flash. Bootloader, partition table and the 586,640-byte application all
+passed written-data hash verification, followed by a hard reset.
+
+A deliberate monitor reset captured a complete boot. The application reported
+version `R01-dev`; the hardware profile reported COB PWM enabled on GPIO8 at
+3,000 Hz with 5–80% duty limits; the driver reported 13-bit active-high PWM;
+and the 50 Hz light task started with persisted brightness 57%. LCD/LVGL startup
+completed. UART on Control GPIO16 TX/GPIO17 RX synchronized with the Atom and
+reported authoritative `STOPPED`, persisted volume 59%, `remaining=0` and
+`fault=0`.
+
+This is firmware initialization evidence only. No instrument measurement proves
+GPIO8 reset-low voltage, actual carrier frequency or physical duty yet, and no
+12 V was applied.
+
 ## Disposition
 
-M10 software and build preparation pass. M10-HWT-001, M10-IT-001 and
-M10-PWR-001 remain open. Do not create an R01 release tag until all three target
-gates pass and this report is extended with measured frequency/duty values,
-exact flash verification and observations.
+M10 software, build and exact-image flash/boot initialization pass. M10-HWT-001
+is partial; M10-IT-001 and M10-PWR-001 remain open. Do not create an R01 release
+tag until all three target gates pass and this report is extended with measured
+frequency/duty values and powered observations.

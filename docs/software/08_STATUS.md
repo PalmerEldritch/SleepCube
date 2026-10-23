@@ -2,7 +2,7 @@
 
 **Baseline:** R01 development from released `software-r00`
 
-**Last updated:** 2026-10-19
+**Last updated:** 2026-10-23
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
@@ -13,9 +13,12 @@
 Status: **Branch `feat/r01-cob-pwm-lighting` was created from clean annotated
 tag `software-r00`. The COB-only Control implementation and active R01 documents
 are complete. New mapping tests and retained settings/protocol/timing tests pass.
-A clean ESP-IDF v6.0 ESP32-C6/8 MB build passes and embeds `R01-dev`. No R01
-firmware has yet been flashed or measured on target, so M10 and R01 release are
-not complete. No R01 release tag exists or should be created yet.**
+A clean ESP-IDF v6.0 ESP32-C6/8 MB build passes and embeds `R01-dev`. The exact
+image has now flashed to the USB-powered Waveshare with write-hash verification,
+and reset boot/init plus UART reconciliation pass with 12 V disconnected. GPIO8
+electrical measurements and powered-strip/final-power tests remain pending, so
+M10 and R01 release are not complete. No R01 release tag exists or should be
+created yet.**
 
 The Control backend now drives an active-high logic-level MOSFET on GPIO8 using
 LEDC timer 1/channel 1 at 3 kHz and 13-bit resolution, distinct from display
@@ -267,8 +270,19 @@ Verified for M10 R01 software:
 - source/configuration inspection confirms COB LEDC timer 1/channel 1 is
   distinct from display timer 0/channel 0 and Control RGB/RMT code is removed.
 
-Not yet verified for R01: target flash identity, GPIO8 reset/boot low state,
-actual frequency/duties, no-flash behavior with 12 V, visual effects, MOSFET
+Verified on the USB-powered Waveshare on 2026-10-23 with 12 V disconnected:
+
+- stable identity `AC:EB:E6:1E:67:C4` resolved to `/dev/ttyACM0`;
+- exact 586,640-byte R01 application plus bootloader/partition table flashed and
+  every write passed esptool hash verification;
+- reset boot reported `R01-dev`, ESP32-C6 revision v0.2 and 8 MB flash;
+- logs reported COB PWM initialization on GPIO8 at configured 3 kHz/13-bit,
+  5–80% limits and 50 Hz light-task update;
+- display initialization completed and UART synchronized with the Atom on
+  `/dev/ttyACM1`, reporting authoritative `STOPPED`, volume 59%, no fault.
+
+Not yet verified for R01: GPIO8 electrical reset/boot low state, measured
+frequency/duties, no-flash behavior with 12 V, visual effects, MOSFET
 temperature, flicker/noise, unchanged integrated GUI/settings/audio behavior,
 Audio-disconnected operation, and final PD/DC-DC power-cycle behavior.
 
@@ -678,12 +692,28 @@ The exact next task is:
 2. Verify the external GPIO8 gate pull-down and the explicit external 12 V
    negative/MOSFET-source-to-Waveshare-ground connection; leave external DC-DC
    5 V disconnected.
-3. Flash the exact R01 build and record its hash verification and boot identity.
-4. Scope GPIO8 through reset/boot and at off, 1%, midpoint and 100% settings;
+3. Scope GPIO8 through reset/boot and at off, 1%, midpoint and 100% settings;
    record low state, frequency and duty values.
-5. Apply 12 V only after steps 1–4 pass, then continue M10-IT-001.
+4. Apply 12 V only after steps 1–3 pass, then continue M10-IT-001.
 
 ## 7. Session closeout record
+
+### 2026-10-23 — Exact R01 Control flash and boot initialization pass
+
+- Confirmed both modules USB-connected with 12 V disconnected. Stable identities
+  are Waveshare `/dev/ttyACM0` (`AC:EB:E6:1E:67:C4`) and Atom `/dev/ttyACM1`
+  (`44:1B:F6:F4:FE:C8`).
+- Reverified staged application SHA-256
+  `db5783c01517e3fffe2718f65ca9f39fb0498a5c13b57f985a302ebb2f570345`,
+  then flashed it to the Waveshare. Bootloader, partition table and application
+  writes all passed hash verification.
+- Captured a deliberate reset boot. The target reports `R01-dev`, GPIO8 COB PWM
+  configured for 3 kHz/13-bit and 5–80% duty limits, successful display startup,
+  and successful UART synchronization to Atom `STOPPED`/59%/no fault.
+- No scope/logic-analyzer measurement or 12 V test was performed. M10-HWT-001 is
+  now PARTIAL; M10-IT-001 and M10-PWR-001 remain pending.
+- Exact next task remains verifying GPIO8 reset-low behavior and measuring off,
+  1%, midpoint and 100% frequency/duty values before applying 12 V.
 
 ### 2026-10-19 — M10 COB PWM software implementation
 
