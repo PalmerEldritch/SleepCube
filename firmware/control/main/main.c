@@ -9,6 +9,9 @@
 #include "app_core.h"
 #include "settings_store.h"
 #include "sc_audio_link.h"
+#if CONFIG_SC_ENABLE_LIGHT_DEBUG_CONSOLE
+#include "light_debug_console.h"
+#endif
 
 static const char *TAG = "main";
 
@@ -87,5 +90,8 @@ void app_main(void)
                     NULL, 3, NULL) != pdPASS) {
         ESP_LOGE(TAG, "semantic diagnostic console task unavailable");
     }
+#endif
+#if CONFIG_SC_ENABLE_LIGHT_DEBUG_CONSOLE
+    ESP_ERROR_CHECK(sc_light_debug_console_start());
 #endif
 }

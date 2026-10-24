@@ -26,6 +26,13 @@ if(CONFIG_SC_ENABLE_LIGHT)
     )
 endif()
 
+if(CONFIG_SC_ENABLE_LIGHT_DEBUG_CONSOLE)
+    list(APPEND SC_SRCS
+        "debug/light_debug_command.c"
+        "debug/light_debug_console.c"
+    )
+endif()
+
 if(CONFIG_SC_ENABLE_UI AND CONFIG_SC_UI_BACKEND_LCD_TOUCH)
     list(APPEND SC_SRCS
         "drivers/lcd_panel_if.c"
@@ -51,7 +58,7 @@ endif()
 
 idf_component_register(
     SRCS ${SC_SRCS}
-    INCLUDE_DIRS "." "app_core" "services" "hal" "drivers" "lighting" "trace"
+    INCLUDE_DIRS "." "app_core" "services" "hal" "drivers" "lighting" "trace" "debug"
     PRIV_INCLUDE_DIRS ${SC_PRIV_INCLUDE_DIRS}
     REQUIRES ${SC_REQUIRES}
     PRIV_REQUIRES ${SC_PRIV_REQUIRES}

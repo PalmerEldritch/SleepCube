@@ -5,6 +5,9 @@
 
 #define SC_LIGHT_PWM_DUTY_BPS_MAX (10000U)
 
+/** Select the highest R01 runtime resolution supported across the debug range. */
+uint8_t sc_light_pwm_resolution_bits_for_frequency(uint32_t frequency_hz);
+
 bool sc_light_pwm_limits_valid(uint8_t minimum_duty_pct, uint8_t maximum_duty_pct);
 
 /**

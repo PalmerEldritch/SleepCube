@@ -23,6 +23,7 @@ Control Controller (Waveshare ESP32-C6)
 ├── light_service
 ├── global-brightness/effect policy
 ├── COB LEDC PWM driver
+├── development PWM console (R01-dev only)
 ├── settings store
 ├── audio_service (control-side facade)
 └── audio_link / UART transport
@@ -64,6 +65,14 @@ It shall not own:
 - audio buffering;
 - I2S timing;
 - amplifier-facing output generation.
+
+The R01 development image additionally owns a USB-console test seam for COB
+hardware evaluation. The console submits requested frequency and manual duty to
+`light_service`; the lighting task remains the only runtime owner that applies
+LEDC changes. Manual duty temporarily replaces the normal presentation output
+without changing persisted brightness. The seam is volatile, mutually exclusive
+with the older semantic-audio stdin console, and shall be compiled out of a
+release image.
 
 ### 3.2 Audio Controller
 

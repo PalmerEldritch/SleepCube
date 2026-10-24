@@ -86,6 +86,13 @@ static float s_fluct_phase_a = 0.0f;
 static float s_fluct_phase_b = 2.1f;
 static float s_fluct_speed_a = 0.21f;
 static float s_fluct_speed_b = 0.11f;
+static portMUX_TYPE s_debug_pwm_lock = portMUX_INITIALIZER_UNLOCKED;
+static bool s_debug_manual_duty_enabled;
+static uint16_t s_debug_manual_duty_bps;
+static uint32_t s_debug_requested_frequency_hz = CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ;
+static uint32_t s_debug_applied_request_hz = CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ;
+static uint32_t s_debug_actual_frequency_hz;
+static uint8_t s_debug_resolution_bits;
 
 #define SC_LIGHT_BRIGHTNESS_STEP_PCT (5)
 #define SC_LIGHT_BRIGHTNESS_MIN_PCT  (0)
@@ -235,6 +242,39 @@ static void sc_light_service_task(void *arg)
         if (trace_this_cycle) {
             SC_TRACE_MARK("light", "work_start", (int32_t)s_brightness_current_pct);
         }
+        uint32_t requested_frequency_hz;
+        bool manual_duty_enabled;
+        uint16_t manual_duty_bps;
+        portENTER_CRITICAL(&s_debug_pwm_lock);
+        requested_frequency_hz = s_debug_requested_frequency_hz;
+        manual_duty_enabled = s_debug_manual_duty_enabled;
+        manual_duty_bps = s_debug_manual_duty_bps;
+        portEXIT_CRITICAL(&s_debug_pwm_lock);
+
+        if (requested_frequency_hz != s_debug_applied_request_hz) {
+            const esp_err_t frequency_err =
+                sc_cob_pwm_if_set_frequency_hz(requested_frequency_hz);
+            const uint32_t actual_frequency_hz =
+                (frequency_err == ESP_OK) ? sc_cob_pwm_if_get_frequency_hz() : 0U;
+            const uint8_t resolution_bits =
+                (frequency_err == ESP_OK) ? sc_cob_pwm_if_get_resolution_bits() : 0U;
+            portENTER_CRITICAL(&s_debug_pwm_lock);
+            if (frequency_err == ESP_OK) {
+                s_debug_applied_request_hz = requested_frequency_hz;
+                s_debug_actual_frequency_hz = actual_frequency_hz;
+                s_debug_resolution_bits = resolution_bits;
+            } else if (s_debug_requested_frequency_hz == requested_frequency_hz) {
+                /* Do not discard a newer console request queued while the
+                 * failed hardware reconfiguration was in progress. */
+                s_debug_requested_frequency_hz = s_debug_applied_request_hz;
+            }
+            portEXIT_CRITICAL(&s_debug_pwm_lock);
+            if (frequency_err != ESP_OK) {
+                ESP_LOGE(TAG, "debug PWM frequency change failed: %s",
+                         esp_err_to_name(frequency_err));
+            }
+        }
+
         int target = s_light_enabled ? s_brightness_target_pct : 0;
         if (target < 0) {
             target = 0;
@@ -247,8 +287,9 @@ static void sc_light_service_task(void *arg)
             s_brightness_current_pct += ((float)target - s_brightness_current_pct) * alpha;
         }
 
+        uint16_t output_duty_bps = 0U;
         if (s_brightness_current_pct <= 0.0f) {
-            ESP_ERROR_CHECK_WITHOUT_ABORT(sc_cob_pwm_if_force_off());
+            output_duty_bps = 0U;
         } else {
             const float startup_scale = sc_startup_envelope(dt_s);
             const bool effects_enabled = s_light_enabled && (s_brightness_target_pct > 0);
@@ -261,12 +302,15 @@ static void sc_light_service_task(void *arg)
                 effective_brightness = fmaxf(effective_brightness, 1.0f);
             }
             effective_brightness = sc_clampf(effective_brightness, 0.0f, 100.0f);
-            const uint16_t duty_bps = sc_light_pwm_map_brightness(
+            output_duty_bps = sc_light_pwm_map_brightness(
                 effective_brightness,
                 (uint8_t)CONFIG_SC_LIGHT_PWM_MIN_DUTY_PCT,
                 (uint8_t)CONFIG_SC_LIGHT_PWM_MAX_DUTY_PCT);
-            ESP_ERROR_CHECK_WITHOUT_ABORT(sc_cob_pwm_if_set_duty_bps(duty_bps));
         }
+        if (manual_duty_enabled) {
+            output_duty_bps = manual_duty_bps;
+        }
+        ESP_ERROR_CHECK_WITHOUT_ABORT(sc_cob_pwm_if_set_duty_bps(output_duty_bps));
         if (trace_this_cycle) {
             SC_TRACE_MARK("light", "work_end", (int32_t)s_brightness_current_pct);
         }
@@ -320,6 +364,16 @@ esp_err_t sc_light_service_start(void)
     s_audio_sway_active = false;
     s_audio_sway_elapsed_s = 0.0f;
     s_audio_sway_peak_pct = 0.0f;
+    const uint32_t actual_frequency_hz = sc_cob_pwm_if_get_frequency_hz();
+    const uint8_t resolution_bits = sc_cob_pwm_if_get_resolution_bits();
+    portENTER_CRITICAL(&s_debug_pwm_lock);
+    s_debug_manual_duty_enabled = false;
+    s_debug_manual_duty_bps = 0U;
+    s_debug_requested_frequency_hz = CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ;
+    s_debug_applied_request_hz = CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ;
+    s_debug_actual_frequency_hz = actual_frequency_hz;
+    s_debug_resolution_bits = resolution_bits;
+    portEXIT_CRITICAL(&s_debug_pwm_lock);
 
     BaseType_t ok = xTaskCreate(sc_light_service_task, "sc_light", 3072, NULL, 4, NULL);
     if (ok != pdPASS) {
@@ -469,6 +523,56 @@ uint8_t sc_light_service_get_target_brightness_percent(void)
     return (uint8_t)sc_clampf((float)s_brightness_target_pct, 0.0f, 100.0f);
 }
 
+esp_err_t sc_light_service_debug_set_pwm_frequency_khz(uint8_t frequency_khz)
+{
+    if ((frequency_khz < SC_LIGHT_DEBUG_PWM_MIN_KHZ) ||
+        (frequency_khz > SC_LIGHT_DEBUG_PWM_MAX_KHZ)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    portENTER_CRITICAL(&s_debug_pwm_lock);
+    s_debug_requested_frequency_hz = (uint32_t)frequency_khz * 1000U;
+    portEXIT_CRITICAL(&s_debug_pwm_lock);
+    return ESP_OK;
+}
+
+esp_err_t sc_light_service_debug_set_pwm_duty_bps(uint16_t duty_bps)
+{
+    if (duty_bps > SC_LIGHT_DEBUG_DUTY_BPS_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    portENTER_CRITICAL(&s_debug_pwm_lock);
+    s_debug_manual_duty_bps = duty_bps;
+    s_debug_manual_duty_enabled = true;
+    portEXIT_CRITICAL(&s_debug_pwm_lock);
+    return ESP_OK;
+}
+
+esp_err_t sc_light_service_debug_clear_pwm_duty_override(void)
+{
+    portENTER_CRITICAL(&s_debug_pwm_lock);
+    s_debug_manual_duty_enabled = false;
+    portEXIT_CRITICAL(&s_debug_pwm_lock);
+    return ESP_OK;
+}
+
+esp_err_t sc_light_service_debug_get_status(sc_light_debug_status_t *status)
+{
+    if (status == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    portENTER_CRITICAL(&s_debug_pwm_lock);
+    status->manual_duty_enabled = s_debug_manual_duty_enabled;
+    status->manual_duty_bps = s_debug_manual_duty_bps;
+    status->requested_frequency_hz = s_debug_requested_frequency_hz;
+    status->actual_frequency_hz = s_debug_actual_frequency_hz;
+    status->resolution_bits = s_debug_resolution_bits;
+    portEXIT_CRITICAL(&s_debug_pwm_lock);
+    return ESP_OK;
+}
+
 #else
 
 esp_err_t sc_light_service_start(void)
@@ -567,6 +671,29 @@ uint8_t sc_light_service_get_current_brightness_percent(void)
 uint8_t sc_light_service_get_target_brightness_percent(void)
 {
     return 0;
+}
+
+esp_err_t sc_light_service_debug_set_pwm_frequency_khz(uint8_t frequency_khz)
+{
+    (void)frequency_khz;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_debug_set_pwm_duty_bps(uint16_t duty_bps)
+{
+    (void)duty_bps;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_debug_clear_pwm_duty_override(void)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_debug_get_status(sc_light_debug_status_t *status)
+{
+    (void)status;
+    return ESP_ERR_NOT_SUPPORTED;
 }
 
 #endif

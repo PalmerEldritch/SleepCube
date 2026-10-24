@@ -47,6 +47,11 @@
 | SRS-LGT-013 | PR-LGT-001 | Startup and transition-to-off fades may pass below the configured active-duty floor; all output including ambient and audio-state effects shall remain at or below the configured duty cap. |
 | SRS-LGT-014 | PR-SYS-003, PR-FLT-001 | Lighting initialization, invalid duty-limit configuration or PWM update failure shall leave or return the COB MOSFET command output to the off state. |
 
+The 3 kHz/13-bit requirement is the normal product default. The `R01-dev`
+verification image may temporarily select 1–25 kHz and a fixed duty through its
+development USB console; those volatile overrides are test instrumentation and
+shall not be enabled in an R01 release image.
+
 ## 5. Audio control and playback
 
 | ID | Derived From | Requirement |

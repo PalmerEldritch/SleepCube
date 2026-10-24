@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19
 
-**Status:** SOFTWARE/BUILD/FLASH/PWM PASS; POWERED-STRIP VERIFICATION PENDING
+**Status:** SOFTWARE/BUILD/FLASH/PWM PASS; POWERED PROTOTYPE PARTIAL; DEBUG-CONTROL TARGET TEST PENDING
 
 ## Scope
 
@@ -99,7 +99,8 @@ driver/encoder and RGB lighting-engine sources are deleted from this branch.
 | Exact R01 flash and logged boot initialization with 12 V off | PASS | 2026-10-23 esptool writes hash-verified; reset boot reports `R01-dev`, GPIO8/3 kHz/13-bit, 5–80% limits and normal UART reconciliation |
 | GPIO8 logic levels, carrier and dynamic duty behavior | PASS | 0–3.3 V clean/stable waveform; 3.012 kHz / 332 µs; expected capped ambient movement and PLAY/STOP pulses |
 | Active minimum, midpoint modulation and reset-low captures | PASS | Minimum active output remains just above the 5% floor; midpoint setting varies approximately ±7.5 duty points; GPIO8 is 0 V on reset |
-| Powered 12 V COB behavior and effects | PENDING | Apply 12 V only after the unpowered measurement gate passes; observe flash, levels, fades, flicker, heat and noise |
+| Powered 12 V prototype smoke | PARTIAL | User reports stable 12 V/5 V rails, functioning controllers/audio/COB output and smooth brightness; exact supply topology, USB state and reset/heat/noise/flicker observations remain to be recorded |
+| Runtime PWM debug console | PARTIAL | Parser and clean build pass; flash and scope the 1–25 kHz frequency range and fixed-duty override on target |
 | Unchanged GUI, persistence, audio/UART and Audio-disconnected behavior | PENDING | Repeat integrated product regression on R01 target |
 | Final PD-trigger/DC-DC topology with USB disconnected | PENDING | Run last, after development topology passes |
 
@@ -164,9 +165,50 @@ capture is not applicable. Internal 0% mapping remains covered by host tests.
 No powered-strip observation was provided with this evidence, so no-flash
 behavior through powered reset/boot remains open.
 
+## 2026-10-24 powered prototype and PWM debug-control update
+
+The user powered the prototype from an external 12 V source and reported stable
+12 V and converted 5 V rails. Both controllers operated, Audio played, the COB
+strip operated and brightness adjustment was smooth. This is positive powered
+integration evidence, but the report does not establish whether the final PD
+trigger was used, whether computer USB power was disconnected, or the remaining
+reset-flash, thermal, flicker and noise observations.
+
+A development-only line console was then added to the R01 Control profile:
+
+| Command | Behavior |
+| --- | --- |
+| `pwm freq <1..25>` | Requests an integer carrier frequency in kHz |
+| `pwm duty <0..100>` | Enables fixed-duty override; accepts up to two decimal places |
+| `pwm auto` | Releases duty override and resumes GUI/ambient/audio effects |
+| `pwm status` | Logs requested/actual frequency, resolution and override state |
+| `help` | Logs the command summary |
+
+Manual duty intentionally bypasses the normal 5–80% presentation limits so
+hardware variables can be isolated. It is volatile, does not alter persisted
+brightness, and clears on reset. Frequency also returns to the configured 3 kHz
+default on reset. To cover 1–25 kHz on ESP32-C6, the driver uses 13-bit duty
+through 9 kHz, 12-bit from 10–19 kHz and 11-bit from 20–25 kHz; requested duty
+is therefore quantized to the active resolution.
+
+Strict C11/warnings-as-errors/UBSan parser tests pass for command forms, both
+frequency boundaries, duty boundaries/decimals and invalid input. The retained
+COB mapping, frame, semantic-protocol and settings-policy suites also pass, as
+do all three timing-analyzer tests. A clean ESP-IDF v6.0 R01 build passes with
+`CONFIG_SC_ENABLE_LIGHT_DEBUG_CONSOLE=y`, semantic-audio console disabled,
+3 kHz product default and 5–80% normal limits. Build artifact:
+
+- `SleepCube_P0.bin`: 596,176 bytes;
+- SHA-256: `6e0f32835aebb2ff06c177d0841f4a3c88d5535c084198d61d0385dfae6519dc`.
+
+This new image has not been flashed or exercised on target. The previously
+flashed 586,640-byte image does not contain these console commands.
+
 ## Disposition
 
 M10 software, build, exact-image flash/boot initialization, PWM carrier/logic
-levels and dynamic duty-response checks pass, closing M10-HWT-001. M10-IT-001
-and M10-PWR-001 remain open. Do not create an R01 release tag until both powered
-target gates pass and this report is extended with the powered observations.
+levels and dynamic duty-response checks pass, closing M10-HWT-001. Powered
+prototype behavior is partially verified. M10-DBG-001, M10-IT-001 and
+M10-PWR-001 remain open. Do not create an R01 release tag until the debug
+controls and powered target gates pass and this report is extended with target
+observations.

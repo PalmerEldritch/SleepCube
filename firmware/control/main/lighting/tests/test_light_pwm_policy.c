@@ -13,6 +13,13 @@ static void assert_near_u16(uint16_t actual, uint16_t expected, uint16_t toleran
 
 int main(void)
 {
+    assert(sc_light_pwm_resolution_bits_for_frequency(1000U) == 13U);
+    assert(sc_light_pwm_resolution_bits_for_frequency(9000U) == 13U);
+    assert(sc_light_pwm_resolution_bits_for_frequency(10000U) == 12U);
+    assert(sc_light_pwm_resolution_bits_for_frequency(19000U) == 12U);
+    assert(sc_light_pwm_resolution_bits_for_frequency(20000U) == 11U);
+    assert(sc_light_pwm_resolution_bits_for_frequency(25000U) == 11U);
+
     assert(sc_light_pwm_limits_valid(5U, 80U));
     assert(sc_light_pwm_limits_valid(0U, 100U));
     assert(!sc_light_pwm_limits_valid(81U, 80U));

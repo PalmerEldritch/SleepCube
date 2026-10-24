@@ -2,6 +2,17 @@
 
 #include <math.h>
 
+uint8_t sc_light_pwm_resolution_bits_for_frequency(uint32_t frequency_hz)
+{
+    if (frequency_hz <= 9000U) {
+        return 13U;
+    }
+    if (frequency_hz <= 19000U) {
+        return 12U;
+    }
+    return 11U;
+}
+
 bool sc_light_pwm_limits_valid(uint8_t minimum_duty_pct, uint8_t maximum_duty_pct)
 {
     return (minimum_duty_pct <= maximum_duty_pct) && (maximum_duty_pct <= 100U);

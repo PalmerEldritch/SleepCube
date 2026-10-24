@@ -8,8 +8,8 @@
 
 ## 1. Current milestone
 
-**M10 R01 COB PWM migration: software/build and unpowered target gate pass;
-powered target verification pending**
+**M10 R01 COB PWM migration: unpowered gate pass; powered prototype partial;
+runtime PWM debug image built but not flashed**
 
 Status: **Branch `feat/r01-cob-pwm-lighting` was created from clean annotated
 tag `software-r00`. The COB-only Control implementation and active R01 documents
@@ -20,9 +20,12 @@ and reset boot/init plus UART reconciliation pass with 12 V disconnected. GPIO8
 scope measurements confirm stable 0–3.3 V PWM at 3.012 kHz plus responsive
 ambient and PLAY/STOP duty effects, the 5% active floor and 0 V at reset.
 ADR-0010 retains the nonzero GUI minimum, so a GUI-selected settled-off capture
-is not applicable. All powered-strip/final-power tests remain pending, so M10
-and R01 release are not complete. No R01 release tag exists or should be created
-yet.**
+is not applicable. The externally powered prototype now reports stable 12 V/5 V
+rails, functioning controllers/audio/COB output and smooth brightness. A newer
+development image adds runtime USB-console frequency and fixed-duty controls;
+host tests and a clean build pass, but that image is not flashed or target-
+verified. M10 and R01 release are not complete. No R01 release tag exists or
+should be created yet.**
 
 The Control backend now drives an active-high logic-level MOSFET on GPIO8 using
 LEDC timer 1/channel 1 at 3 kHz and 13-bit resolution, distinct from display
@@ -33,6 +36,13 @@ fades may pass below 5%; ambient and PLAY/STOP effects remain capped at 80%.
 Invalid floor/cap configuration and PWM update failure are fail-off paths. RGB
 buffers, color/warmth/dithering, LED count/order, spatial animation and project
 RMT sources/dependencies are absent from the active Control implementation.
+
+The R01 development profile now includes a volatile COB PWM USB console. It can
+select 1–25 kHz in integer 1 kHz steps, hold a requested 0–100% duty independent
+of GUI/effects, report actual frequency/resolution, and return to automatic
+lighting. The driver retains 13-bit resolution through 9 kHz, 12 bits through
+19 kHz and 11 bits through 25 kHz. This diagnostic deliberately bypasses normal
+product duty limits and must be disabled before a release image.
 
 The GUI, persistence API, Audio firmware, semantic UART protocol and controller
 ownership are unchanged. ADR-0009 records the COB PWM architecture and the
@@ -126,9 +136,9 @@ facade.
 
 M10 replaces the old RMT/addressable-strip layer with `cob_pwm_if` plus the
 host-testable `light_pwm_policy`. `sdkconfig.r01.defaults` selects GPIO8, 3 kHz,
-5–80% duty, normal UI/audio behavior and `R01-dev`. The addressable-strip
-encoder/driver and RGB lighting engine are removed on this branch; recover them
-from `software-r00` if R00 behavior is needed.
+5–80% duty, normal UI/audio behavior, `R01-dev` and the development PWM console.
+The addressable-strip encoder/driver and RGB lighting engine are removed on this
+branch; recover them from `software-r00` if R00 behavior is needed.
 
 For M4, `sdkconfig.m4.defaults` selects the 8 MB ESP32-C6/USB Serial-JTAG build
 with UI and lighting enabled and legacy local audio disabled. A dedicated UART
@@ -162,6 +172,12 @@ The M4 single-character semantic diagnostic console is now guarded by
 `CONFIG_SC_ENABLE_SEMANTIC_CONSOLE`. Only `sdkconfig.m4.defaults` opts in;
 product, timing and endurance profiles compile it out so host serial bytes
 cannot issue application audio commands.
+
+The separate R01 PWM development console is guarded by
+`CONFIG_SC_ENABLE_LIGHT_DEBUG_CONSOLE` and is mutually exclusive with the M4
+semantic console so only one task reads USB stdin. Commands are `pwm freq
+<1..25>`, `pwm duty <0..100>`, `pwm auto`, `pwm status` and `help`. Manual duty
+does not persist and normal GUI/effect output resumes on `pwm auto` or reset.
 
 Implemented migration seam:
 
@@ -275,6 +291,13 @@ Verified for M10 R01 software:
   SHA-256 `db5783c01517e3fffe2718f65ca9f39fb0498a5c13b57f985a302ebb2f570345`;
 - source/configuration inspection confirms COB LEDC timer 1/channel 1 is
   distinct from display timer 0/channel 0 and Control RGB/RMT code is removed.
+- strict C11/warnings-as-errors/UBSan PWM-console parser tests pass for 1–25 kHz,
+  decimal 0–100% duty, auto/status/help and rejected invalid inputs;
+- a newer clean ESP-IDF v6.0 R01 build with the PWM console enabled passes at
+  596,176 bytes, SHA-256
+  `6e0f32835aebb2ff06c177d0841f4a3c88d5535c084198d61d0385dfae6519dc`;
+  it has not been flashed and does not supersede the target evidence for the
+  previously flashed 586,640-byte image.
 
 Verified on the USB-powered Waveshare on 2026-10-23 with 12 V disconnected:
 
@@ -303,12 +326,21 @@ Verified at the GPIO8 gate with a 20 MHz/20 MSa/s PC oscilloscope on 2026-10-24:
 - brightness adjustment changed duty responsively, and PLAY/STOP touch actions
   produced the expected smooth positive/negative duty pulse.
 
-Not yet verified for R01: no-flash behavior with 12 V, powered visual effects,
-MOSFET temperature, flicker/noise, complete unchanged integrated
-GUI/settings/audio behavior, Audio-disconnected operation, and final PD/DC-DC
-power-cycle behavior. The reset-low observation was made without the 12 V strip
-supply; powered boot behavior remains part of M10-IT-001. ADR-0010 confirms that
-a settled 0% target selection through the normal GUI is not applicable.
+Powered prototype evidence reported on 2026-10-24:
+
+- external 12 V and converted 5 V rails were stable;
+- both controllers functioned, Audio worked and the COB strip illuminated;
+- brightness adjustment was smooth.
+
+The exact external source/PD-trigger and computer-USB state were not reported,
+so this does not yet close the final USB-disconnected power topology gate.
+
+Not yet verified for R01: the new debug image on target, 1–25 kHz runtime sweep,
+fixed-duty accuracy, no-flash behavior with 12 V, MOSFET temperature,
+flicker/noise, complete unchanged integrated GUI/settings/audio behavior,
+Audio-disconnected operation, and final PD/DC-DC power-cycle behavior. ADR-0010
+confirms that a settled 0% target selection through the normal GUI is not
+applicable.
 
 Historical R00/prototype evidence follows and does not substitute for R01 COB
 target verification.
@@ -707,20 +739,43 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Execute the powered development-topology R01 COB checks.**
+**Safely flash and verify the R01 PWM-debug image.**
 
 The exact next task is:
 
-1. Keep both controllers powered only from their computer USB connections and
-   leave the external DC-DC 5 V output disconnected.
-2. Reconfirm the external GPIO8 gate pull-down and the explicit external 12 V
-   negative/MOSFET-source-to-Waveshare-ground connection.
-3. Apply the external 12 V strip supply and observe reset/boot for unintended
-   flash, then check GUI minimum, midpoint, maximum and dynamic effects.
-4. Record visible flicker, MOSFET temperature, PWM-related noise and unchanged
-   GUI/audio behavior for M10-IT-001.
+1. De-energize external 12 V and disconnect the external DC-DC 5 V output from
+   both controllers before attaching computer USB, unless simultaneous power
+   paths have separately been verified.
+2. Flash the new 596,176-byte R01 Control image and confirm its boot/configuration
+   log plus `help` and `pwm status` responses with the strip supply off.
+3. Scope representative `pwm freq` values across 1–25 kHz at a fixed `pwm duty`
+   value, including the 9/10 kHz and 19/20 kHz resolution boundaries.
+4. Re-establish the documented development power/ground arrangement, apply 12 V
+   to the strip, and evaluate flicker, MOSFET temperature and audible noise.
+5. Finish with `pwm freq 3` and `pwm auto`; reset also restores these defaults.
 
 ## 7. Session closeout record
+
+### 2026-10-24 — Powered prototype partial pass; PWM debug console implemented
+
+- User reports stable external 12 V and converted 5 V rails, functioning Control
+  and Audio controllers, working Audio/COB output and smooth brightness control.
+  Exact PD-trigger/USB state plus reset, thermal, flicker and noise observations
+  remain unverified.
+- Added an R01 development-only USB console with `pwm freq <1..25>`, `pwm duty
+  <0..100>`, `pwm auto`, `pwm status` and `help` commands. Frequency is selected
+  in 1 kHz steps. Duty accepts hundredths of a percent and is quantized by LEDC.
+- Manual duty bypasses GUI, ambient, PLAY/STOP and normal 5–80% limits without
+  changing persisted brightness. Releasing the override resumes current normal
+  state. Frequency/duty overrides are volatile and reset to 3 kHz/automatic.
+- Runtime frequency changes are owned by the lighting task. LEDC resolution is
+  13 bits at 1–9 kHz, 12 bits at 10–19 kHz and 11 bits at 20–25 kHz.
+- Strict parser, retained COB-policy/frame/semantic/settings host tests and all
+  three timing-analyzer tests pass. A clean ESP-IDF v6.0 build passes at 596,176
+  bytes with SHA-256
+  `6e0f32835aebb2ff06c177d0841f4a3c88d5535c084198d61d0385dfae6519dc`.
+- The new image is not flashed or runtime-tested. The exact next task is the
+  safe flash and frequency/duty scope sweep in section 6.
 
 ### 2026-10-24 — GPIO8 PWM scope gate passed; GUI minimum clarified
 

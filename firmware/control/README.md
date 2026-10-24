@@ -67,6 +67,35 @@ off and rejects lighting-service startup.
 For timing capture, append `sdkconfig.m7.trace` to the R01 defaults list. The
 trace overlay changes diagnostics only; it does not restore the old RGB backend.
 
+## R01 COB PWM development console
+
+The `R01-dev` profile enables a USB Serial/JTAG console for controlled lighting
+experiments. Enter complete lines in `idf.py monitor`:
+
+```text
+pwm freq 1       # select 1 kHz
+pwm freq 25      # select 25 kHz
+pwm duty 42.12   # hold an exact requested 42.12% duty
+pwm duty 0       # hold output low
+pwm duty 100     # request maximum duty
+pwm status       # show requested/actual frequency, resolution and mode
+pwm auto         # release duty override and resume GUI/effects
+help
+```
+
+Frequency accepts integer 1 kHz steps from 1 through 25 kHz and remains selected
+until another command or reset. Reset restores the configured 3 kHz default.
+The driver retains 13-bit resolution through 9 kHz, uses 12 bits from 10 through
+19 kHz and 11 bits from 20 through 25 kHz. Duty accepts 0.01% input units but is
+quantized to the active hardware resolution. Manual duty mode intentionally
+bypasses the normal 5–80% product limits and all ambient/PLAY/STOP effects; GUI
+brightness changes continue to update the normal state and take effect after
+`pwm auto`. The override is volatile and clears on reset.
+
+`CONFIG_SC_ENABLE_LIGHT_DEBUG_CONSOLE` is development-only and shall be disabled
+before an R01 release image is created. It is mutually exclusive with the older
+M4 semantic-audio console so only one task reads USB stdin.
+
 ## Host tests
 
 Run the COB mapping policy test:
@@ -78,6 +107,17 @@ cc -std=c11 -Wall -Wextra -Werror -pedantic -fsanitize=undefined \
   firmware/control/main/lighting/tests/test_light_pwm_policy.c \
   -lm -o /tmp/test_light_pwm_policy
 /tmp/test_light_pwm_policy
+```
+
+Run the development-console parser test:
+
+```sh
+cc -std=c11 -Wall -Wextra -Werror -pedantic -fsanitize=undefined \
+  -Ifirmware/control/main/debug \
+  firmware/control/main/debug/light_debug_command.c \
+  firmware/control/main/debug/tests/test_light_debug_command.c \
+  -o /tmp/test_light_debug_command
+/tmp/test_light_debug_command
 ```
 
 Run timing-analyzer regressions from the repository root with:

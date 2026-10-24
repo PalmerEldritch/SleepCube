@@ -30,6 +30,16 @@ config SC_ENABLE_SEMANTIC_CONSOLE
         protocol bring-up. Keep this disabled in product, timing and endurance
         images: arbitrary host input must never issue audio commands.
 
+config SC_ENABLE_LIGHT_DEBUG_CONSOLE
+    bool "Enable development COB PWM console"
+    depends on SC_ENABLE_LIGHT && !SC_ENABLE_SEMANTIC_CONSOLE
+    default n
+    help
+        Enables line-oriented USB development commands for runtime COB PWM
+        frequency and exact-duty experiments. This bypasses the normal light
+        presentation while manual duty override is active and must remain
+        disabled in a release image.
+
 config SC_ENABLE_LIGHT
     bool "Enable lighting service"
     default y
@@ -58,7 +68,7 @@ config SC_LIGHT_PWM_GPIO
 config SC_LIGHT_PWM_FREQUENCY_HZ
     int "COB PWM carrier frequency (Hz)"
     depends on SC_ENABLE_LIGHT
-    range 100 20000
+    range 100 25000
     default 3000
     help
         Hardware PWM carrier frequency. R01 starts at 3 kHz; later hardware
