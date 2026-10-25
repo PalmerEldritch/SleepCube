@@ -100,7 +100,7 @@ driver/encoder and RGB lighting-engine sources are deleted from this branch.
 | GPIO8 logic levels, carrier and dynamic duty behavior | PASS | 0–3.3 V clean/stable waveform; 3.012 kHz / 332 µs; expected capped ambient movement and PLAY/STOP pulses |
 | Active minimum, midpoint modulation and reset-low captures | PASS | Minimum active output remains just above the 5% floor; midpoint setting varies approximately ±7.5 duty points; GPIO8 is 0 V on reset |
 | Powered 12 V prototype smoke | PARTIAL | User reports stable 12 V/5 V rails, functioning controllers/audio/COB output and smooth brightness; exact supply topology, USB state and reset/heat/noise/flicker observations remain to be recorded |
-| Runtime PWM debug console | PARTIAL | Parser and clean build pass; flash and scope the 1–25 kHz frequency range and fixed-duty override on target |
+| Runtime PWM debug console | PARTIAL | Exact clean image flash and serial runtime sweep pass at 1/9/10/19/20/25 kHz with fixed 42.12% duty; independent scope confirmation remains |
 | Unchanged GUI, persistence, audio/UART and Audio-disconnected behavior | PENDING | Repeat integrated product regression on R01 target |
 | Final PD-trigger/DC-DC topology with USB disconnected | PENDING | Run last, after development topology passes |
 
@@ -201,14 +201,61 @@ do all three timing-analyzer tests. A clean ESP-IDF v6.0 R01 build passes with
 - `SleepCube_P0.bin`: 596,176 bytes;
 - SHA-256: `6e0f32835aebb2ff06c177d0841f4a3c88d5535c084198d61d0385dfae6519dc`.
 
-This new image has not been flashed or exercised on target. The previously
-flashed 586,640-byte image does not contain these console commands.
+This intermediate image had not yet been flashed or exercised on target. The
+2026-10-25 record below supersedes it with the final exact build and target
+evidence.
+
+## 2026-10-25 PWM debug target verification
+
+The Waveshare identity `AC:EB:E6:1E:67:C4` was reconfirmed on
+`/dev/ttyACM0`; the Atom remained on `/dev/ttyACM1`. Initial target interaction
+found that USB Serial/JTAG nonblocking stdio can return between individual
+characters. The console was changed from `fgets` to a bounded byte accumulator
+with CR/LF, backspace and overlength-line handling.
+
+The first 25 kHz request then correctly exercised the driver's fail-safe
+rollback when ESP-IDF reported a clock conflict: ESP32-C6 LEDC timers share a
+global source, and automatic selection attempted to move the COB timer from the
+display timer's 40 MHz source to 80 MHz. The display and COB drivers were both
+pinned to the shared 80 MHz PLL-divided source; their separate timer/channel
+assignments remain unchanged.
+
+A fresh clean ESP-IDF v6.0 build passed with the R01 defaults:
+
+- `SleepCube_P0.bin`: 596,336 bytes;
+- SHA-256: `d14b5ea978dd5b5b20e4c706c24cb4f64a96d2d6219ae0220ec713e799ca2043`;
+- GPIO8, 3 kHz default, 5–80% normal limits, debug console enabled and semantic
+  console disabled;
+- embedded application identity `R01-dev`.
+
+That exact application, bootloader and partition table were flashed to the
+Waveshare; every esptool write passed hash verification. Reset boot reported
+default requested 3,000 Hz / actual 3,001 Hz at 13-bit. Display/LVGL
+initialization completed and Audio UART synchronized to authoritative `STOPPED`,
+volume 59%, fault 0.
+
+With requested fixed duty 42.12%, the runtime console produced:
+
+| Request | Driver-reported actual | Resolution |
+| ---: | ---: | ---: |
+| 1 kHz | 1,000 Hz | 13-bit |
+| 9 kHz | 8,993 Hz | 13-bit |
+| 10 kHz | 10,000 Hz | 12-bit |
+| 19 kHz | 19,011 Hz | 12-bit |
+| 20 kHz | 20,000 Hz | 11-bit |
+| 25 kHz | 25,000 Hz | 11-bit |
+
+`pwm status` correctly reported requested/actual frequency, resolution, manual
+mode and 42.12% requested duty. The final commands restored 3 kHz (actual
+3,001 Hz, 13-bit) and automatic GUI/effect output. No runtime fault occurred,
+and display and UART operation continued through the sweep. Independent scope
+measurement of the selected carrier frequencies and fixed duty remains open.
 
 ## Disposition
 
 M10 software, build, exact-image flash/boot initialization, PWM carrier/logic
 levels and dynamic duty-response checks pass, closing M10-HWT-001. Powered
-prototype behavior is partially verified. M10-DBG-001, M10-IT-001 and
-M10-PWR-001 remain open. Do not create an R01 release tag until the debug
-controls and powered target gates pass and this report is extended with target
-observations.
+prototype behavior is partially verified. M10-DBG-001 is now target-runtime
+partial with only independent waveform measurements open; M10-IT-001 and
+M10-PWR-001 remain open. Do not create an R01 release tag until the remaining
+scope and powered target gates pass.

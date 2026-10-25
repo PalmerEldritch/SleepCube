@@ -2,14 +2,14 @@
 
 **Baseline:** R01 development from released `software-r00`
 
-**Last updated:** 2026-10-24
+**Last updated:** 2026-10-25
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M10 R01 COB PWM migration: unpowered gate pass; powered prototype partial;
-runtime PWM debug image built but not flashed**
+**M10 R01 COB PWM migration: powered prototype partial; runtime PWM debug
+image flashed and serial sweep passed; physical sweep pending**
 
 Status: **Branch `feat/r01-cob-pwm-lighting` was created from clean annotated
 tag `software-r00`. The COB-only Control implementation and active R01 documents
@@ -22,10 +22,11 @@ ambient and PLAY/STOP duty effects, the 5% active floor and 0 V at reset.
 ADR-0010 retains the nonzero GUI minimum, so a GUI-selected settled-off capture
 is not applicable. The externally powered prototype now reports stable 12 V/5 V
 rails, functioning controllers/audio/COB output and smooth brightness. A newer
-development image adds runtime USB-console frequency and fixed-duty controls;
-host tests and a clean build pass, but that image is not flashed or target-
-verified. M10 and R01 release are not complete. No R01 release tag exists or
-should be created yet.**
+development image adds runtime USB-console frequency and fixed-duty controls.
+The exact clean-built image is flashed and serial runtime checks pass across
+the 1–25 kHz range and both resolution boundaries. Independent scope checks at
+the selected frequencies remain open. M10 and R01 release are not complete. No
+R01 release tag exists or should be created yet.**
 
 The Control backend now drives an active-high logic-level MOSFET on GPIO8 using
 LEDC timer 1/channel 1 at 3 kHz and 13-bit resolution, distinct from display
@@ -43,6 +44,10 @@ of GUI/effects, report actual frequency/resolution, and return to automatic
 lighting. The driver retains 13-bit resolution through 9 kHz, 12 bits through
 19 kHz and 11 bits through 25 kHz. This diagnostic deliberately bypasses normal
 product duty limits and must be disabled before a release image.
+
+The display and COB outputs retain distinct LEDC timers/channels but share the
+ESP32-C6 LEDC global source. Both are pinned to the 80 MHz PLL-divided clock so
+runtime COB selection through 25 kHz cannot conflict with the display timer.
 
 The GUI, persistence API, Audio firmware, semantic UART protocol and controller
 ownership are unchanged. ADR-0009 records the COB PWM architecture and the
@@ -293,11 +298,25 @@ Verified for M10 R01 software:
   distinct from display timer 0/channel 0 and Control RGB/RMT code is removed.
 - strict C11/warnings-as-errors/UBSan PWM-console parser tests pass for 1–25 kHz,
   decimal 0–100% duty, auto/status/help and rejected invalid inputs;
-- a newer clean ESP-IDF v6.0 R01 build with the PWM console enabled passes at
-  596,176 bytes, SHA-256
-  `6e0f32835aebb2ff06c177d0841f4a3c88d5535c084198d61d0385dfae6519dc`;
-  it has not been flashed and does not supersede the target evidence for the
-  previously flashed 586,640-byte image.
+- the final clean ESP-IDF v6.0 R01 PWM-console build passes at 596,336 bytes,
+  SHA-256
+  `d14b5ea978dd5b5b20e4c706c24cb4f64a96d2d6219ae0220ec713e799ca2043`;
+- that exact image is flashed to the Waveshare and every esptool write passed
+  hash verification.
+
+Verified on the USB-connected Waveshare and Atom on 2026-10-25:
+
+- `/dev/ttyACM0` was reconfirmed as Waveshare identity `AC:EB:E6:1E:67:C4`;
+- reset boot reported `R01-dev`, GPIO8 default requested 3,000 Hz / actual
+  3,001 Hz at 13-bit, and normal display initialization;
+- Audio UART synchronized to the Atom and remained `STOPPED`, volume 59%, with
+  no fault throughout the PWM command sweep;
+- USB Serial/JTAG line handling, `pwm status`, fixed `pwm duty 42.12`, frequency
+  selection and `pwm auto` all operated correctly;
+- driver-reported applied results were 1,000 Hz/13-bit, 8,993 Hz/13-bit,
+  10,000 Hz/12-bit, 19,011 Hz/12-bit, 20,000 Hz/11-bit and 25,000 Hz/11-bit;
+- the board was restored to requested 3 kHz / actual 3,001 Hz and automatic
+  GUI/effect control before monitor exit.
 
 Verified on the USB-powered Waveshare on 2026-10-23 with 12 V disconnected:
 
@@ -335,9 +354,9 @@ Powered prototype evidence reported on 2026-10-24:
 The exact external source/PD-trigger and computer-USB state were not reported,
 so this does not yet close the final USB-disconnected power topology gate.
 
-Not yet verified for R01: the new debug image on target, 1–25 kHz runtime sweep,
-fixed-duty accuracy, no-flash behavior with 12 V, MOSFET temperature,
-flicker/noise, complete unchanged integrated GUI/settings/audio behavior,
+Not yet verified for R01: independent scope measurements across the 1–25 kHz
+runtime range and fixed-duty accuracy, no-flash behavior with 12 V, MOSFET
+temperature, flicker/noise, complete unchanged integrated GUI/settings/audio behavior,
 Audio-disconnected operation, and final PD/DC-DC power-cycle behavior. ADR-0010
 confirms that a settled 0% target selection through the normal GUI is not
 applicable.
@@ -739,22 +758,42 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Safely flash and verify the R01 PWM-debug image.**
+**Measure the flashed R01 PWM-debug image across the frequency range.**
 
 The exact next task is:
 
-1. De-energize external 12 V and disconnect the external DC-DC 5 V output from
-   both controllers before attaching computer USB, unless simultaneous power
-   paths have separately been verified.
-2. Flash the new 596,176-byte R01 Control image and confirm its boot/configuration
-   log plus `help` and `pwm status` responses with the strip supply off.
-3. Scope representative `pwm freq` values across 1–25 kHz at a fixed `pwm duty`
-   value, including the 9/10 kHz and 19/20 kHz resolution boundaries.
-4. Re-establish the documented development power/ground arrangement, apply 12 V
-   to the strip, and evaluate flicker, MOSFET temperature and audible noise.
-5. Finish with `pwm freq 3` and `pwm auto`; reset also restores these defaults.
+1. With a safe documented power/ground arrangement, set a fixed duty such as
+   `pwm duty 42.12`.
+2. Scope representative `pwm freq` values across 1–25 kHz, including the 9/10
+   kHz and 19/20 kHz resolution boundaries, and record measured frequency/duty.
+3. With the strip powered, evaluate visible flicker, MOSFET temperature and
+   audible noise at candidate frequencies.
+4. Finish with `pwm freq 3` and `pwm auto`; reset also restores these defaults.
 
 ## 7. Session closeout record
+
+### 2026-10-25 — PWM debug image flashed; serial runtime sweep passed
+
+- Reconfirmed the Waveshare as `/dev/ttyACM0`, identity
+  `AC:EB:E6:1E:67:C4`; the Atom remained `/dev/ttyACM1`.
+- Initial target interaction exposed USB Serial/JTAG nonblocking partial-line
+  delivery. Replaced `fgets` handling with a bounded byte accumulator supporting
+  CR/LF, backspace and overlength-line rejection; complete commands then passed.
+- The first 25 kHz request exposed the ESP32-C6 shared LEDC clock constraint.
+  The safe rollback retained 3 kHz and fixed duty. Both the display and COB
+  timers are now pinned to the shared 80 MHz PLL-divided source, while retaining
+  timer 0/channel 0 and timer 1/channel 1 respectively.
+- Strict parser and PWM-policy tests pass. A fresh clean ESP-IDF v6.0 build is
+  596,336 bytes with SHA-256
+  `d14b5ea978dd5b5b20e4c706c24cb4f64a96d2d6219ae0220ec713e799ca2043`.
+  That exact image was flashed and all writes passed esptool hash verification.
+- Reset boot, display initialization and Audio UART reconciliation passed. With
+  fixed requested duty 42.12%, serial runtime checks passed at 1, 9, 10, 19, 20
+  and 25 kHz with expected 13/12/11-bit transitions. The exact applied values
+  are recorded in section 3 and the M10 verification report.
+- Restored requested 3 kHz / actual 3,001 Hz and automatic GUI/effect control.
+  Independent scope measurements and powered thermal/flicker/noise checks are
+  the exact next task in section 6.
 
 ### 2026-10-24 — Powered prototype partial pass; PWM debug console implemented
 

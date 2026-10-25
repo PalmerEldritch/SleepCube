@@ -20,6 +20,7 @@ static const char *TAG = "sc_lcd_panel_if";
 #define SC_LCD_BACKLIGHT_DUTY_RES          LEDC_TIMER_10_BIT
 #define SC_LCD_BACKLIGHT_MAX_DUTY          1024
 #define SC_LCD_BACKLIGHT_FREQUENCY_HZ      5000
+#define SC_LCD_BACKLIGHT_CLOCK             LEDC_USE_PLL_DIV_CLK
 #define SC_LCD_TOUCH_ROTATION              0
 
 static esp_lcd_panel_io_handle_t s_io_handle;
@@ -36,7 +37,8 @@ static esp_err_t sc_lcd_backlight_init(void)
         .timer_num = SC_LCD_BACKLIGHT_TIMER,
         .duty_resolution = SC_LCD_BACKLIGHT_DUTY_RES,
         .freq_hz = SC_LCD_BACKLIGHT_FREQUENCY_HZ,
-        .clk_cfg = LEDC_AUTO_CLK,
+        /* ESP32-C6 LEDC timers share one global source with the COB timer. */
+        .clk_cfg = SC_LCD_BACKLIGHT_CLOCK,
     };
     const ledc_channel_config_t channel_cfg = {
         .speed_mode = SC_LCD_BACKLIGHT_MODE,

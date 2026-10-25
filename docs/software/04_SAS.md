@@ -74,6 +74,12 @@ without changing persisted brightness. The seam is volatile, mutually exclusive
 with the older semantic-audio stdin console, and shall be compiled out of a
 release image.
 
+On ESP32-C6 the distinct display and COB LEDC timers share one global clock
+source. Both drivers therefore select the fixed 80 MHz PLL-divided source. The
+display remains on timer 0/channel 0 and the COB output remains on timer
+1/channel 1; pinning the shared source prevents runtime COB frequency changes
+from attempting to retune the display timer's clock domain.
+
 ### 3.2 Audio Controller
 
 The Audio Controller owns:
@@ -228,7 +234,8 @@ The UART link uses Waveshare GPIO16 (TX) and GPIO17 (RX), crossed to the AtomS3
 Lite Grove GPIO2 (RX, yellow) and GPIO1 (TX, white), plus common ground. The Atom
 Grove 5 V contact remains unused. GPIO8 on the Waveshare is dedicated to the
 active-high COB MOSFET gate and uses LEDC timer 1/channel 1; display backlight
-remains on LEDC timer 0/channel 0.
+remains on LEDC timer 0/channel 0. Both timers use the shared fixed 80 MHz LEDC
+clock source required by the ESP32-C6 peripheral.
 
 Two power arrangements are deliberately distinct:
 

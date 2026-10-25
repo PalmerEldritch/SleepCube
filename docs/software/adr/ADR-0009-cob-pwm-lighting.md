@@ -19,7 +19,9 @@ do not need to change.
 
 The Waveshare display backlight already uses LEDC timer 0/channel 0. GPIO8 is
 available for the lighting output but is an ESP32-C6 strapping pin, so reset and
-boot behavior require explicit fail-safe handling and target verification.
+boot behavior require explicit fail-safe handling and target verification. The
+ESP32-C6 timers have separate timer/channel resources but share one LEDC global
+clock source.
 
 ## Decision
 
@@ -29,6 +31,9 @@ It shall:
 
 - drive the external MOSFET gate active-high on Waveshare GPIO8 with LEDC
   timer 1/channel 1 at 3 kHz and 13-bit resolution;
+- retain display timer 0/channel 0 and select the fixed 80 MHz PLL-divided LEDC
+  source for both timers so runtime COB frequency tests cannot retune the shared
+  clock domain;
 - initialize at zero duty and force zero duty on output errors;
 - retain the public `light_service` API, UI layout, stored 0–100% brightness
   value, startup fade, smooth changes, low-frequency ambient fluctuation and
@@ -64,7 +69,8 @@ interval before firmware takes control.
 
 - the light backend matches the simpler fixed-color hardware;
 - brightness and transient responses remain compatible with the unchanged GUI;
-- PWM generation is independent of the display backlight LEDC resources;
+- PWM generation uses timer/channel resources distinct from the display
+  backlight while respecting their shared ESP32-C6 clock source;
 - the R00 RGB product remains exactly recoverable from `software-r00`.
 
 ### Costs / Risks

@@ -15,6 +15,7 @@ is COB-only; it contains no Control-side RGB/RMT lighting implementation.
 - COB MOSFET gate: Waveshare GPIO8, active high
 - COB PWM: 3 kHz, 13-bit, LEDC timer 1/channel 1
 - display backlight: LEDC timer 0/channel 0
+- both LEDC timers share the fixed 80 MHz PLL-divided source required by ESP32-C6
 - Control GPIO16 TX → Audio GPIO2 RX
 - Audio GPIO1 TX → Control GPIO17 RX
 - UART/common ground retained; Atom Grove 5 V left disconnected

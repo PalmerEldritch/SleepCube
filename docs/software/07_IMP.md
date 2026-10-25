@@ -373,8 +373,8 @@ Deliverables:
 hardware while preserving the GUI, persistence, audio behavior and controller
 ownership boundaries.
 
-**Status (2026-10-24): SOFTWARE COMPLETE; UNPOWERED TARGET GATE PASS; POWERED
-PROTOTYPE PARTIAL; PWM DEBUG BUILD PASS.** Branch
+**Status (2026-10-25): SOFTWARE COMPLETE; UNPOWERED TARGET GATE PASS; POWERED
+PROTOTYPE PARTIAL; PWM DEBUG SERIAL SWEEP PASS.** Branch
 `feat/r01-cob-pwm-lighting` was created from clean tag `software-r00`. The
 Control firmware now uses an active-high GPIO8 LEDC driver at 3 kHz/13-bit on
 timer 1/channel 1, retains the `light_service` API and whole-strip effects, maps
@@ -393,8 +393,10 @@ The powered prototype subsequently reported stable 12 V and 5 V rails with
 both controllers, Audio and the COB strip functioning and smooth brightness
 control. A development-only USB console now accepts 1–25 kHz carrier selection
 in 1 kHz steps, fixed 0–100% duty override, status and return-to-automatic
-commands. Host parser tests and a clean build pass; this newer image still
-requires target flash and runtime frequency/duty verification.
+commands. Host parser tests and a clean build pass; the exact image also passes
+target flash and serial runtime checks at 1, 9, 10, 19, 20
+and 25 kHz while holding fixed 42.12% duty. Independent scope measurements of
+frequency and duty remain to be recorded.
 
 Deliverables:
 

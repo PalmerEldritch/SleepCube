@@ -18,6 +18,7 @@ static const char *TAG = "sc_cob_pwm_if";
 #define SC_COB_PWM_MAX_RES_BITS  (13U)
 #define SC_COB_PWM_MIN_FREQ_HZ   (1000U)
 #define SC_COB_PWM_MAX_FREQ_HZ   (25000U)
+#define SC_COB_PWM_CLOCK         LEDC_USE_PLL_DIV_CLK
 
 static bool s_initialized;
 static uint8_t s_resolution_bits = SC_COB_PWM_MAX_RES_BITS;
@@ -63,7 +64,9 @@ esp_err_t sc_cob_pwm_if_init(int gpio_num, uint32_t frequency_hz)
         .duty_resolution = (ledc_timer_bit_t)resolution_bits,
         .timer_num = SC_COB_PWM_TIMER,
         .freq_hz = frequency_hz,
-        .clk_cfg = LEDC_AUTO_CLK,
+        /* ESP32-C6 LEDC timers share one global source. Use the 80 MHz PLL
+         * for both display and COB so 25 kHz/11-bit remains achievable. */
+        .clk_cfg = SC_COB_PWM_CLOCK,
     };
     esp_err_t err = ledc_timer_config(&timer_cfg);
     if (err != ESP_OK) {
@@ -154,7 +157,7 @@ esp_err_t sc_cob_pwm_if_set_frequency_hz(uint32_t frequency_hz)
         .duty_resolution = (ledc_timer_bit_t)new_resolution_bits,
         .timer_num = SC_COB_PWM_TIMER,
         .freq_hz = frequency_hz,
-        .clk_cfg = LEDC_AUTO_CLK,
+        .clk_cfg = SC_COB_PWM_CLOCK,
     };
     err = ledc_timer_config(&timer_cfg);
     if (err != ESP_OK) {
@@ -163,7 +166,7 @@ esp_err_t sc_cob_pwm_if_set_frequency_hz(uint32_t frequency_hz)
             .duty_resolution = (ledc_timer_bit_t)old_resolution_bits,
             .timer_num = SC_COB_PWM_TIMER,
             .freq_hz = old_frequency_hz,
-            .clk_cfg = LEDC_AUTO_CLK,
+            .clk_cfg = SC_COB_PWM_CLOCK,
         };
         s_resolution_bits = old_resolution_bits;
         if (ledc_timer_config(&restore_cfg) == ESP_OK) {
@@ -185,7 +188,7 @@ esp_err_t sc_cob_pwm_if_set_frequency_hz(uint32_t frequency_hz)
             .duty_resolution = (ledc_timer_bit_t)old_resolution_bits,
             .timer_num = SC_COB_PWM_TIMER,
             .freq_hz = old_frequency_hz,
-            .clk_cfg = LEDC_AUTO_CLK,
+            .clk_cfg = SC_COB_PWM_CLOCK,
         };
         s_resolution_bits = old_resolution_bits;
         s_requested_frequency_hz = old_frequency_hz;

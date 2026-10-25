@@ -1,5 +1,6 @@
 #include "light_debug_console.h"
 
+#include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -42,56 +43,94 @@ static void sc_light_debug_log_status(void)
              (unsigned)(status.manual_duty_bps % 100U));
 }
 
+static void sc_light_debug_execute_line(const char *line)
+{
+    const sc_light_debug_command_t command = sc_light_debug_parse_command(line);
+    esp_err_t err = ESP_OK;
+    switch (command.type) {
+    case SC_LIGHT_DEBUG_COMMAND_EMPTY:
+        break;
+    case SC_LIGHT_DEBUG_COMMAND_HELP:
+        sc_light_debug_log_help();
+        break;
+    case SC_LIGHT_DEBUG_COMMAND_STATUS:
+        sc_light_debug_log_status();
+        break;
+    case SC_LIGHT_DEBUG_COMMAND_AUTO:
+        err = sc_light_service_debug_clear_pwm_duty_override();
+        if (err == ESP_OK) {
+            ESP_LOGI(TAG, "manual duty override released; GUI/effects resumed");
+        }
+        break;
+    case SC_LIGHT_DEBUG_COMMAND_FREQUENCY_KHZ:
+        err = sc_light_service_debug_set_pwm_frequency_khz((uint8_t)command.value);
+        if (err != ESP_OK) {
+            break;
+        }
+        ESP_LOGI(TAG, "PWM frequency queued: %" PRIu32 " kHz", command.value);
+        break;
+    case SC_LIGHT_DEBUG_COMMAND_DUTY_BPS:
+        err = sc_light_service_debug_set_pwm_duty_bps((uint16_t)command.value);
+        if (err != ESP_OK) {
+            break;
+        }
+        ESP_LOGI(TAG, "manual PWM duty queued: %" PRIu32 ".%02" PRIu32 "%%",
+                 command.value / 100U, command.value % 100U);
+        break;
+    case SC_LIGHT_DEBUG_COMMAND_INVALID:
+    default:
+        ESP_LOGW(TAG, "invalid PWM command; enter 'help'");
+        break;
+    }
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "PWM command rejected: %s", esp_err_to_name(err));
+    }
+}
+
 static void sc_light_debug_console_task(void *argument)
 {
     (void)argument;
     char line[80];
+    size_t length = 0U;
+    bool discard_until_newline = false;
     sc_light_debug_log_help();
 
     for (;;) {
-        if (fgets(line, sizeof(line), stdin) == NULL) {
+        const int character = getchar();
+        if (character == EOF) {
+            /* USB Serial/JTAG stdio is nonblocking and may report EOF between
+             * individual bytes of the same host-entered line. */
             clearerr(stdin);
-            vTaskDelay(pdMS_TO_TICKS(100));
+            vTaskDelay(pdMS_TO_TICKS(10));
             continue;
         }
-
-        const sc_light_debug_command_t command = sc_light_debug_parse_command(line);
-        esp_err_t err = ESP_OK;
-        switch (command.type) {
-        case SC_LIGHT_DEBUG_COMMAND_EMPTY:
-            break;
-        case SC_LIGHT_DEBUG_COMMAND_HELP:
-            sc_light_debug_log_help();
-            break;
-        case SC_LIGHT_DEBUG_COMMAND_STATUS:
-            sc_light_debug_log_status();
-            break;
-        case SC_LIGHT_DEBUG_COMMAND_AUTO:
-            err = sc_light_service_debug_clear_pwm_duty_override();
-            if (err == ESP_OK) {
-                ESP_LOGI(TAG, "manual duty override released; GUI/effects resumed");
-            }
-            break;
-        case SC_LIGHT_DEBUG_COMMAND_FREQUENCY_KHZ:
-            err = sc_light_service_debug_set_pwm_frequency_khz((uint8_t)command.value);
-            if (err == ESP_OK) {
-                ESP_LOGI(TAG, "PWM frequency queued: %" PRIu32 " kHz", command.value);
-            }
-            break;
-        case SC_LIGHT_DEBUG_COMMAND_DUTY_BPS:
-            err = sc_light_service_debug_set_pwm_duty_bps((uint16_t)command.value);
-            if (err == ESP_OK) {
-                ESP_LOGI(TAG, "manual PWM duty queued: %" PRIu32 ".%02" PRIu32 "%%",
-                         command.value / 100U, command.value % 100U);
-            }
-            break;
-        case SC_LIGHT_DEBUG_COMMAND_INVALID:
-        default:
-            ESP_LOGW(TAG, "invalid PWM command; enter 'help'");
-            break;
+        if (character == '\r') {
+            continue;
         }
-        if (err != ESP_OK) {
-            ESP_LOGW(TAG, "PWM command rejected: %s", esp_err_to_name(err));
+        if (character == '\n') {
+            if (discard_until_newline) {
+                ESP_LOGW(TAG, "PWM command too long; enter 'help'");
+            } else {
+                line[length] = '\0';
+                sc_light_debug_execute_line(line);
+            }
+            length = 0U;
+            discard_until_newline = false;
+            continue;
+        }
+        if ((character == '\b') || (character == 0x7f)) {
+            if (!discard_until_newline && (length > 0U)) {
+                --length;
+            }
+            continue;
+        }
+        if (discard_until_newline || (character < 0x20) || (character > 0x7e)) {
+            continue;
+        }
+        if (length < (sizeof(line) - 1U)) {
+            line[length++] = (char)character;
+        } else {
+            discard_until_newline = true;
         }
     }
 }
