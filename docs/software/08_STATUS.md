@@ -45,6 +45,14 @@ lighting. The driver retains 13-bit resolution through 9 kHz, 12 bits through
 19 kHz and 11 bits through 25 kHz. This diagnostic deliberately bypasses normal
 product duty limits and must be disabled before a release image.
 
+User terminal testing confirmed commands work when Enter sends CR+LF, but the
+earlier image did not accept CR-only termination and its one-second
+`audio_link` info traffic cluttered the terminal. The follow-up image accepts
+CR, LF and CR+LF and reduces `audio_link` logging to warnings/errors while the
+PWM console is enabled. It is now flashed and target-verified: each line-ending
+form executed one command, and routine `audio_link` info traffic remained
+suppressed.
+
 The display and COB outputs retain distinct LEDC timers/channels but share the
 ESP32-C6 LEDC global source. Both are pinned to the 80 MHz PLL-divided clock so
 runtime COB selection through 25 kHz cannot conflict with the display timer.
@@ -758,7 +766,7 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Measure the flashed R01 PWM-debug image across the frequency range.**
+**Measure and evaluate candidate PWM frequencies on the powered strip.**
 
 The exact next task is:
 
@@ -771,6 +779,27 @@ The exact next task is:
 4. Finish with `pwm freq 3` and `pwm auto`; reset also restores these defaults.
 
 ## 7. Session closeout record
+
+### 2026-10-25 — Terminal compatibility and quiet-console update verified
+
+- User confirmed commands work after configuring the serial terminal for CR+LF
+  and reported that periodic `audio_link` status messages clutter the monitor.
+- Updated the bounded console accumulator to accept CR, LF or CR+LF without
+  double-submitting CR+LF commands.
+- While the R01 PWM console is active, `audio_link` info logs are now suppressed;
+  warnings and errors remain visible so transport faults are not hidden.
+- Strict parser tests pass. The ESP-IDF v6.0 image builds at 596,992 bytes with
+  SHA-256
+  `6101e5ae04b8585a686b0045f400834e9eb4253e600d2551ebfa1f9ac31818b3`.
+- The first flash attempt could not acquire `/dev/ttyACM0` while the user's
+  terminal held it and stopped before any write. After the terminal was closed,
+  the exact image was flashed to the confirmed Waveshare on `/dev/ttyACM0`;
+  bootloader, partition table and application all passed write/hash checks.
+- Boot confirmed `R01-dev`, requested 3000 Hz/actual 3001 Hz at 13-bit, and the
+  explicit quiet-console startup message. Target commands terminated by CR,
+  LF and CR+LF each produced exactly one status response. No repetitive
+  `audio_link` info messages appeared during the checks; warnings remain
+  available by design.
 
 ### 2026-10-25 — PWM debug image flashed; serial runtime sweep passed
 

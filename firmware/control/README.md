@@ -95,7 +95,9 @@ brightness changes continue to update the normal state and take effect after
 
 `CONFIG_SC_ENABLE_LIGHT_DEBUG_CONSOLE` is development-only and shall be disabled
 before an R01 release image is created. It is mutually exclusive with the older
-M4 semantic-audio console so only one task reads USB stdin.
+M4 semantic-audio console so only one task reads USB stdin. While enabled, it
+suppresses routine `audio_link` info-level status traffic; UART warnings and
+errors remain visible. Commands accept CR, LF or CR+LF line endings.
 
 ## Host tests
 

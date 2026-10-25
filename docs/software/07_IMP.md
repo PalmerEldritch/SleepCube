@@ -398,6 +398,13 @@ target flash and serial runtime checks at 1, 9, 10, 19, 20
 and 25 kHz while holding fixed 42.12% duty. Independent scope measurements of
 frequency and duty remain to be recorded.
 
+Terminal use subsequently confirmed that the earlier console accepts CR+LF,
+while a CR-only terminal configuration does not terminate commands. The
+follow-up image accepts CR, LF and CR+LF and suppresses routine `audio_link`
+info traffic while retaining warnings/errors. It was flashed to the Waveshare
+and target checks confirmed all three line endings execute exactly once and the
+periodic status stream remains suppressed.
+
 Deliverables:
 
 - COB LEDC driver and host-tested brightness/duty policy;

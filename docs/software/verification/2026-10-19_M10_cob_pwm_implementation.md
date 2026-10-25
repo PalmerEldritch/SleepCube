@@ -251,6 +251,26 @@ mode and 42.12% requested duty. The final commands restored 3 kHz (actual
 and display and UART operation continued through the sweep. Independent scope
 measurement of the selected carrier frequencies and fixed duty remains open.
 
+## 2026-10-25 terminal compatibility follow-up
+
+The user confirmed that commands work when the external terminal sends CR+LF
+and reported that periodic `audio_link` status logs clutter the monitor. The
+console accumulator now treats CR, LF and CR+LF as valid line endings without
+double-submitting a CR+LF command. Enabling the PWM console also reduces the
+`audio_link` tag to warning level, preserving transport warnings/errors while
+suppressing routine info-level status traffic.
+
+Strict parser tests pass. The updated ESP-IDF v6.0 image builds at 596,992 bytes,
+SHA-256
+`6101e5ae04b8585a686b0045f400834e9eb4253e600d2551ebfa1f9ac31818b3`.
+An initial flash attempt stopped before connection or write because the user's
+serial terminal held `/dev/ttyACM0` exclusively. After it was closed, the exact
+image was flashed to the confirmed Waveshare; bootloader, partition table and
+application passed write/hash verification. Boot reported `R01-dev`, requested
+3000 Hz/actual 3001 Hz and 13-bit resolution. Target commands terminated by CR,
+LF and CR+LF each executed exactly once. Routine `audio_link` info traffic did
+not recur during the checks; warning/error visibility remains enabled.
+
 ## Disposition
 
 M10 software, build, exact-image flash/boot initialization, PWM carrier/logic

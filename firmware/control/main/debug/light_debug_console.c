@@ -93,6 +93,7 @@ static void sc_light_debug_console_task(void *argument)
     char line[80];
     size_t length = 0U;
     bool discard_until_newline = false;
+    bool previous_delimiter_was_cr = false;
     sc_light_debug_log_help();
 
     for (;;) {
@@ -104,10 +105,11 @@ static void sc_light_debug_console_task(void *argument)
             vTaskDelay(pdMS_TO_TICKS(10));
             continue;
         }
-        if (character == '\r') {
-            continue;
-        }
-        if (character == '\n') {
+        if ((character == '\r') || (character == '\n')) {
+            if ((character == '\n') && previous_delimiter_was_cr) {
+                previous_delimiter_was_cr = false;
+                continue;
+            }
             if (discard_until_newline) {
                 ESP_LOGW(TAG, "PWM command too long; enter 'help'");
             } else {
@@ -116,8 +118,10 @@ static void sc_light_debug_console_task(void *argument)
             }
             length = 0U;
             discard_until_newline = false;
+            previous_delimiter_was_cr = (character == '\r');
             continue;
         }
+        previous_delimiter_was_cr = false;
         if ((character == '\b') || (character == 0x7f)) {
             if (!discard_until_newline && (length > 0U)) {
                 --length;
@@ -137,10 +141,16 @@ static void sc_light_debug_console_task(void *argument)
 
 esp_err_t sc_light_debug_console_start(void)
 {
+    /* Keep warnings and faults visible, but suppress the one-second semantic
+     * status traffic while the serial port is being used for PWM experiments. */
+    esp_log_level_set("audio_link", ESP_LOG_WARN);
+
     if (xTaskCreate(sc_light_debug_console_task, "light_debug", 3072,
                     NULL, 3, NULL) != pdPASS) {
         return ESP_ERR_NO_MEM;
     }
-    ESP_LOGI(TAG, "COB PWM debug console enabled (development only)");
+    ESP_LOGI(TAG,
+             "COB PWM debug console enabled (development only); "
+             "audio_link info logs suppressed");
     return ESP_OK;
 }
