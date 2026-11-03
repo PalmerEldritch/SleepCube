@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/CMakeFiles/bootloader
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/CMakeFiles/bootloader.rule
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/CMakeFiles/bootloader-complete.rule
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/audio/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule

@@ -1,0 +1,2 @@
+source /home/jeppe/Hämtningar/ESP32-C6-Touch-LCD-1.47-Demo/ESP-IDF/03_lvgl_example/build/bootloader/gdbinit/symbols
+source /home/jeppe/Hämtningar/ESP32-C6-Touch-LCD-1.47-Demo/ESP-IDF/03_lvgl_example/build/bootloader/gdbinit/connect

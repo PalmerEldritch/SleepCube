@@ -1,0 +1,19 @@
+Command: ninja all
+[1/10] cd /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build/esp-idf/main && /home/jeppe/.espressif/python_env/idf6.0_py3.14_env/bin/python /home/jeppe/esp/v6.0/esp-idf/components/spiffs/spiffsgen.py 0x50000 /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/spiffs_data /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build/storage.bin --page-size=256 --obj-name-len=32 --meta-len=4 --use-magic --use-magic-len
+[2/10] Performing build step for 'bootloader'
+[1/1] cd /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build/bootloader && /home/jeppe/.espressif/python_env/idf6.0_py3.14_env/bin/python /home/jeppe/esp/v6.0/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build/bootloader/bootloader.bin
+Bootloader binary size 0x5830 bytes. 0x27d0 bytes (31%) free.
+[3/10] No install step for 'bootloader'
+[4/10] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/drivers/lvgl_display_if.c.obj
+[5/10] Completed 'bootloader'
+[6/10] Linking C static library esp-idf/main/libmain.a
+[7/10] Generating esp-idf/esp_system/ld/sections.ld
+[8/10] Linking CXX executable SleepCube_P0.elf
+[9/10] Generating binary image from built executable
+esptool v5.3.dev2
+Creating ESP32-C6 image...
+Merged 1 ELF section.
+Successfully created ESP32-C6 image.
+Generated /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build/SleepCube_P0.bin
+[10/10] cd /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build && /home/jeppe/.espressif/python_env/idf6.0_py3.14_env/bin/python /home/jeppe/esp/v6.0/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build/partition_table/partition-table.bin /home/jeppe/OneDrive/Elektronikprojekt/SleepCube/firmware/SleepCube_P0/build/SleepCube_P0.bin
+SleepCube_P0.bin binary size 0x60200 bytes. Smallest app partition is 0x1a0000 bytes. 0x13fe00 bytes (77%) free.

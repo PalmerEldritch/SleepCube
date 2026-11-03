@@ -1,0 +1,32 @@
+Command: /home/jeppe/.espressif/python_env/idf6.0_py3.14_env/bin/python /home/jeppe/esp/v6.0/esp-idf/tools/idf_monitor.py -p /dev/ttyACM0 -b 115200 --toolchain-prefix xtensa-esp32s3-elf- --target esp32s3 --revision 0 --no-reset -m '/home/jeppe/.espressif/python_env/idf6.0_py3.14_env/bin/python' '/home/jeppe/esp/v6.0/esp-idf/tools/idf.py' '-p' '/dev/ttyACM0'
+[0;32mI (2128) m2_audio: SleepCube Audio Controller M2 normal 30-minute session[0m
+[0;32mI (2128) m2_audio: app=SleepCube_audio_controller version=082c7ed idf=v6.0-dirty target=esp32s3 reset_reason=1[0m
+[0;32mI (2128) m2_audio: flash=8388608 bytes (8 MiB)[0m
+[0;32mI (2128) m2_audio: i2s format=Philips-I2S stereo signed-16, duplicated mono rate=44100Hz bits=16 dma=6x256 bclk=GPIO5 lrclk=GPIO39 data=GPIO38 mclk=unused[0m
+[0;32mI (2128) m2_audio: content=/sdcard/sleepcube/audio.wav format=RIFF/WAVE PCM mono signed-16 44100Hz sd_clk=GPIO7 sd_mosi=GPIO6 sd_miso=GPIO8 sd_cs=fixed-low[0m
+[0;32mI (2138) audio_settings: loaded saved volume=50%[0m
+[0;32mI (2178) sdspi_transaction: cmd=5, R1 response: command not supported[0m
+[0;32mI (2208) content_storage: microSD mounted read-only-by-policy at /sdcard: name=MK    capacity=1007681536 bytes bus=SPI2 clk=GPIO7 mosi=GPIO6 miso=GPIO8 cs=fixed-low[0m
+[0;32mI (2208) wav_reader: content ready: path=/sdcard/sleepcube/audio.wav PCM mono signed-16 rate=44100Hz frames=3748500 duration_ms=85000[0m
+[0;32mI (2208) audio_output: I2S output enabled in auto-clear silent state[0m
+[0;32mI (2208) playback: controller ready: state=STOPPED volume=50% session=1800s start_fade=1000ms stop_fade=1000ms timeout_fade=5000ms[0m
+[0;32mI (2208) m2_audio: READY: state=STOPPED and output=silent; short press toggles PLAY/STOP; hold for at least 1000ms then release to cycle persistent volume[0m
+[0;32mI (69868) playback: session start duration=1800s volume=50% fade_in=1000ms deadline_us=1869757663[0m
+[0;32mI (70838) playback: state=PLAYING[0m
+[0;32mI (129868) playback: heartbeat state=PLAYING frames=2647552 bytes=10590208 loops=0 remaining=1740s[0m
+[0;32mI (154828) playback: content loop=1[0m
+[0;32mI (189868) playback: heartbeat state=PLAYING frames=5293568 bytes=21174272 loops=1 remaining=1680s[0m
+[0;32mI (239828) playback: content loop=2[0m
+[0;32mI (249868) playback: heartbeat state=PLAYING frames=7939584 bytes=31758336 loops=2 remaining=1620s[0m
+[0;32mI (309868) playback: heartbeat state=PLAYING frames=10585600 bytes=42342400 loops=2 remaining=1560s[0m
+[0;32mI (324828) playback: content loop=3[0m
+[0;32mI (335538) playback: session stop requested reason=manual fade_out=1000ms[0m
+[0;32mI (336558) playback: state=STOPPED reason=manual frames=11762176 bytes=47048704 loops=3[0m
+[0;32mI (374168) playback: volume=75% target_gain_q15=4608 ramp=250ms persisted=yes[0m
+[0;32mI (382628) playback: volume=100% target_gain_q15=8192 ramp=250ms persisted=yes[0m
+[0;32mI (497388) playback: session start duration=1800s volume=100% fade_in=1000ms deadline_us=2297278693[0m
+[0;32mI (498358) playback: state=PLAYING[0m
+[0;32mI (537908) playback: session stop requested reason=manual fade_out=1000ms[0m
+[0;32mI (538928) playback: state=STOPPED reason=manual frames=1832960 bytes=7331840 loops=0[0m
+[0;32mI (667858) playback: volume=25% target_gain_q15=512 ramp=250ms persisted=yes[0m
+[0;32mI (673058) playback: volume=50% target_gain_q15=2048 ramp=250ms persisted=yes[0m
