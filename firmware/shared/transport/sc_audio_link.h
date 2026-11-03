@@ -21,10 +21,13 @@ esp_err_t sc_audio_link_start_control(int tx_gpio, int rx_gpio);
 esp_err_t sc_audio_link_control_play(uint32_t duration_seconds);
 esp_err_t sc_audio_link_control_stop(void);
 esp_err_t sc_audio_link_control_set_volume(uint8_t volume_percent);
+esp_err_t sc_audio_link_control_set_source(sc_audio_source_t source);
+esp_err_t sc_audio_link_control_set_tone_note(sc_audio_tone_note_t note);
 esp_err_t sc_audio_link_control_request_status(void);
 
 /** M4 diagnostic hook: resend the last state-changing request without reissuing it. */
 esp_err_t sc_audio_link_control_replay_last(void);
 
 bool sc_audio_link_control_is_synchronized(void);
+bool sc_audio_link_control_has_capability(uint16_t capability);
 esp_err_t sc_audio_link_control_get_status(sc_audio_status_t *status);

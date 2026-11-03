@@ -71,10 +71,14 @@ Detailed closeout rules are defined in the repository `AGENTS.md`.
 R00 remains frozen at annotated tag `software-r00`. R01 development is isolated
 on `feat/r01-cob-pwm-lighting`; it replaces only the Control-side addressable
 RGB implementation with fixed-color COB PWM control. The GUI, Audio firmware,
-semantic UART protocol and established controller ownership remain unchanged.
+semantic UART protocol and established controller ownership remain unchanged in
+the normal R01 profile. The separate `feat/r01-touch-debug-ui` development
+profile adds the optional, capability-negotiated source/note extension defined
+by ADR-0011; it does not change controller ownership or the release profile.
 
 ADR-0009 defines the R01 lighting/power decision and supersedes only the
-RGB-specific portions of ADR-0002 and ADR-0003.
+RGB-specific portions of ADR-0002 and ADR-0003. ADR-0011 defines the isolated
+touch-debug development image.
 
 ## 8. Resolved R00 design items and remaining release issue
 

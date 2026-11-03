@@ -9,6 +9,9 @@
 #include "esp_check.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+#include "tone_generator.h"
+#endif
 
 typedef struct {
     int32_t start_q15;
@@ -28,6 +31,13 @@ typedef struct {
     uint64_t session_frames;
     uint32_t loop_count;
     bool timeout_fade_started;
+    bool source_switch_pending;
+    bool source_switch_fading_in;
+    sc_audio_source_t active_source;
+    sc_audio_tone_note_t active_tone_note;
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    sc_tone_generator_t tone_generator;
+#endif
     sc_playback_stop_reason_t stop_reason;
 } playback_runtime_t;
 
@@ -53,6 +63,17 @@ static void update_shared_volume(sc_playback_controller_t *controller,
 {
     if (xSemaphoreTake(controller->status_mutex, portMAX_DELAY) == pdTRUE) {
         controller->volume_percent = volume_percent;
+        xSemaphoreGive(controller->status_mutex);
+    }
+}
+
+static void update_shared_debug_config(sc_playback_controller_t *controller,
+                                       sc_audio_source_t source,
+                                       sc_audio_tone_note_t note)
+{
+    if (xSemaphoreTake(controller->status_mutex, portMAX_DELAY) == pdTRUE) {
+        controller->source = source;
+        controller->tone_note = note;
         xSemaphoreGive(controller->status_mutex);
     }
 }
@@ -130,6 +151,13 @@ static esp_err_t fill_mono_block(playback_runtime_t *runtime,
                                  int16_t *mono,
                                  size_t requested_frames)
 {
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    if (runtime->active_source == SC_AUDIO_SOURCE_TONE) {
+        sc_tone_generator_fill(&runtime->tone_generator, mono,
+                               requested_frames);
+        return ESP_OK;
+    }
+#endif
     size_t filled_frames = 0;
     while (filled_frames < requested_frames) {
         size_t frames_read = 0;
@@ -158,15 +186,28 @@ static esp_err_t fill_mono_block(playback_runtime_t *runtime,
 static void begin_playback(playback_runtime_t *runtime,
                            uint32_t duration_seconds)
 {
-    esp_err_t result = sc_wav_reader_rewind(runtime->controller->reader);
-    if (result != ESP_OK) {
-        enter_fault(runtime, "content rewind", result);
-        return;
+    runtime->active_source = runtime->controller->source;
+    runtime->active_tone_note = runtime->controller->tone_note;
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    if (runtime->active_source == SC_AUDIO_SOURCE_TONE) {
+        sc_tone_generator_set_note(&runtime->tone_generator,
+                                   runtime->active_tone_note);
+    } else
+#endif
+    {
+        const esp_err_t result =
+            sc_wav_reader_rewind(runtime->controller->reader);
+        if (result != ESP_OK) {
+            enter_fault(runtime, "content rewind", result);
+            return;
+        }
     }
 
     runtime->session_frames = 0;
     runtime->loop_count = 0;
     runtime->timeout_fade_started = false;
+    runtime->source_switch_pending = false;
+    runtime->source_switch_fading_in = false;
     runtime->playback_gain_q15 = 0;
     runtime->volume_gain_q15 =
         volume_to_gain_q15(runtime->controller->volume_percent);
@@ -205,6 +246,8 @@ static void begin_stop(playback_runtime_t *runtime,
                runtime->playback_gain_q15,
                0,
                frames_for_ms(fade_ms));
+    runtime->source_switch_pending = false;
+    runtime->source_switch_fading_in = false;
     runtime->stop_reason = stop_reason;
     update_shared_status(runtime->controller, SC_PLAYBACK_STOPPING,
                          stop_reason, runtime->session_deadline_us, 0U);
@@ -233,6 +276,34 @@ static void set_volume(playback_runtime_t *runtime, uint8_t next_volume)
                frames_for_ms(SC_PLAYBACK_VOLUME_RAMP_MS));
     ESP_LOGI(TAG, "volume=%u%% target_gain_q15=%" PRId32 " ramp=%ums persisted=yes",
              next_volume, target_gain, SC_PLAYBACK_VOLUME_RAMP_MS);
+}
+
+static void update_debug_selection(playback_runtime_t *runtime,
+                                   sc_audio_source_t source,
+                                   sc_audio_tone_note_t note)
+{
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    const bool audible_change =
+        source != runtime->active_source ||
+        (source == SC_AUDIO_SOURCE_TONE &&
+         runtime->active_source == SC_AUDIO_SOURCE_TONE &&
+         note != runtime->active_tone_note);
+
+    update_shared_debug_config(runtime->controller, source, note);
+    if (audible_change &&
+        (runtime->controller->state == SC_PLAYBACK_STARTING ||
+         runtime->controller->state == SC_PLAYBACK_PLAYING)) {
+        runtime->source_switch_pending = true;
+        ramp_begin(&runtime->playback_ramp,
+                   runtime->playback_gain_q15, 0,
+                   frames_for_ms(SC_PLAYBACK_SOURCE_SWITCH_FADE_MS));
+        runtime->source_switch_fading_in = false;
+    }
+#else
+    (void)runtime;
+    (void)source;
+    (void)note;
+#endif
 }
 
 static void cycle_volume(playback_runtime_t *runtime)
@@ -290,6 +361,14 @@ static void handle_command(playback_runtime_t *runtime,
         break;
     case SC_PLAYBACK_COMMAND_SET_VOLUME:
         set_volume(runtime, command->volume_percent);
+        break;
+    case SC_PLAYBACK_COMMAND_SET_SOURCE:
+        update_debug_selection(runtime, command->source,
+                               runtime->controller->tone_note);
+        break;
+    case SC_PLAYBACK_COMMAND_SET_TONE_NOTE:
+        update_debug_selection(runtime, runtime->controller->source,
+                               command->tone_note);
         break;
     default:
         ESP_LOGW(TAG, "unknown standalone command=%d", (int)command->type);
@@ -357,6 +436,36 @@ static void update_timing_and_state(playback_runtime_t *runtime)
                    SC_PLAYBACK_STOP_REASON_TIMER_EXPIRED);
     }
 
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    if (runtime->source_switch_pending &&
+        !runtime->source_switch_fading_in &&
+        ramp_complete(&runtime->playback_ramp) &&
+        (runtime->controller->state == SC_PLAYBACK_STARTING ||
+         runtime->controller->state == SC_PLAYBACK_PLAYING)) {
+        runtime->active_source = runtime->controller->source;
+        runtime->active_tone_note = runtime->controller->tone_note;
+        if (runtime->active_source == SC_AUDIO_SOURCE_TONE) {
+            sc_tone_generator_set_note(&runtime->tone_generator,
+                                       runtime->active_tone_note);
+        } else {
+            const esp_err_t result =
+                sc_wav_reader_rewind(runtime->controller->reader);
+            if (result != ESP_OK) {
+                enter_fault(runtime, "source-switch rewind", result);
+                return;
+            }
+        }
+        runtime->source_switch_fading_in = true;
+        ramp_begin(&runtime->playback_ramp, 0, INT16_MAX,
+                   frames_for_ms(SC_PLAYBACK_SOURCE_SWITCH_FADE_MS));
+    } else if (runtime->source_switch_pending &&
+               runtime->source_switch_fading_in &&
+               ramp_complete(&runtime->playback_ramp)) {
+        runtime->source_switch_pending = false;
+        runtime->source_switch_fading_in = false;
+    }
+#endif
+
     if (runtime->controller->state == SC_PLAYBACK_STARTING &&
         ramp_complete(&runtime->playback_ramp)) {
         update_shared_status(runtime->controller, SC_PLAYBACK_PLAYING,
@@ -411,7 +520,12 @@ static void playback_task(void *argument)
         .controller = argument,
         .playback_gain_q15 = 0,
         .volume_gain_q15 = 0,
+        .active_source = SC_AUDIO_SOURCE_MUSIC,
+        .active_tone_note = SC_AUDIO_TONE_C5,
     };
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    sc_tone_generator_init(&runtime.tone_generator, SC_AUDIO_TONE_C5);
+#endif
 
     for (;;) {
         if (runtime.controller->state == SC_PLAYBACK_STOPPED ||
@@ -456,6 +570,8 @@ esp_err_t sc_playback_controller_init(sc_playback_controller_t *controller,
     controller->reader = reader;
     controller->state = SC_PLAYBACK_STOPPED;
     controller->volume_percent = initial_volume_percent;
+    controller->source = SC_AUDIO_SOURCE_MUSIC;
+    controller->tone_note = SC_AUDIO_TONE_C5;
     controller->stop_reason = SC_PLAYBACK_STOP_REASON_BOOT;
     controller->status_mutex = xSemaphoreCreateMutex();
     if (controller->status_mutex == NULL) {
@@ -552,6 +668,42 @@ esp_err_t sc_playback_controller_set_volume(sc_playback_controller_t *controller
     return send_message(controller, &message);
 }
 
+esp_err_t sc_playback_controller_set_source(sc_playback_controller_t *controller,
+                                            sc_audio_source_t source)
+{
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    ESP_RETURN_ON_FALSE(source <= SC_AUDIO_SOURCE_TONE,
+                        ESP_ERR_INVALID_ARG, TAG, "invalid audio source");
+    const sc_playback_command_t message = {
+        .type = SC_PLAYBACK_COMMAND_SET_SOURCE,
+        .source = source,
+    };
+    return send_message(controller, &message);
+#else
+    (void)controller;
+    (void)source;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t sc_playback_controller_set_tone_note(sc_playback_controller_t *controller,
+                                               sc_audio_tone_note_t note)
+{
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    ESP_RETURN_ON_FALSE(note < SC_AUDIO_TONE_COUNT,
+                        ESP_ERR_INVALID_ARG, TAG, "invalid tone note");
+    const sc_playback_command_t message = {
+        .type = SC_PLAYBACK_COMMAND_SET_TONE_NOTE,
+        .tone_note = note,
+    };
+    return send_message(controller, &message);
+#else
+    (void)controller;
+    (void)note;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
 esp_err_t sc_playback_controller_get_snapshot(sc_playback_controller_t *controller,
                                               sc_playback_snapshot_t *snapshot)
 {
@@ -564,6 +716,8 @@ esp_err_t sc_playback_controller_get_snapshot(sc_playback_controller_t *controll
     }
     snapshot->state = controller->state;
     snapshot->volume_percent = controller->volume_percent;
+    snapshot->source = controller->source;
+    snapshot->tone_note = controller->tone_note;
     snapshot->stop_reason = controller->stop_reason;
     snapshot->fault_code = controller->fault_code;
     const int64_t deadline_us = controller->session_deadline_us;

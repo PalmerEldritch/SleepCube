@@ -64,6 +64,10 @@ static sc_audio_result_t link_get_status(void *context,
     }
     status->state = (sc_audio_state_t)snapshot.state + 1;
     status->volume_percent = snapshot.volume_percent;
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    status->flags = sc_audio_debug_status_flags(snapshot.source,
+                                                snapshot.tone_note);
+#endif
     status->stop_reason = (sc_audio_stop_reason_t)snapshot.stop_reason;
     status->remaining_seconds = snapshot.remaining_seconds;
     status->fault_code = snapshot.fault_code;
@@ -124,6 +128,46 @@ static sc_audio_result_t link_set_volume(void *context, uint8_t volume_percent)
                ? SC_AUDIO_RESULT_ACCEPTED
                : SC_AUDIO_RESULT_INTERNAL_ERROR;
 }
+
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+static sc_audio_result_t link_set_source(void *context,
+                                         sc_audio_source_t source)
+{
+    (void)context;
+    if (!s_controller_ready) {
+        return SC_AUDIO_RESULT_NOT_READY;
+    }
+    sc_playback_snapshot_t snapshot;
+    if (sc_playback_controller_get_snapshot(&s_controller, &snapshot) != ESP_OK) {
+        return SC_AUDIO_RESULT_INTERNAL_ERROR;
+    }
+    if (snapshot.source == source) {
+        return SC_AUDIO_RESULT_NO_CHANGE;
+    }
+    return sc_playback_controller_set_source(&s_controller, source) == ESP_OK
+               ? SC_AUDIO_RESULT_ACCEPTED
+               : SC_AUDIO_RESULT_INTERNAL_ERROR;
+}
+
+static sc_audio_result_t link_set_tone_note(void *context,
+                                            sc_audio_tone_note_t note)
+{
+    (void)context;
+    if (!s_controller_ready) {
+        return SC_AUDIO_RESULT_NOT_READY;
+    }
+    sc_playback_snapshot_t snapshot;
+    if (sc_playback_controller_get_snapshot(&s_controller, &snapshot) != ESP_OK) {
+        return SC_AUDIO_RESULT_INTERNAL_ERROR;
+    }
+    if (snapshot.tone_note == note) {
+        return SC_AUDIO_RESULT_NO_CHANGE;
+    }
+    return sc_playback_controller_set_tone_note(&s_controller, note) == ESP_OK
+               ? SC_AUDIO_RESULT_ACCEPTED
+               : SC_AUDIO_RESULT_INTERNAL_ERROR;
+}
+#endif
 
 static esp_err_t configure_button(void)
 {
@@ -194,6 +238,10 @@ void app_main(void)
         .play = link_play,
         .stop = link_stop,
         .set_volume = link_set_volume,
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+        .set_source = link_set_source,
+        .set_tone_note = link_set_tone_note,
+#endif
     };
     uint32_t audio_session_id = esp_random();
     if (audio_session_id == 0U) {

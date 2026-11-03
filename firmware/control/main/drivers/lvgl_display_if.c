@@ -1,6 +1,7 @@
 #include "lvgl_display_if.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "app_core.h"
@@ -43,10 +44,15 @@ LV_FONT_DECLARE(lv_font_montserrat_28);
 #define SC_LCD_PULSE_OFF_MIN_DELTA     0.18f
 #define SC_LCD_PULSE_OFF_LEVEL_GAIN    0.16f
 #define SC_LCD_AMBIENT_FILTER_RATE     2.2f
+#define SC_DEBUG_TAP_WINDOW_MS         350U
+#define SC_DEBUG_BACKLIGHT_LEVEL       716U
 
 typedef enum {
     SC_UI_MODE_REST = 0,
     SC_UI_MODE_SLIDER,
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    SC_UI_MODE_DEBUG,
+#endif
 } sc_ui_mode_t;
 
 typedef enum {
@@ -79,6 +85,13 @@ static lv_point_t s_rest_press_start_point;
 static uint32_t s_ambient_last_tick_ms;
 static float s_ambient_level_filtered;
 static bool s_backlight_level_valid;
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+static lv_timer_t *s_debug_tap_timer;
+static uint8_t s_debug_tap_count;
+static lv_obj_t *s_debug_overlay;
+static lv_obj_t *s_debug_buttons[8];
+static lv_obj_t *s_debug_labels[8];
+#endif
 
 static float sc_clampf(float value, float lo, float hi)
 {
@@ -235,6 +248,14 @@ static void sc_ambient_anim_cb(lv_timer_t *timer)
         return;
     }
 
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    if (s_ui_mode == SC_UI_MODE_DEBUG) {
+        s_audio_toggle_pulse_bias = 0.0f;
+        (void)sc_lcd_panel_if_set_backlight_level(SC_DEBUG_BACKLIGHT_LEVEL);
+        return;
+    }
+#endif
+
     const uint32_t now_ms = lv_tick_get();
     float dt_s = (float)SC_AMBIENT_TIMER_MS / 1000.0f;
     if (s_ambient_last_tick_ms != 0U) {
@@ -337,7 +358,23 @@ static void sc_rest_surface_event_cb(lv_event_t *e)
         }
     } else if (code == LV_EVENT_CLICKED) {
         if (!s_rest_gesture_canceled) {
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+            if (s_debug_tap_count < 5U) {
+                s_debug_tap_count++;
+            }
+            if (s_debug_tap_count >= 5U) {
+                s_debug_tap_count = 0U;
+                if (s_debug_tap_timer != NULL) {
+                    lv_timer_pause(s_debug_tap_timer);
+                }
+                sc_emit_event(SC_APP_EVT_UI_DEBUG_ENTER, 0);
+            } else if (s_debug_tap_timer != NULL) {
+                lv_timer_resume(s_debug_tap_timer);
+                lv_timer_reset(s_debug_tap_timer);
+            }
+#else
             sc_emit_event(SC_APP_EVT_UI_AUDIO_TOGGLE, 0);
+#endif
         } else {
             SC_TRACE_MARK("ui_touch", "click_suppressed", 1);
         }
@@ -348,6 +385,156 @@ static void sc_rest_surface_event_cb(lv_event_t *e)
         s_rest_press_tracking = false;
     }
 }
+
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+static void sc_debug_tap_timeout_cb(lv_timer_t *timer)
+{
+    lv_timer_pause(timer);
+    const uint8_t tap_count = s_debug_tap_count;
+    s_debug_tap_count = 0U;
+    if (tap_count > 0U && s_ui_mode == SC_UI_MODE_REST) {
+        /* One through four taps retain the normal single-toggle meaning. */
+        sc_emit_event(SC_APP_EVT_UI_AUDIO_TOGGLE, 0);
+    }
+}
+
+static void sc_debug_button_event_cb(lv_event_t *event)
+{
+    if (s_ui_mode != SC_UI_MODE_DEBUG ||
+        lv_event_get_code(event) != LV_EVENT_CLICKED) {
+        return;
+    }
+    sc_emit_event((sc_app_event_type_t)(intptr_t)lv_event_get_user_data(event), 0);
+}
+
+static lv_obj_t *sc_create_debug_button(lv_obj_t *parent,
+                                        uint8_t index,
+                                        uint8_t column,
+                                        uint8_t row,
+                                        lv_color_t color,
+                                        sc_app_event_type_t event_type)
+{
+    lv_obj_t *button = lv_btn_create(parent);
+    lv_obj_set_pos(button, (lv_coord_t)(column * 86 + 3),
+                   (lv_coord_t)(row * 80 + 3));
+    lv_obj_set_size(button, 80, 74);
+    lv_obj_set_style_radius(button, 8, 0);
+    lv_obj_set_style_bg_color(button, color, 0);
+    lv_obj_set_style_bg_opa(button, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(button, 2, 0);
+    lv_obj_set_style_border_color(button, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_border_opa(button, LV_OPA_30, 0);
+    lv_obj_set_style_shadow_width(button, 0, 0);
+    lv_obj_add_event_cb(button, sc_debug_button_event_cb, LV_EVENT_CLICKED,
+                        (void *)(intptr_t)event_type);
+
+    lv_obj_t *label = lv_label_create(button);
+    lv_obj_set_style_text_color(label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_center(label);
+    s_debug_buttons[index] = button;
+    s_debug_labels[index] = label;
+    return button;
+}
+
+static void sc_debug_set_audio_enabled(bool enabled)
+{
+    const uint8_t audio_indices[] = {0U, 2U, 4U, 6U};
+    for (size_t i = 0; i < sizeof(audio_indices); ++i) {
+        lv_obj_t *button = s_debug_buttons[audio_indices[i]];
+        if (button == NULL) {
+            continue;
+        }
+        if (enabled) {
+            lv_obj_clear_state(button, LV_STATE_DISABLED);
+        } else {
+            lv_obj_add_state(button, LV_STATE_DISABLED);
+        }
+    }
+}
+
+static void sc_debug_refresh_locked(void)
+{
+    if (s_debug_overlay == NULL) {
+        return;
+    }
+
+    const bool available = sc_audio_service_is_available();
+    const bool source_capable = sc_audio_service_has_debug_source();
+    sc_debug_set_audio_enabled(available);
+    if (s_debug_buttons[4] != NULL) {
+        if (available && source_capable) {
+            lv_obj_clear_state(s_debug_buttons[4], LV_STATE_DISABLED);
+            lv_obj_clear_state(s_debug_buttons[6], LV_STATE_DISABLED);
+        } else {
+            lv_obj_add_state(s_debug_buttons[4], LV_STATE_DISABLED);
+            lv_obj_add_state(s_debug_buttons[6], LV_STATE_DISABLED);
+        }
+    }
+
+    lv_label_set_text(s_debug_labels[0],
+                      sc_audio_service_get_playback_enabled()
+                          ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY);
+    lv_label_set_text_fmt(s_debug_labels[2], "VOL\n%u%%",
+                          (unsigned)sc_audio_service_get_volume_percent());
+    lv_label_set_text(s_debug_labels[4],
+                      sc_audio_service_get_source() == SC_AUDIO_SOURCE_TONE
+                          ? "~\nTONE" : LV_SYMBOL_AUDIO "\nMUSIC");
+    static const char *const note_names[SC_AUDIO_TONE_COUNT] = {
+        "C3", "C4", "C5", "C6", "C7", "C8",
+    };
+    sc_audio_tone_note_t note = sc_audio_service_get_tone_note();
+    if (note >= SC_AUDIO_TONE_COUNT) {
+        note = SC_AUDIO_TONE_C5;
+    }
+    lv_label_set_text_fmt(s_debug_labels[6], "TONE\n%s", note_names[note]);
+
+    lv_label_set_text(s_debug_labels[1],
+                      sc_light_service_get_enabled()
+                          ? LV_SYMBOL_POWER "\nLIGHT" : "o\nLIGHT");
+    sc_light_debug_status_t status = {0};
+    if (sc_light_service_debug_get_status(&status) == ESP_OK) {
+        lv_label_set_text_fmt(s_debug_labels[3], "DUTY\n%u%%",
+                              (unsigned)(status.manual_duty_bps / 100U));
+        lv_label_set_text_fmt(s_debug_labels[5], "PWM\n%uk",
+                              (unsigned)(status.requested_frequency_hz / 1000U));
+    }
+    lv_label_set_text(s_debug_labels[7], LV_SYMBOL_CLOSE);
+}
+
+static void sc_create_debug_overlay(void)
+{
+    s_debug_overlay = lv_obj_create(lv_scr_act());
+    lv_obj_remove_style_all(s_debug_overlay);
+    lv_obj_set_pos(s_debug_overlay, 0, 0);
+    lv_obj_set_size(s_debug_overlay, SC_LCD_H_RES, SC_LCD_V_RES);
+    lv_obj_set_style_bg_color(s_debug_overlay, lv_color_hex(0x101418), 0);
+    lv_obj_set_style_bg_opa(s_debug_overlay, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(s_debug_overlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    const lv_color_t audio_blue = lv_color_hex(0x1565C0);
+    const lv_color_t light_green = lv_color_hex(0x2E7D32);
+    (void)sc_create_debug_button(s_debug_overlay, 0, 0, 0, audio_blue,
+                                 SC_APP_EVT_UI_AUDIO_TOGGLE);
+    (void)sc_create_debug_button(s_debug_overlay, 1, 1, 0, light_green,
+                                 SC_APP_EVT_UI_DEBUG_LIGHT_TOGGLE);
+    (void)sc_create_debug_button(s_debug_overlay, 2, 0, 1, audio_blue,
+                                 SC_APP_EVT_UI_DEBUG_VOLUME_NEXT);
+    (void)sc_create_debug_button(s_debug_overlay, 3, 1, 1, light_green,
+                                 SC_APP_EVT_UI_DEBUG_DUTY_NEXT);
+    (void)sc_create_debug_button(s_debug_overlay, 4, 0, 2, audio_blue,
+                                 SC_APP_EVT_UI_DEBUG_SOURCE_TOGGLE);
+    (void)sc_create_debug_button(s_debug_overlay, 5, 1, 2, light_green,
+                                 SC_APP_EVT_UI_DEBUG_FREQUENCY_NEXT);
+    (void)sc_create_debug_button(s_debug_overlay, 6, 0, 3, audio_blue,
+                                 SC_APP_EVT_UI_DEBUG_NOTE_NEXT);
+    (void)sc_create_debug_button(s_debug_overlay, 7, 1, 3,
+                                 lv_color_hex(0xC62828),
+                                 SC_APP_EVT_UI_DEBUG_EXIT);
+    lv_obj_add_flag(s_debug_overlay, LV_OBJ_FLAG_HIDDEN);
+    sc_debug_refresh_locked();
+}
+#endif
 
 static void sc_slider_event_cb(lv_event_t *e)
 {
@@ -596,6 +783,17 @@ void sc_lvgl_display_create_ambient_screen(void)
         lv_timer_pause(s_slider_timeout_timer);
     }
 
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    if (s_debug_tap_timer == NULL) {
+        s_debug_tap_timer = lv_timer_create(sc_debug_tap_timeout_cb,
+                                             SC_DEBUG_TAP_WINDOW_MS, NULL);
+        lv_timer_pause(s_debug_tap_timer);
+    }
+    if (s_debug_overlay == NULL) {
+        sc_create_debug_overlay();
+    }
+#endif
+
     lvgl_port_unlock();
     ESP_LOGI(TAG, "lvgl ambient screen created");
 }
@@ -605,7 +803,14 @@ void sc_lvgl_display_audio_state_changed(bool playback_active)
     if (!s_started || !lvgl_port_lock(20)) {
         return;
     }
-    sc_trigger_audio_toggle_pulse(playback_active);
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    if (s_ui_mode == SC_UI_MODE_DEBUG) {
+        sc_debug_refresh_locked();
+    } else
+#endif
+    {
+        sc_trigger_audio_toggle_pulse(playback_active);
+    }
     lvgl_port_unlock();
 }
 
@@ -617,7 +822,68 @@ void sc_lvgl_display_audio_volume_changed(uint8_t volume_percent)
     if (s_volume_slider != NULL) {
         lv_slider_set_value(s_volume_slider, volume_percent, LV_ANIM_OFF);
     }
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    if (s_ui_mode == SC_UI_MODE_DEBUG) {
+        sc_debug_refresh_locked();
+    }
+#endif
     lvgl_port_unlock();
+}
+
+void sc_lvgl_display_debug_enter(void)
+{
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    if (!s_started || !lvgl_port_lock(50)) {
+        return;
+    }
+    s_debug_tap_count = 0U;
+    if (s_debug_tap_timer != NULL) {
+        lv_timer_pause(s_debug_tap_timer);
+    }
+    if (s_slider_timeout_timer != NULL) {
+        lv_timer_pause(s_slider_timeout_timer);
+    }
+    s_ui_mode = SC_UI_MODE_DEBUG;
+    s_audio_toggle_pulse_bias = 0.0f;
+    sc_debug_refresh_locked();
+    lv_obj_clear_flag(s_debug_overlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_to_index(s_debug_overlay, -1);
+    (void)sc_lcd_panel_if_set_backlight_level(SC_DEBUG_BACKLIGHT_LEVEL);
+    lv_indev_reset(NULL, NULL);
+    lvgl_port_unlock();
+    ESP_LOGI(TAG, "ui mode -> touch debug");
+#endif
+}
+
+void sc_lvgl_display_debug_exit(void)
+{
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    if (!s_started || !lvgl_port_lock(50)) {
+        return;
+    }
+    if (s_debug_overlay != NULL) {
+        lv_obj_add_flag(s_debug_overlay, LV_OBJ_FLAG_HIDDEN);
+    }
+    s_ui_mode = SC_UI_MODE_REST;
+    s_ambient_last_tick_ms = 0U;
+    s_backlight_level_valid = false;
+    lv_indev_reset(NULL, NULL);
+    lvgl_port_unlock();
+    ESP_LOGI(TAG, "ui mode -> rest (debug exited)");
+#endif
+}
+
+void sc_lvgl_display_debug_refresh(void)
+{
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    if (!s_started || !lvgl_port_lock(20)) {
+        return;
+    }
+    if (s_ui_mode == SC_UI_MODE_DEBUG) {
+        sc_debug_refresh_locked();
+    }
+    lvgl_port_unlock();
+#endif
 }
 
 bool sc_lvgl_display_bus_lock(uint32_t timeout_ms)
@@ -655,6 +921,18 @@ void sc_lvgl_display_audio_state_changed(bool playback_active)
 void sc_lvgl_display_audio_volume_changed(uint8_t volume_percent)
 {
     (void)volume_percent;
+}
+
+void sc_lvgl_display_debug_enter(void)
+{
+}
+
+void sc_lvgl_display_debug_exit(void)
+{
+}
+
+void sc_lvgl_display_debug_refresh(void)
+{
 }
 
 bool sc_lvgl_display_bus_lock(uint32_t timeout_ms)

@@ -191,9 +191,14 @@ static bool handle_hello(sc_audio_server_t *server,
     put_u32(&response->payload[0], control_session_id);
     put_u32(&response->payload[4], server->audio_session_id);
     response->payload[8] = SC_AUDIO_SEMANTIC_VERSION;
-    put_u16(&response->payload[9], SC_AUDIO_CAP_FINITE_PLAY |
-                                      SC_AUDIO_CAP_VOLUME |
-                                      SC_AUDIO_CAP_STATUS);
+    uint16_t capabilities = SC_AUDIO_CAP_FINITE_PLAY |
+                            SC_AUDIO_CAP_VOLUME |
+                            SC_AUDIO_CAP_STATUS;
+    if (server->backend.set_source != NULL &&
+        server->backend.set_tone_note != NULL) {
+        capabilities |= SC_AUDIO_CAP_DEBUG_SOURCE;
+    }
+    put_u16(&response->payload[9], capabilities);
     put_u32(&response->payload[11], server->minimum_duration_seconds);
     put_u32(&response->payload[15], server->maximum_duration_seconds);
     return true;
@@ -222,7 +227,9 @@ static bool handle_command(sc_audio_server_t *server,
 {
     const size_t expected_len = request->type == SC_AUDIO_MSG_PLAY
                                     ? 16U
-                                    : request->type == SC_AUDIO_MSG_SET_VOLUME
+                                    : (request->type == SC_AUDIO_MSG_SET_VOLUME ||
+                                       request->type == SC_AUDIO_MSG_SET_SOURCE ||
+                                       request->type == SC_AUDIO_MSG_SET_TONE_NOTE)
                                           ? 13U
                                           : SC_AUDIO_COMMAND_HEADER_SIZE;
     if (request->payload_len != expected_len) {
@@ -272,13 +279,33 @@ static bool handle_command(sc_audio_server_t *server,
         if (server->backend.stop != NULL) {
             result = server->backend.stop(server->backend.context);
         }
-    } else {
+    } else if (request->type == SC_AUDIO_MSG_SET_VOLUME) {
         const uint8_t volume_percent = request->payload[12];
         if (volume_percent > 100U) {
             result = SC_AUDIO_RESULT_INVALID_ARGUMENT;
         } else if (server->backend.set_volume != NULL) {
             result = server->backend.set_volume(server->backend.context,
                                                 volume_percent);
+        }
+    } else if (request->type == SC_AUDIO_MSG_SET_SOURCE) {
+        const uint8_t source = request->payload[12];
+        if (source > SC_AUDIO_SOURCE_TONE) {
+            result = SC_AUDIO_RESULT_INVALID_ARGUMENT;
+        } else if (server->backend.set_source != NULL) {
+            result = server->backend.set_source(server->backend.context,
+                                                (sc_audio_source_t)source);
+        } else {
+            result = SC_AUDIO_RESULT_UNSUPPORTED;
+        }
+    } else {
+        const uint8_t note = request->payload[12];
+        if (note >= SC_AUDIO_TONE_COUNT) {
+            result = SC_AUDIO_RESULT_INVALID_ARGUMENT;
+        } else if (server->backend.set_tone_note != NULL) {
+            result = server->backend.set_tone_note(server->backend.context,
+                                                   (sc_audio_tone_note_t)note);
+        } else {
+            result = SC_AUDIO_RESULT_UNSUPPORTED;
         }
     }
     cache_command(server, request, command_id, result);
@@ -301,6 +328,8 @@ bool sc_audio_server_handle(sc_audio_server_t *server,
     case SC_AUDIO_MSG_PLAY:
     case SC_AUDIO_MSG_STOP:
     case SC_AUDIO_MSG_SET_VOLUME:
+    case SC_AUDIO_MSG_SET_SOURCE:
+    case SC_AUDIO_MSG_SET_TONE_NOTE:
         return handle_command(server, request, response);
     default:
         make_error(server, request, SC_AUDIO_RESULT_UNSUPPORTED, response);
@@ -395,6 +424,72 @@ bool sc_audio_make_set_volume(sc_frame_t *frame,
                  audio_session_id, command_id);
     frame->payload_len = 13U;
     frame->payload[12] = volume_percent;
+    return true;
+}
+
+bool sc_audio_make_set_source(sc_frame_t *frame,
+                              uint16_t sequence,
+                              uint32_t control_session_id,
+                              uint32_t audio_session_id,
+                              uint32_t command_id,
+                              sc_audio_source_t source)
+{
+    if (frame == NULL || source > SC_AUDIO_SOURCE_TONE) {
+        return false;
+    }
+    make_command(frame, SC_AUDIO_MSG_SET_SOURCE, sequence, control_session_id,
+                 audio_session_id, command_id);
+    frame->payload_len = 13U;
+    frame->payload[12] = (uint8_t)source;
+    return true;
+}
+
+bool sc_audio_make_set_tone_note(sc_frame_t *frame,
+                                 uint16_t sequence,
+                                 uint32_t control_session_id,
+                                 uint32_t audio_session_id,
+                                 uint32_t command_id,
+                                 sc_audio_tone_note_t note)
+{
+    if (frame == NULL || note >= SC_AUDIO_TONE_COUNT) {
+        return false;
+    }
+    make_command(frame, SC_AUDIO_MSG_SET_TONE_NOTE, sequence,
+                 control_session_id, audio_session_id, command_id);
+    frame->payload_len = 13U;
+    frame->payload[12] = (uint8_t)note;
+    return true;
+}
+
+uint8_t sc_audio_debug_status_flags(sc_audio_source_t source,
+                                    sc_audio_tone_note_t note)
+{
+    if (source > SC_AUDIO_SOURCE_TONE || note >= SC_AUDIO_TONE_COUNT) {
+        return 0U;
+    }
+    return SC_AUDIO_STATUS_FLAG_DEBUG_CONFIG_VALID |
+           (source == SC_AUDIO_SOURCE_TONE
+                ? SC_AUDIO_STATUS_FLAG_SOURCE_TONE : 0U) |
+           ((uint8_t)note << SC_AUDIO_STATUS_FLAG_NOTE_SHIFT);
+}
+
+bool sc_audio_debug_config_from_status(const sc_audio_status_t *status,
+                                       sc_audio_source_t *source,
+                                       sc_audio_tone_note_t *note)
+{
+    if (status == NULL || source == NULL || note == NULL ||
+        (status->flags & SC_AUDIO_STATUS_FLAG_DEBUG_CONFIG_VALID) == 0U) {
+        return false;
+    }
+    const uint8_t encoded_note =
+        (status->flags & SC_AUDIO_STATUS_FLAG_NOTE_MASK) >>
+        SC_AUDIO_STATUS_FLAG_NOTE_SHIFT;
+    if (encoded_note >= SC_AUDIO_TONE_COUNT) {
+        return false;
+    }
+    *source = (status->flags & SC_AUDIO_STATUS_FLAG_SOURCE_TONE) != 0U
+                  ? SC_AUDIO_SOURCE_TONE : SC_AUDIO_SOURCE_MUSIC;
+    *note = (sc_audio_tone_note_t)encoded_note;
     return true;
 }
 
@@ -515,6 +610,8 @@ const char *sc_audio_message_name(uint8_t type)
     case SC_AUDIO_MSG_PLAY: return "PLAY";
     case SC_AUDIO_MSG_STOP: return "STOP";
     case SC_AUDIO_MSG_SET_VOLUME: return "SET_VOLUME";
+    case SC_AUDIO_MSG_SET_SOURCE: return "SET_SOURCE";
+    case SC_AUDIO_MSG_SET_TONE_NOTE: return "SET_TONE_NOTE";
     case SC_AUDIO_MSG_INFO: return "INFO";
     case SC_AUDIO_MSG_RESULT: return "RESULT";
     case SC_AUDIO_MSG_READY: return "READY";

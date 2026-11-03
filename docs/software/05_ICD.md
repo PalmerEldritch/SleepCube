@@ -10,6 +10,8 @@ This revision retains the released physical UART mapping, ADR-0007 transport
 framing and semantic audio contract unchanged. ADR-0008 defines session
 identity, idempotent command handling, retry limits and reset reconciliation.
 ADR-0009 adds the R01 COB-light and power-interface constraints.
+ADR-0011 adds a capability-negotiated extension used only by the matched touch-
+debug development images; normal product semantics remain unchanged.
 
 ## 2. Physical interface
 
@@ -92,6 +94,8 @@ echoes its request sequence.
 | `PLAY` | `0x03` | Control → Audio | common command header + `duration_seconds:u32` | Request finite playback |
 | `STOP` | `0x04` | Control → Audio | common command header | Request controlled stop |
 | `SET_VOLUME` | `0x05` | Control → Audio | common command header + `volume_percent:u8` | Request authoritative persisted volume |
+| `SET_SOURCE` | `0x06` | Control → Audio | common command header + `source:u8` | Optional debug capability: select sleep music (`0`) or generated sine (`1`) |
+| `SET_TONE_NOTE` | `0x07` | Control → Audio | common command header + `note:u8` | Optional debug capability: select C3..C8 (`0`..`5`) |
 | `INFO` | `0x81` | Audio → Control | information payload | Correlated `HELLO` response |
 | `RESULT` | `0x82` | Audio → Control | result payload | Correlated state-changing-command acknowledgement/result |
 | `READY` | `0x83` | Audio → Control | status payload | Audio services became command-ready; also an unsolicited event |
@@ -125,7 +129,7 @@ session. It shall not wrap; a new Control session shall be established first.
 | 0 | 4 | echoed `control_session_id` |
 | 4 | 4 | current `audio_session_id` |
 | 8 | 1 | semantic version (`1`) |
-| 9 | 2 | capabilities bit mask: bit 0 finite PLAY, bit 1 volume, bit 2 status |
+| 9 | 2 | capabilities bit mask: bit 0 finite PLAY, bit 1 volume, bit 2 status, optional bit 3 debug source/note |
 | 11 | 4 | minimum accepted duration in seconds |
 | 15 | 4 | maximum accepted duration in seconds |
 
@@ -143,7 +147,7 @@ All authoritative snapshots are 14 bytes:
 | 4 | 1 | state code |
 | 5 | 1 | confirmed volume, 0–100 percent |
 | 6 | 1 | stop-reason code |
-| 7 | 1 | flags; zero in semantic version 1 |
+| 7 | 1 | flags; normally zero; optional debug encoding below |
 | 8 | 4 | whole seconds remaining, rounded up; zero when inactive |
 | 12 | 2 | fault code; zero when no fault |
 
@@ -151,6 +155,19 @@ State codes are `0 NOT_READY`, `1 STOPPED`, `2 STARTING`, `3 PLAYING`,
 `4 STOPPING`, and `5 FAULT`. Stop-reason codes are `0 BOOT/NONE`, `1 MANUAL`,
 `2 TIMER_EXPIRED`, and `3 FAULT`. The status payload carries the `VOLUME`
 semantics; semantic version 1 has no separate volume-event type.
+
+When capability bit 3 is advertised, status flag bit 7 marks the debug
+configuration valid, bit 0 selects generated sine when set, and bits 1 through
+3 encode C3..C8 as `0`..`5`. Other flag bits remain reserved. A normal Audio
+image does not advertise bit 3 and shall reject the optional commands as
+unsupported. Source/note values outside the declared ranges shall return
+`INVALID_ARGUMENT`.
+
+The optional controls do not alter the PLAY contract. Switching source or note
+while active shall preserve the existing absolute playback deadline; the
+current development implementation uses a one-second fade out and one-second
+fade in. Generated samples remain local to Audio and are never transported over
+UART. Control shall disable these UI controls when bit 3 is absent.
 
 ### 4.4 Result and error payloads
 

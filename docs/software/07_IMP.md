@@ -8,7 +8,10 @@ Development shall proceed in bounded milestones. Each milestone must preserve a 
 
 The released R00 Waveshare GUI and application-facing lighting behavior are
 retained. M10 replaces only the physical RGB backend and RGB-specific rendering
-with fixed-color COB PWM. The Audio firmware and UART protocol remain unchanged.
+with fixed-color COB PWM. The normal R01 Audio firmware and UART feature set
+remain unchanged. ADR-0011 separately permits a matched development-only image
+with capability-negotiated source/note commands and a generated sine source;
+those features are compiled out of the normal profiles.
 
 ## 2. Milestones
 
@@ -373,17 +376,20 @@ Deliverables:
 hardware while preserving the GUI, persistence, audio behavior and controller
 ownership boundaries.
 
-**Status (2026-10-25): SOFTWARE COMPLETE; UNPOWERED TARGET GATE PASS; POWERED
-PROTOTYPE PARTIAL; PWM DEBUG SERIAL SWEEP PASS.** Branch
-`feat/r01-cob-pwm-lighting` was created from clean tag `software-r00`. The
+**Status (2026-10-31): COB MIGRATION SOFTWARE COMPLETE; TOUCH-DEBUG SOFTWARE
+IMPLEMENTED AND BUILD-VERIFIED; TARGET TOUCH/AUDIO VERIFICATION PENDING.** The
+COB baseline was developed on `feat/r01-cob-pwm-lighting`; the separate
+`feat/r01-touch-debug-ui` branch now carries the matched development image. The
 Control firmware now uses an active-high GPIO8 LEDC driver at 3 kHz/13-bit on
 timer 1/channel 1, retains the `light_service` API and whole-strip effects, maps
 internal logical 0% to off and nonzero values to configurable 5–80% steady-state
 duty, and fails off for invalid limits or output errors. ADR-0010 retains the
 existing nonzero GUI minimum; no user-accessible off state is added. RGB
 buffers, per-pixel rendering, RMT sources/configuration and RGB-only settings
-are removed from the active Control implementation. The GUI, Audio firmware and
-UART protocol are unchanged.
+are removed from the active Control implementation. Normal GUI behavior remains
+unchanged. The matched debug profiles add the ADR-0011 touch grid, local sine
+source and optional capability-negotiated UART source/note controls; normal
+profiles compile out the grid/generator.
 
 Strict mapping/policy tests, retained host regressions and a clean ESP-IDF v6.0
 R01 Control build pass. The image embeds `R01-dev`; exact software evidence is
@@ -405,6 +411,19 @@ info traffic while retaining warnings/errors. It was flashed to the Waveshare
 and target checks confirmed all three line endings execute exactly once and the
 periodic status stream remains suppressed.
 
+The touch-debug image enters on five rapid rest-view taps and offers PLAY/STOP,
+volume, exact 0–100% duty, light enable, 1–25 kHz frequency, music/generated-
+sine source, C3–C8 note and exit controls. Exact duty and frequency are volatile;
+effects are disabled in debug mode; exit restores product lighting, music and
+C5. Strict protocol and generated-tone host tests pass. Clean ESP-IDF v6.0
+matched builds pass at 593,680 bytes (Control) and 343,488 bytes (Audio).
+Clean normal-profile regression builds also pass with the touch UI and tone
+generator disabled (Control 597,680 bytes; Audio 342,160 bytes).
+The exact matched images subsequently passed flash/write verification, booted
+with the intended identities, advertised capability `0x000f`, reconciled to
+silent `STOPPED` and validated the canonical Audio content. Touch-grid,
+generated-tone and powered PWM interaction checks have not yet been performed.
+
 Deliverables:
 
 - COB LEDC driver and host-tested brightness/duty policy;
@@ -414,6 +433,7 @@ Deliverables:
 - powered-strip behavioral and regression checks;
 - final PD-trigger/DC-DC integrated power-cycle smoke.
 - development-only runtime PWM frequency/duty console for hardware evaluation.
+- matched development-only touch grid and generated-tone Audio image.
 
 Exit criteria:
 
@@ -449,8 +469,8 @@ changes only the Control-side lighting implementation within it.
 
 ## 5. Suggested immediate next engineering task
 
-Execute M10-HWT-001 with both controllers USB-powered and the external 12 V
-supply initially off. Confirm the external GPIO8 gate pull-down and explicit
-external-source-to-Waveshare ground connection, flash the exact R01 image, then
-measure reset/boot low level, approximately 3 kHz frequency and expected duties.
-Only after this passes should 12 V be applied for the COB behavior checks.
+Verify all eight grid controls with 12 V initially off, then repeat exact
+frequency/duty, effect-suppression, generated-tone/source-fade and
+exit-restoration checks on the powered prototype. The matched flash, boot
+identity and capability synchronization gates already pass; do not infer the
+remaining behavior from that smoke evidence.

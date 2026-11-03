@@ -24,6 +24,7 @@ Control Controller (Waveshare ESP32-C6)
 ├── global-brightness/effect policy
 ├── COB LEDC PWM driver
 ├── development PWM console (R01-dev only)
+├── development touch debug grid (matched debug image only)
 ├── settings store
 ├── audio_service (control-side facade)
 └── audio_link / UART transport
@@ -37,6 +38,7 @@ Audio Controller (AtomS3 Lite)
 ├── content/storage service
 ├── decoder
 ├── audio buffer pipeline
+├── generated sine source (matched debug image only)
 └── I2S/audio-output driver
         │
         ▼
@@ -74,6 +76,13 @@ without changing persisted brightness. The seam is volatile, mutually exclusive
 with the older semantic-audio stdin console, and shall be compiled out of a
 release image.
 
+ADR-0011 adds a separate touch-debug profile alongside that serial image. Its
+`app_core` owns entry/exit and routes grid events through the existing light and
+audio service boundaries. `light_service` remains the only COB/LEDC owner; in
+debug mode it substitutes exact duty and disables presentation effects without
+changing persisted brightness. The display driver owns only gesture recognition
+and grid rendering. The normal profile compiles this path out.
+
 On ESP32-C6 the distinct display and COB LEDC timers share one global clock
 source. Both drivers therefore select the fixed 80 MHz PLL-divided source. The
 display remains on timer 0/channel 0 and the COB output remains on timer
@@ -99,6 +108,12 @@ It shall not own:
 - main COB lighting;
 - overall visual product state;
 - track-selection UX.
+
+The matched Audio debug profile adds one generated-sine source inside the
+playback owner. Source/note requests never expose decoder, storage or I2S
+operations. Switching source while active uses the existing gain path and
+retains the current absolute session deadline. Normal Audio profiles do not
+advertise this optional capability and compile out the generator.
 
 ## 4. Control-side layering
 
@@ -266,3 +281,5 @@ The framing/checksum and semantic session/retry decisions are captured by
 ADR-0007 and ADR-0008. ADR-0009 supersedes the RGB-specific portions of
 ADR-0002/ADR-0003 for the R01 COB PWM variant without changing controller
 ownership, GUI behavior or the inter-controller semantic protocol.
+ADR-0011 defines the separate touch-debug image and its optional development
+extension to that protocol; it does not change normal product ownership or UX.

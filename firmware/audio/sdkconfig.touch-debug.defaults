@@ -1,0 +1,4 @@
+# SleepCube matched Atom touch-debug development profile.
+CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO=y
+CONFIG_APP_PROJECT_VER_FROM_CONFIG=y
+CONFIG_APP_PROJECT_VER="R01-touch-debug-audio"

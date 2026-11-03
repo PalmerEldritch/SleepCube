@@ -70,3 +70,24 @@ void sc_ui_service_audio_volume_changed(uint8_t volume_percent)
     (void)volume_percent;
 #endif
 }
+
+void sc_ui_service_debug_enter(void)
+{
+#if CONFIG_SC_UI_BACKEND_LCD_TOUCH && CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    sc_lvgl_display_debug_enter();
+#endif
+}
+
+void sc_ui_service_debug_exit(void)
+{
+#if CONFIG_SC_UI_BACKEND_LCD_TOUCH && CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    sc_lvgl_display_debug_exit();
+#endif
+}
+
+void sc_ui_service_debug_refresh(void)
+{
+#if CONFIG_SC_UI_BACKEND_LCD_TOUCH && CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+    sc_lvgl_display_debug_refresh();
+#endif
+}

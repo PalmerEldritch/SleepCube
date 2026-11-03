@@ -15,6 +15,9 @@
 static const char *TAG = "sc_app_core";
 
 static QueueHandle_t s_event_queue;
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+static bool s_debug_mode;
+#endif
 
 esp_err_t sc_app_core_post_event(const sc_app_event_t *event)
 {
@@ -70,15 +73,105 @@ static void sc_app_core_task(void *arg)
                     ESP_LOGW(TAG,
                              "authoritative audio unavailable; presentation neutral, lighting retained");
                 }
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+                if (s_debug_mode) {
+                    sc_ui_service_debug_refresh();
+                }
+#endif
                 break;
             case SC_APP_EVT_AUDIO_STATE_CHANGED:
                 sc_ui_service_audio_state_changed(event.value != 0);
                 ESP_ERROR_CHECK_WITHOUT_ABORT(
                     sc_light_service_audio_sway(event.value != 0));
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+                if (s_debug_mode) {
+                    sc_ui_service_debug_refresh();
+                }
+#endif
                 break;
             case SC_APP_EVT_AUDIO_VOLUME_CHANGED:
                 sc_ui_service_audio_volume_changed((uint8_t)event.value);
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+                if (s_debug_mode) {
+                    sc_ui_service_debug_refresh();
+                }
+#endif
                 break;
+            case SC_APP_EVT_AUDIO_DEBUG_CONFIG_CHANGED:
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+                if (s_debug_mode) {
+                    sc_ui_service_debug_refresh();
+                }
+#endif
+                break;
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
+            case SC_APP_EVT_UI_DEBUG_ENTER:
+                if (!s_debug_mode &&
+                    sc_light_service_debug_enter_touch_mode() == ESP_OK) {
+                    s_debug_mode = true;
+                    sc_ui_service_debug_enter();
+                }
+                break;
+            case SC_APP_EVT_UI_DEBUG_EXIT:
+                if (s_debug_mode) {
+                    s_debug_mode = false;
+                    sc_audio_service_restore_debug_defaults();
+                    ESP_ERROR_CHECK_WITHOUT_ABORT(
+                        sc_light_service_debug_exit_touch_mode());
+                    sc_ui_service_debug_exit();
+                }
+                break;
+            case SC_APP_EVT_UI_DEBUG_VOLUME_NEXT: {
+                const uint8_t current = sc_audio_service_get_volume_percent();
+                const uint8_t next = current >= 100U
+                                         ? 0U
+                                         : (uint8_t)(((current / 10U) + 1U) * 10U);
+                (void)sc_audio_service_set_volume_percent(next);
+                sc_ui_service_debug_refresh();
+                break;
+            }
+            case SC_APP_EVT_UI_DEBUG_LIGHT_TOGGLE:
+                (void)sc_light_service_toggle();
+                sc_ui_service_debug_refresh();
+                break;
+            case SC_APP_EVT_UI_DEBUG_DUTY_NEXT: {
+                sc_light_debug_status_t status = {0};
+                if (sc_light_service_debug_get_status(&status) == ESP_OK) {
+                    const uint16_t next = status.manual_duty_bps >= 10000U
+                                              ? 0U
+                                              : (uint16_t)(((status.manual_duty_bps / 1000U) + 1U) * 1000U);
+                    (void)sc_light_service_debug_set_pwm_duty_bps(next);
+                }
+                sc_ui_service_debug_refresh();
+                break;
+            }
+            case SC_APP_EVT_UI_DEBUG_SOURCE_TOGGLE: {
+                const sc_audio_source_t next =
+                    sc_audio_service_get_source() == SC_AUDIO_SOURCE_TONE
+                        ? SC_AUDIO_SOURCE_MUSIC : SC_AUDIO_SOURCE_TONE;
+                (void)sc_audio_service_set_source(next);
+                break;
+            }
+            case SC_APP_EVT_UI_DEBUG_FREQUENCY_NEXT: {
+                sc_light_debug_status_t status = {0};
+                if (sc_light_service_debug_get_status(&status) == ESP_OK) {
+                    uint8_t current = (uint8_t)(status.requested_frequency_hz / 1000U);
+                    const uint8_t next = current >= SC_LIGHT_DEBUG_PWM_MAX_KHZ
+                                             ? SC_LIGHT_DEBUG_PWM_MIN_KHZ
+                                             : (uint8_t)(current + 1U);
+                    (void)sc_light_service_debug_set_pwm_frequency_khz(next);
+                }
+                sc_ui_service_debug_refresh();
+                break;
+            }
+            case SC_APP_EVT_UI_DEBUG_NOTE_NEXT: {
+                const sc_audio_tone_note_t current = sc_audio_service_get_tone_note();
+                const sc_audio_tone_note_t next =
+                    (sc_audio_tone_note_t)((current + 1U) % SC_AUDIO_TONE_COUNT);
+                (void)sc_audio_service_set_tone_note(next);
+                break;
+            }
+#endif
             default:
                 break;
         }

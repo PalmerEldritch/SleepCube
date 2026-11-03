@@ -78,6 +78,7 @@ static float s_startup_anim_elapsed_s = 0.0f;
 static float s_audio_sway_elapsed_s = 0.0f;
 static float s_audio_sway_peak_pct = 0.0f;
 static bool s_audio_sway_active = false;
+static bool s_effects_enabled = true;
 static uint16_t s_pulse_attack_ms = 260U;
 static uint16_t s_pulse_release_ms = 900U;
 static uint8_t s_pulse_peak_up_pct = 19U;
@@ -291,8 +292,9 @@ static void sc_light_service_task(void *arg)
         if (s_brightness_current_pct <= 0.0f) {
             output_duty_bps = 0U;
         } else {
-            const float startup_scale = sc_startup_envelope(dt_s);
-            const bool effects_enabled = s_light_enabled && (s_brightness_target_pct > 0);
+            const float startup_scale = s_effects_enabled ? sc_startup_envelope(dt_s) : 1.0f;
+            const bool effects_enabled = s_effects_enabled && s_light_enabled &&
+                                         (s_brightness_target_pct > 0);
             const float audio_sway_pct = effects_enabled ? sc_audio_sway_envelope(dt_s) : 0.0f;
             const float fluct_brightness_pct = effects_enabled ? sc_fluctuation_step(dt_s) : 0.0f;
 
@@ -308,7 +310,7 @@ static void sc_light_service_task(void *arg)
                 (uint8_t)CONFIG_SC_LIGHT_PWM_MAX_DUTY_PCT);
         }
         if (manual_duty_enabled) {
-            output_duty_bps = manual_duty_bps;
+            output_duty_bps = s_light_enabled ? manual_duty_bps : 0U;
         }
         ESP_ERROR_CHECK_WITHOUT_ABORT(sc_cob_pwm_if_set_duty_bps(output_duty_bps));
         if (trace_this_cycle) {
@@ -364,6 +366,7 @@ esp_err_t sc_light_service_start(void)
     s_audio_sway_active = false;
     s_audio_sway_elapsed_s = 0.0f;
     s_audio_sway_peak_pct = 0.0f;
+    s_effects_enabled = true;
     const uint32_t actual_frequency_hz = sc_cob_pwm_if_get_frequency_hz();
     const uint8_t resolution_bits = sc_cob_pwm_if_get_resolution_bits();
     portENTER_CRITICAL(&s_debug_pwm_lock);
@@ -393,7 +396,7 @@ esp_err_t sc_light_service_start(void)
 esp_err_t sc_light_service_set_enabled(bool enable)
 {
     s_light_enabled = enable;
-    if (enable) {
+    if (enable && s_effects_enabled) {
         s_startup_anim_active = true;
         s_startup_anim_elapsed_s = 0.0f;
     } else {
@@ -447,7 +450,7 @@ esp_err_t sc_light_service_set_brightness_percent(uint8_t percent)
 esp_err_t sc_light_service_audio_sway(bool audio_enabled)
 {
 #if SC_LIGHT_AUDIO_SWAY_ENABLE
-    if (!s_light_enabled || (s_brightness_target_pct <= 0)) {
+    if (!s_effects_enabled || !s_light_enabled || (s_brightness_target_pct <= 0)) {
         s_audio_sway_active = false;
         s_audio_sway_elapsed_s = 0.0f;
         s_audio_sway_peak_pct = 0.0f;
@@ -521,6 +524,52 @@ uint8_t sc_light_service_get_current_brightness_percent(void)
 uint8_t sc_light_service_get_target_brightness_percent(void)
 {
     return (uint8_t)sc_clampf((float)s_brightness_target_pct, 0.0f, 100.0f);
+}
+
+esp_err_t sc_light_service_debug_enter_touch_mode(void)
+{
+    uint16_t duty_bps = sc_cob_pwm_if_get_duty_bps();
+    duty_bps = (uint16_t)(((uint32_t)duty_bps + 500U) / 1000U * 1000U);
+    if (duty_bps > SC_LIGHT_DEBUG_DUTY_BPS_MAX) {
+        duty_bps = SC_LIGHT_DEBUG_DUTY_BPS_MAX;
+    }
+
+    s_effects_enabled = false;
+    s_startup_anim_active = false;
+    s_startup_anim_elapsed_s = 0.0f;
+    s_audio_sway_active = false;
+    s_audio_sway_elapsed_s = 0.0f;
+    s_audio_sway_peak_pct = 0.0f;
+    ESP_RETURN_ON_ERROR(sc_light_service_debug_set_pwm_duty_bps(duty_bps),
+                        TAG, "touch-debug duty setup failed");
+    ESP_LOGI(TAG, "touch debug entered: exact duty=%u.%02u%% effects=off",
+             (unsigned)(duty_bps / 100U), (unsigned)(duty_bps % 100U));
+    return ESP_OK;
+}
+
+esp_err_t sc_light_service_debug_exit_touch_mode(void)
+{
+    const uint8_t default_frequency_khz =
+        (uint8_t)((CONFIG_SC_LIGHT_PWM_FREQUENCY_HZ + 500U) / 1000U);
+    ESP_RETURN_ON_ERROR(sc_light_service_debug_clear_pwm_duty_override(),
+                        TAG, "touch-debug duty release failed");
+    ESP_RETURN_ON_ERROR(sc_light_service_debug_set_pwm_frequency_khz(default_frequency_khz),
+                        TAG, "touch-debug frequency restore failed");
+
+    s_audio_sway_active = false;
+    s_audio_sway_elapsed_s = 0.0f;
+    s_audio_sway_peak_pct = 0.0f;
+    s_startup_anim_active = false;
+    s_startup_anim_elapsed_s = 0.0f;
+    s_light_enabled = true;
+    s_effects_enabled = true;
+    ESP_LOGI(TAG, "touch debug exited: product PWM/effects restored");
+    return ESP_OK;
+}
+
+bool sc_light_service_debug_effects_enabled(void)
+{
+    return s_effects_enabled;
 }
 
 esp_err_t sc_light_service_debug_set_pwm_frequency_khz(uint8_t frequency_khz)
@@ -671,6 +720,21 @@ uint8_t sc_light_service_get_current_brightness_percent(void)
 uint8_t sc_light_service_get_target_brightness_percent(void)
 {
     return 0;
+}
+
+esp_err_t sc_light_service_debug_enter_touch_mode(void)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sc_light_service_debug_exit_touch_mode(void)
+{
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+bool sc_light_service_debug_effects_enabled(void)
+{
+    return false;
 }
 
 esp_err_t sc_light_service_debug_set_pwm_frequency_khz(uint8_t frequency_khz)

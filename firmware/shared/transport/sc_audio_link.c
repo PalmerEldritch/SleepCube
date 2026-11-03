@@ -29,6 +29,8 @@ typedef enum {
     CONTROL_REQUEST_PLAY,
     CONTROL_REQUEST_STOP,
     CONTROL_REQUEST_SET_VOLUME,
+    CONTROL_REQUEST_SET_SOURCE,
+    CONTROL_REQUEST_SET_TONE_NOTE,
     CONTROL_REQUEST_REPLAY_LAST,
 } control_request_type_t;
 
@@ -42,6 +44,7 @@ typedef struct {
     volatile bool synchronized;
     uint32_t control_session_id;
     uint32_t audio_session_id;
+    uint16_t capabilities;
     uint32_t next_command_id;
     uint16_t next_sequence;
     QueueHandle_t request_queue;
@@ -291,6 +294,24 @@ static bool build_control_request(const control_request_t *request,
             return false;
         }
         break;
+    case CONTROL_REQUEST_SET_SOURCE:
+        if (!sc_audio_make_set_source(frame, sequence,
+                                      s_control.control_session_id,
+                                      s_control.audio_session_id,
+                                      s_control.next_command_id++,
+                                      (sc_audio_source_t)request->value)) {
+            return false;
+        }
+        break;
+    case CONTROL_REQUEST_SET_TONE_NOTE:
+        if (!sc_audio_make_set_tone_note(frame, sequence,
+                                         s_control.control_session_id,
+                                         s_control.audio_session_id,
+                                         s_control.next_command_id++,
+                                         (sc_audio_tone_note_t)request->value)) {
+            return false;
+        }
+        break;
     case CONTROL_REQUEST_REPLAY_LAST:
         if (!s_control.last_state_request_valid) {
             return false;
@@ -376,6 +397,7 @@ static void process_control_frame(const sc_frame_t *frame,
                  SC_AUDIO_CAP_VOLUME |
                  SC_AUDIO_CAP_STATUS)) {
             s_control.audio_session_id = info.audio_session_id;
+            s_control.capabilities = info.capabilities;
             ESP_LOGI(TAG,
                      "INFO synchronized audio_session=%08" PRIx32
                      " capabilities=0x%04x duration=%" PRIu32 "..%" PRIu32 "s",
@@ -656,6 +678,24 @@ esp_err_t sc_audio_link_control_set_volume(uint8_t volume_percent)
     return queue_control_request(CONTROL_REQUEST_SET_VOLUME, volume_percent);
 }
 
+esp_err_t sc_audio_link_control_set_source(sc_audio_source_t source)
+{
+    if (source > SC_AUDIO_SOURCE_TONE ||
+        !sc_audio_link_control_has_capability(SC_AUDIO_CAP_DEBUG_SOURCE)) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return queue_control_request(CONTROL_REQUEST_SET_SOURCE, source);
+}
+
+esp_err_t sc_audio_link_control_set_tone_note(sc_audio_tone_note_t note)
+{
+    if (note >= SC_AUDIO_TONE_COUNT ||
+        !sc_audio_link_control_has_capability(SC_AUDIO_CAP_DEBUG_SOURCE)) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return queue_control_request(CONTROL_REQUEST_SET_TONE_NOTE, note);
+}
+
 esp_err_t sc_audio_link_control_request_status(void)
 {
     return queue_control_request(CONTROL_REQUEST_STATUS, 0U);
@@ -672,6 +712,12 @@ esp_err_t sc_audio_link_control_replay_last(void)
 bool sc_audio_link_control_is_synchronized(void)
 {
     return s_control.synchronized;
+}
+
+bool sc_audio_link_control_has_capability(uint16_t capability)
+{
+    return s_control.synchronized &&
+           (s_control.capabilities & capability) == capability;
 }
 
 esp_err_t sc_audio_link_control_get_status(sc_audio_status_t *status)

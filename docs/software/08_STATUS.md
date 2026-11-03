@@ -2,17 +2,18 @@
 
 **Baseline:** R01 development from released `software-r00`
 
-**Last updated:** 2026-10-25
+**Last updated:** 2026-10-31
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M10 R01 COB PWM migration: powered prototype partial; runtime PWM debug
-image flashed and serial sweep passed; physical sweep pending**
+**M10 R01 COB PWM migration: matched touch-debug images flashed and boot-
+verified; target touch/PWM/audio interaction verification pending**
 
-Status: **Branch `feat/r01-cob-pwm-lighting` was created from clean annotated
-tag `software-r00`. The COB-only Control implementation and active R01 documents
+Status: **The COB baseline branch was created from clean annotated tag
+`software-r00`; current branch `feat/r01-touch-debug-ui` is a separate
+development image. The COB-only Control implementation and active R01 documents
 are complete. New mapping tests and retained settings/protocol/timing tests pass.
 A clean ESP-IDF v6.0 ESP32-C6/8 MB build passes and embeds `R01-dev`. The exact
 image has now flashed to the USB-powered Waveshare with write-hash verification,
@@ -25,8 +26,17 @@ rails, functioning controllers/audio/COB output and smooth brightness. A newer
 development image adds runtime USB-console frequency and fixed-duty controls.
 The exact clean-built image is flashed and serial runtime checks pass across
 the 1–25 kHz range and both resolution boundaries. Independent scope checks at
-the selected frequencies remain open. M10 and R01 release are not complete. No
-R01 release tag exists or should be created yet.**
+the selected frequencies remain open. The new touch-debug Control/Audio pair
+adds a five-tap 2-by-4 hardware-test grid, exact 0–100% duty, 1–25 kHz
+frequency, generated C3–C8 sine source and source switching. Strict protocol/
+tone host tests and clean ESP-IDF v6.0 matched builds pass. The exact matched
+pair has now passed target write/hash verification and boot smoke testing.
+Control booted `R01-touch-debug`, initialized GPIO8 at requested
+3 kHz/actual 3001 Hz and synchronized with capability mask `0x000f`. Audio
+booted `R01-touch-debug-audio`, mounted the SD card, validated the canonical WAV
+and reached silent `STOPPED` at persisted 50% volume. Interactive touch-grid,
+generated-tone and powered PWM checks remain open. M10 and R01 release are not
+complete. No R01 release tag exists or should be created yet.**
 
 The Control backend now drives an active-high logic-level MOSFET on GPIO8 using
 LEDC timer 1/channel 1 at 3 kHz and 13-bit resolution, distinct from display
@@ -57,8 +67,10 @@ The display and COB outputs retain distinct LEDC timers/channels but share the
 ESP32-C6 LEDC global source. Both are pinned to the 80 MHz PLL-divided clock so
 runtime COB selection through 25 kHz cannot conflict with the display timer.
 
-The GUI, persistence API, Audio firmware, semantic UART protocol and controller
-ownership are unchanged. ADR-0009 records the COB PWM architecture and the
+The normal GUI, persistence API and controller ownership remain unchanged.
+ADR-0011 records the separate touch-debug profiles and their optional semantic
+source/note extension; normal profiles compile out the grid and generator.
+ADR-0009 records the COB PWM architecture and the
 separate development/final power arrangements; ADR-0010 records the retained
 nonzero GUI minimum. Historical R00 target evidence remains valid only for R00
 and is preserved below and in the existing reports.
@@ -191,6 +203,16 @@ The separate R01 PWM development console is guarded by
 semantic console so only one task reads USB stdin. Commands are `pwm freq
 <1..25>`, `pwm duty <0..100>`, `pwm auto`, `pwm status` and `help`. Manual duty
 does not persist and normal GUI/effect output resumes on `pwm auto` or reset.
+
+The separate ADR-0011 touch-debug pair uses
+`sdkconfig.r01.touch-debug.defaults` on Control and
+`sdkconfig.touch-debug.defaults` on Audio. Five rapid rest-view taps enter a
+high-contrast grid. Lighting debug mode disables effects, holds exact physical
+duty independent of the normal 5–80% mapping, and preserves a separate enable
+latch. The Audio image generates C3–C8 directly in code and advertises optional
+source/note commands. Exit restores 3 kHz, normal effects, enabled light,
+music/C5 and the normal rest view. Duty/frequency/source/note are volatile;
+volume remains Audio-owned and persistent.
 
 Implemented migration seam:
 
@@ -766,19 +788,67 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Measure and evaluate candidate PWM frequencies on the powered strip.**
+**Verify the touch-debug controls and generated/PWM outputs.**
 
 The exact next task is:
 
-1. With a safe documented power/ground arrangement, set a fixed duty such as
-   `pwm duty 42.12`.
-2. Scope representative `pwm freq` values across 1–25 kHz, including the 9/10
-   kHz and 19/20 kHz resolution boundaries, and record measured frequency/duty.
-3. With the strip powered, evaluate visible flicker, MOSFET temperature and
-   audible noise at candidate frequencies.
-4. Finish with `pwm freq 3` and `pwm auto`; reset also restores these defaults.
+1. With external 12 V initially off, confirm five-tap entry, the eight controls,
+   GPIO8 low/reset safety, exact-duty/light-latch independence and 1–25 kHz
+   selection.
+2. Apply the already proven prototype power topology and measure selected PWM
+   frequencies/duties while checking flicker, MOSFET temperature and noise.
+3. Verify C3–C8 generated tones, music/tone fades, unchanged finite deadline,
+   effect suppression and B4 restoration to normal UI/music/C5/3 kHz/effects.
 
 ## 7. Session closeout record
+
+### 2026-10-31 — Matched touch-debug pair flashed and boot-verified
+
+- Rebuilt both development profiles cleanly with ESP-IDF v6.0 after the prior
+  temporary build directories had been cleared. Artifact sizes remain 593,680
+  bytes for Control and 343,488 bytes for Audio.
+- Identified Atom ESP32-S3 MAC `44:1b:f6:f4:fe:c8` on `/dev/ttyACM0` and
+  Waveshare ESP32-C6 base MAC `ac:eb:e6:1e:67:c4` on `/dev/ttyACM1`; the ACM
+  order was the reverse of the previous development session.
+- Flashed both exact images. Bootloader, partition-table and application writes
+  all passed esptool hash verification. Application SHA-256 values are
+  `0f989121ff1719e07e1490ff10c3248d0a45d4f06d6d6694dea9699f7daf21df`
+  (Control) and
+  `101ce82c3fb37ec373e2a9f6af15bc3aa156bc4c34e022c7927090a4f0fef36a`
+  (Audio).
+- Control booted `R01-touch-debug`, initialized GPIO8 at requested 3000 Hz /
+  actual 3001 Hz, synchronized to Audio with capability mask `0x000f`, and
+  reconciled to `STOPPED`. Audio booted `R01-touch-debug-audio`, mounted the SD
+  card, validated the canonical WAV and reached silent `STOPPED` at persisted
+  50% volume.
+- No five-tap/grid interaction, generated-tone listening, powered duty/frequency
+  measurement or exit-restoration behavior is claimed yet. The exact next task
+  is the three-step interaction gate in section 6.
+
+### 2026-10-31 — Matched touch-debug image implemented and clean-built
+
+- Created `feat/r01-touch-debug-ui` as a separate development-image branch.
+- Added five-rapid-tap recognition and a high-contrast 2-by-4 grid for
+  PLAY/STOP, volume, light enable, exact duty, source, PWM frequency, C-note and
+  exit. Normal profiles compile the grid out.
+- Exact B2 control is physical 0–100% PWM duty and bypasses the 5–80% product
+  mapping. It is volatile, independent of the B1 enable latch, and clears on
+  exit. Debug mode disables COB effects and fixes display backlight at 70%.
+- Added optional capability-negotiated UART source/note commands plus a local
+  44.1 kHz C3–C8 sine generator. Active changes use one-second down/up fades
+  without replacing the finite deadline. Exit restores music/C5, including
+  deferred restore after Audio reconnect.
+- Added ADR-0011, ICD/UX/SAS/IMP/VVM updates and software evidence report
+  `verification/2026-10-31_M10_touch_debug_image.md`.
+- Strict C11/UBSan semantic protocol and generated-tone tests pass. Clean
+  ESP-IDF v6.0 matched builds pass at 593,680 bytes for Control and 343,488
+  bytes for Audio with the intended identities.
+- Clean normal-profile regression builds also pass: Control is 597,680 bytes
+  with `CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE` unset and Audio is 342,160 bytes
+  with `CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO` unset.
+- At this implementation checkpoint no image had been flashed. The later
+  closeout entry above records the matched flash and boot smoke; interactive
+  touch/PWM/audio behavior remains unverified.
 
 ### 2026-10-25 — Terminal compatibility and quiet-console update verified
 

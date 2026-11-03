@@ -68,6 +68,25 @@ off and rejects lighting-service startup.
 For timing capture, append `sdkconfig.m7.trace` to the R01 defaults list. The
 trace overlay changes diagnostics only; it does not restore the old RGB backend.
 
+## Separate touch-debug build
+
+The matched hardware-test image is intentionally separate from the normal R01
+profile:
+
+```sh
+idf.py -B /tmp/sleepcube-control-touch-debug-build \
+  -D SDKCONFIG=/tmp/sleepcube-control-touch-debug-sdkconfig \
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.r01.touch-debug.defaults' \
+  set-target esp32c6 build
+```
+
+Flash it together with the Audio `R01-touch-debug-audio` image. Five rapid taps
+on the ambient screen enter the 2-by-4 grid. B2 changes exact physical PWM duty
+in wrapping 10% steps, not persisted logical brightness. B1 remains an
+independent output-enable latch. Debug frequency and duty are volatile; B4
+restores 3 kHz, product effects, light enabled and the normal UI. This profile
+does not enable either USB stdin console.
+
 ## R01 COB PWM development console
 
 The `R01-dev` profile enables a USB Serial/JTAG console for controlled lighting

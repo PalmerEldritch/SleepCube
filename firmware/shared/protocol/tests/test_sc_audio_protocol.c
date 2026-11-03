@@ -10,7 +10,11 @@ typedef struct {
     unsigned play_calls;
     unsigned stop_calls;
     unsigned volume_calls;
+    unsigned source_calls;
+    unsigned note_calls;
     uint32_t last_duration;
+    sc_audio_source_t source;
+    sc_audio_tone_note_t note;
 } fake_backend_t;
 
 static sc_audio_result_t get_status(void *context, sc_audio_status_t *status)
@@ -49,6 +53,24 @@ static sc_audio_result_t set_volume(void *context, uint8_t volume_percent)
     fake_backend_t *fake = context;
     ++fake->volume_calls;
     fake->status.volume_percent = volume_percent;
+    return SC_AUDIO_RESULT_ACCEPTED;
+}
+
+static sc_audio_result_t set_source(void *context, sc_audio_source_t source)
+{
+    fake_backend_t *fake = context;
+    ++fake->source_calls;
+    fake->source = source;
+    fake->status.flags = sc_audio_debug_status_flags(fake->source, fake->note);
+    return SC_AUDIO_RESULT_ACCEPTED;
+}
+
+static sc_audio_result_t set_tone_note(void *context, sc_audio_tone_note_t note)
+{
+    fake_backend_t *fake = context;
+    ++fake->note_calls;
+    fake->note = note;
+    fake->status.flags = sc_audio_debug_status_flags(fake->source, fake->note);
     return SC_AUDIO_RESULT_ACCEPTED;
 }
 
@@ -255,12 +277,72 @@ static void malformed_and_unsupported_fail_safe(void)
     assert(response.payload[1] == SC_AUDIO_RESULT_UNSUPPORTED);
 }
 
+static void debug_source_and_note_commands(void)
+{
+    fake_backend_t fake = {
+        .status = {
+            .audio_session_id = 0x3141U,
+            .state = SC_AUDIO_STATE_STOPPED,
+            .volume_percent = 50U,
+            .stop_reason = SC_AUDIO_STOP_REASON_BOOT,
+        },
+        .source = SC_AUDIO_SOURCE_MUSIC,
+        .note = SC_AUDIO_TONE_C5,
+    };
+    fake.status.flags = sc_audio_debug_status_flags(fake.source, fake.note);
+    const sc_audio_backend_t backend = {
+        .context = &fake,
+        .get_status = get_status,
+        .play = play,
+        .stop = stop,
+        .set_volume = set_volume,
+        .set_source = set_source,
+        .set_tone_note = set_tone_note,
+    };
+    sc_audio_server_t server;
+    sc_audio_server_init(&server, 0x3141U, 1U, 3600U, &backend);
+    sc_frame_t request;
+    sc_frame_t response;
+    assert(sc_audio_make_hello(&request, 1U, 0x2718U));
+    assert(sc_audio_server_handle(&server, &request, &response));
+    sc_audio_info_t info = {0};
+    assert(sc_audio_parse_info(&response, &info));
+    assert((info.capabilities & SC_AUDIO_CAP_DEBUG_SOURCE) != 0U);
+
+    assert(sc_audio_make_set_source(&request, 2U, 0x2718U, 0x3141U,
+                                    1U, SC_AUDIO_SOURCE_TONE));
+    assert(sc_audio_server_handle(&server, &request, &response));
+    expect_result(&response, SC_AUDIO_MSG_SET_SOURCE,
+                  SC_AUDIO_RESULT_ACCEPTED, 1U);
+    assert(fake.source_calls == 1U && fake.source == SC_AUDIO_SOURCE_TONE);
+
+    assert(sc_audio_make_set_tone_note(&request, 3U, 0x2718U, 0x3141U,
+                                       2U, SC_AUDIO_TONE_C8));
+    assert(sc_audio_server_handle(&server, &request, &response));
+    expect_result(&response, SC_AUDIO_MSG_SET_TONE_NOTE,
+                  SC_AUDIO_RESULT_ACCEPTED, 2U);
+    assert(fake.note_calls == 1U && fake.note == SC_AUDIO_TONE_C8);
+
+    sc_audio_status_t status = fake.status;
+    sc_audio_source_t parsed_source = SC_AUDIO_SOURCE_MUSIC;
+    sc_audio_tone_note_t parsed_note = SC_AUDIO_TONE_C3;
+    assert(sc_audio_debug_config_from_status(&status, &parsed_source,
+                                             &parsed_note));
+    assert(parsed_source == SC_AUDIO_SOURCE_TONE);
+    assert(parsed_note == SC_AUDIO_TONE_C8);
+    assert(!sc_audio_make_set_source(&request, 4U, 0x2718U, 0x3141U,
+                                     3U, (sc_audio_source_t)2));
+    assert(!sc_audio_make_set_tone_note(&request, 5U, 0x2718U, 0x3141U,
+                                        3U, SC_AUDIO_TONE_COUNT));
+}
+
 int main(void)
 {
     handshake_and_status();
     commands_are_bounded_and_idempotent();
     reset_reconciliation_and_events();
     malformed_and_unsupported_fail_safe();
+    debug_source_and_note_commands();
     puts("sc_audio_protocol tests passed");
     return 0;
 }

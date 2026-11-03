@@ -1,5 +1,12 @@
 menu "SleepCube M2 validation"
 
+config SC_ENABLE_TOUCH_DEBUG_AUDIO
+    bool "Enable touch-debug generated audio sources"
+    default n
+    help
+        Adds volatile music/sine source selection and C3..C8 generated tones
+        to the semantic UART endpoint. Development images only.
+
 config SC_M2_ENDURANCE_BUILD
     bool "Build the finite 60-minute M2 endurance image"
     default n

@@ -35,6 +35,11 @@ bool sc_light_service_get_enabled(void);
 uint8_t sc_light_service_get_current_brightness_percent(void);
 uint8_t sc_light_service_get_target_brightness_percent(void);
 
+/** Development-only touch mode lifecycle. */
+esp_err_t sc_light_service_debug_enter_touch_mode(void);
+esp_err_t sc_light_service_debug_exit_touch_mode(void);
+bool sc_light_service_debug_effects_enabled(void);
+
 /** Development-only: queue a 1..25 kHz carrier in 1 kHz steps. */
 esp_err_t sc_light_service_debug_set_pwm_frequency_khz(uint8_t frequency_khz);
 /** Development-only: override GUI/effects with an exact duty in basis points. */

@@ -47,6 +47,7 @@ typedef struct {
 
 static portMUX_TYPE s_remote_lock = portMUX_INITIALIZER_UNLOCKED;
 static sc_remote_audio_state_t s_remote;
+static volatile bool s_restore_debug_defaults_pending;
 
 static bool remote_state_available(sc_audio_state_t state)
 {
@@ -78,6 +79,7 @@ static void remote_update_snapshot(void)
     bool notify_playback = false;
     bool playback_active = false;
     bool notify_volume = false;
+    bool notify_debug_config = false;
     uint8_t volume = 0U;
     bool playback_settle_timeout = false;
     bool volume_settle_timeout = false;
@@ -89,6 +91,7 @@ static void remote_update_snapshot(void)
     const bool was_active = was_synchronized &&
                             remote_state_presented_playing(s_remote.status.state);
     const uint8_t previous_volume = s_remote.status.volume_percent;
+    const uint8_t previous_flags = s_remote.status.flags;
 
     if (!synchronized) {
         s_remote.synchronized = false;
@@ -146,6 +149,7 @@ static void remote_update_snapshot(void)
                           (!was_synchronized && playback_active);
         volume = s_remote.status.volume_percent;
         notify_volume = !was_synchronized || previous_volume != volume;
+        notify_debug_config = !was_synchronized || previous_flags != s_remote.status.flags;
     }
     portEXIT_CRITICAL(&s_remote_lock);
 
@@ -165,6 +169,10 @@ static void remote_update_snapshot(void)
     }
     if (notify_volume) {
         post_audio_event(SC_APP_EVT_AUDIO_VOLUME_CHANGED, volume);
+    }
+    if (notify_debug_config) {
+        post_audio_event(SC_APP_EVT_AUDIO_DEBUG_CONFIG_CHANGED,
+                         s_remote.status.flags);
     }
 }
 
@@ -214,6 +222,17 @@ static void remote_audio_task(void *argument)
     for (;;) {
         remote_update_snapshot();
         remote_send_coalesced_volume();
+        if (s_restore_debug_defaults_pending &&
+            sc_audio_link_control_has_capability(SC_AUDIO_CAP_DEBUG_SOURCE)) {
+            const esp_err_t note_error =
+                sc_audio_link_control_set_tone_note(SC_AUDIO_TONE_C5);
+            const esp_err_t source_error =
+                sc_audio_link_control_set_source(SC_AUDIO_SOURCE_MUSIC);
+            if (note_error == ESP_OK && source_error == ESP_OK) {
+                s_restore_debug_defaults_pending = false;
+                ESP_LOGI(TAG, "debug audio defaults queued: music/C5");
+            }
+        }
         vTaskDelay(pdMS_TO_TICKS(SC_REMOTE_POLL_MS));
     }
 }
@@ -223,6 +242,7 @@ esp_err_t sc_audio_service_start(void)
     portENTER_CRITICAL(&s_remote_lock);
     s_remote = (sc_remote_audio_state_t){0};
     s_remote.status.state = SC_AUDIO_STATE_NOT_READY;
+    s_restore_debug_defaults_pending = false;
     portEXIT_CRITICAL(&s_remote_lock);
 
     if (xTaskCreate(remote_audio_task, "audio_facade", 4096, NULL, 4, NULL) != pdPASS) {
@@ -389,4 +409,53 @@ bool sc_audio_service_is_synchronized(void)
     synchronized = s_remote.synchronized;
     portEXIT_CRITICAL(&s_remote_lock);
     return synchronized;
+}
+
+bool sc_audio_service_has_debug_source(void)
+{
+    return sc_audio_link_control_has_capability(SC_AUDIO_CAP_DEBUG_SOURCE);
+}
+
+static void remote_get_debug_config(sc_audio_source_t *source,
+                                    sc_audio_tone_note_t *note)
+{
+    sc_audio_status_t status;
+    portENTER_CRITICAL(&s_remote_lock);
+    status = s_remote.status;
+    portEXIT_CRITICAL(&s_remote_lock);
+    if (!sc_audio_debug_config_from_status(&status, source, note)) {
+        *source = SC_AUDIO_SOURCE_MUSIC;
+        *note = SC_AUDIO_TONE_C5;
+    }
+}
+
+sc_audio_source_t sc_audio_service_get_source(void)
+{
+    sc_audio_source_t source;
+    sc_audio_tone_note_t note;
+    remote_get_debug_config(&source, &note);
+    return source;
+}
+
+sc_audio_tone_note_t sc_audio_service_get_tone_note(void)
+{
+    sc_audio_source_t source;
+    sc_audio_tone_note_t note;
+    remote_get_debug_config(&source, &note);
+    return note;
+}
+
+esp_err_t sc_audio_service_set_source(sc_audio_source_t source)
+{
+    return sc_audio_link_control_set_source(source);
+}
+
+esp_err_t sc_audio_service_set_tone_note(sc_audio_tone_note_t note)
+{
+    return sc_audio_link_control_set_tone_note(note);
+}
+
+void sc_audio_service_restore_debug_defaults(void)
+{
+    s_restore_debug_defaults_pending = true;
 }

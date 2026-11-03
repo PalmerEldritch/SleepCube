@@ -72,6 +72,26 @@ idf.py -B /tmp/sleepcube-m2-endurance-build \
   set-target esp32s3 build
 ```
 
+## Matched touch-debug build
+
+For the separate ADR-0011 Control touch grid, build the Audio endpoint with its
+optional generated-tone capability:
+
+```sh
+idf.py -B /tmp/sleepcube-audio-touch-debug-build \
+  -D SDKCONFIG=/tmp/sleepcube-audio-touch-debug-sdkconfig \
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.touch-debug.defaults' \
+  set-target esp32s3 build
+```
+
+This development image generates C3 through C8 directly at 44.1 kHz and
+advertises optional semantic source/note controls. The raw tone and retained
+gain cap combine for a maximum -24 dBFS output at 100% volume. Source/note
+changes during playback fade down/up over one second each while preserving the
+existing absolute session deadline. Source and note are volatile and return to
+music/C5 when the Control debug mode exits; volume remains persistent. The
+normal profile compiles out the generator and does not advertise the capability.
+
 ## Flash and monitor
 
 Connect the AtomS3 Lite over USB-C. Flashing requires two manual button actions:

@@ -228,3 +228,8 @@ uint8_t sc_cob_pwm_if_get_resolution_bits(void)
 {
     return s_initialized ? s_resolution_bits : 0U;
 }
+
+uint16_t sc_cob_pwm_if_get_duty_bps(void)
+{
+    return s_initialized ? s_last_duty_bps : 0U;
+}

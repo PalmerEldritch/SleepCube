@@ -10,6 +10,7 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "wav_reader.h"
+#include "sc_audio_protocol.h"
 
 typedef enum {
     SC_PLAYBACK_STOPPED = 0,
@@ -25,12 +26,16 @@ typedef enum {
     SC_PLAYBACK_COMMAND_PLAY,
     SC_PLAYBACK_COMMAND_STOP,
     SC_PLAYBACK_COMMAND_SET_VOLUME,
+    SC_PLAYBACK_COMMAND_SET_SOURCE,
+    SC_PLAYBACK_COMMAND_SET_TONE_NOTE,
 } sc_playback_command_type_t;
 
 typedef struct {
     sc_playback_command_type_t type;
     uint32_t duration_seconds;
     uint8_t volume_percent;
+    sc_audio_source_t source;
+    sc_audio_tone_note_t tone_note;
 } sc_playback_command_t;
 
 typedef enum {
@@ -43,6 +48,8 @@ typedef enum {
 typedef struct {
     sc_playback_state_t state;
     uint8_t volume_percent;
+    sc_audio_source_t source;
+    sc_audio_tone_note_t tone_note;
     sc_playback_stop_reason_t stop_reason;
     uint32_t remaining_seconds;
     uint16_t fault_code;
@@ -56,6 +63,8 @@ typedef struct {
     TaskHandle_t task;
     volatile sc_playback_state_t state;
     uint8_t volume_percent;
+    sc_audio_source_t source;
+    sc_audio_tone_note_t tone_note;
     sc_playback_stop_reason_t stop_reason;
     int64_t session_deadline_us;
     uint16_t fault_code;
@@ -81,6 +90,12 @@ esp_err_t sc_playback_controller_stop(sc_playback_controller_t *controller);
 /** Queue an authoritative persistent volume request in the 0..100 domain. */
 esp_err_t sc_playback_controller_set_volume(sc_playback_controller_t *controller,
                                             uint8_t volume_percent);
+
+/** Queue development-only volatile audio-source controls. */
+esp_err_t sc_playback_controller_set_source(sc_playback_controller_t *controller,
+                                            sc_audio_source_t source);
+esp_err_t sc_playback_controller_set_tone_note(sc_playback_controller_t *controller,
+                                               sc_audio_tone_note_t note);
 
 /** Read a synchronized authoritative state snapshot without touching audio I/O. */
 esp_err_t sc_playback_controller_get_snapshot(sc_playback_controller_t *controller,

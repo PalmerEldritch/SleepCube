@@ -10,6 +10,27 @@
 #define SC_AUDIO_CAP_FINITE_PLAY  (1U << 0)
 #define SC_AUDIO_CAP_VOLUME       (1U << 1)
 #define SC_AUDIO_CAP_STATUS       (1U << 2)
+#define SC_AUDIO_CAP_DEBUG_SOURCE (1U << 3)
+
+#define SC_AUDIO_STATUS_FLAG_SOURCE_TONE        (1U << 0)
+#define SC_AUDIO_STATUS_FLAG_NOTE_SHIFT         1U
+#define SC_AUDIO_STATUS_FLAG_NOTE_MASK          (7U << SC_AUDIO_STATUS_FLAG_NOTE_SHIFT)
+#define SC_AUDIO_STATUS_FLAG_DEBUG_CONFIG_VALID (1U << 7)
+
+typedef enum {
+    SC_AUDIO_SOURCE_MUSIC = 0,
+    SC_AUDIO_SOURCE_TONE = 1,
+} sc_audio_source_t;
+
+typedef enum {
+    SC_AUDIO_TONE_C3 = 0,
+    SC_AUDIO_TONE_C4,
+    SC_AUDIO_TONE_C5,
+    SC_AUDIO_TONE_C6,
+    SC_AUDIO_TONE_C7,
+    SC_AUDIO_TONE_C8,
+    SC_AUDIO_TONE_COUNT,
+} sc_audio_tone_note_t;
 
 typedef enum {
     SC_AUDIO_MSG_HELLO = 0x01,
@@ -17,6 +38,8 @@ typedef enum {
     SC_AUDIO_MSG_PLAY = 0x03,
     SC_AUDIO_MSG_STOP = 0x04,
     SC_AUDIO_MSG_SET_VOLUME = 0x05,
+    SC_AUDIO_MSG_SET_SOURCE = 0x06,
+    SC_AUDIO_MSG_SET_TONE_NOTE = 0x07,
 
     SC_AUDIO_MSG_INFO = 0x81,
     SC_AUDIO_MSG_RESULT = 0x82,
@@ -85,6 +108,10 @@ typedef sc_audio_result_t (*sc_audio_play_fn)(void *context,
 typedef sc_audio_result_t (*sc_audio_stop_fn)(void *context);
 typedef sc_audio_result_t (*sc_audio_set_volume_fn)(void *context,
                                                     uint8_t volume_percent);
+typedef sc_audio_result_t (*sc_audio_set_source_fn)(void *context,
+                                                    sc_audio_source_t source);
+typedef sc_audio_result_t (*sc_audio_set_tone_note_fn)(void *context,
+                                                       sc_audio_tone_note_t note);
 
 typedef struct {
     void *context;
@@ -92,6 +119,8 @@ typedef struct {
     sc_audio_play_fn play;
     sc_audio_stop_fn stop;
     sc_audio_set_volume_fn set_volume;
+    sc_audio_set_source_fn set_source;
+    sc_audio_set_tone_note_fn set_tone_note;
 } sc_audio_backend_t;
 
 typedef struct {
@@ -141,6 +170,24 @@ bool sc_audio_make_set_volume(sc_frame_t *frame,
                               uint32_t audio_session_id,
                               uint32_t command_id,
                               uint8_t volume_percent);
+bool sc_audio_make_set_source(sc_frame_t *frame,
+                              uint16_t sequence,
+                              uint32_t control_session_id,
+                              uint32_t audio_session_id,
+                              uint32_t command_id,
+                              sc_audio_source_t source);
+bool sc_audio_make_set_tone_note(sc_frame_t *frame,
+                                 uint16_t sequence,
+                                 uint32_t control_session_id,
+                                 uint32_t audio_session_id,
+                                 uint32_t command_id,
+                                 sc_audio_tone_note_t note);
+
+uint8_t sc_audio_debug_status_flags(sc_audio_source_t source,
+                                    sc_audio_tone_note_t note);
+bool sc_audio_debug_config_from_status(const sc_audio_status_t *status,
+                                       sc_audio_source_t *source,
+                                       sc_audio_tone_note_t *note);
 
 bool sc_audio_parse_info(const sc_frame_t *frame, sc_audio_info_t *info);
 bool sc_audio_parse_status(const sc_frame_t *frame, sc_audio_status_t *status);

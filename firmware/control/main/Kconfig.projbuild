@@ -40,6 +40,14 @@ config SC_ENABLE_LIGHT_DEBUG_CONSOLE
         presentation while manual duty override is active and must remain
         disabled in a release image.
 
+config SC_ENABLE_TOUCH_DEBUG_MODE
+    bool "Enable touch-screen hardware debug mode"
+    depends on SC_ENABLE_LIGHT && SC_ENABLE_UI && SC_UI_BACKEND_LCD_TOUCH
+    default n
+    help
+        Adds the five-tap 2x4 touch debug grid and matched semantic audio
+        source controls. Development images only; keep disabled in releases.
+
 config SC_ENABLE_LIGHT
     bool "Enable lighting service"
     default y

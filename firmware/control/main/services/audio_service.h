@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "esp_err.h"
+#include "sc_audio_protocol.h"
 
 esp_err_t sc_audio_service_start(void);
 
@@ -29,3 +30,12 @@ bool sc_audio_service_is_available(void);
 
 /** Return true only after authoritative remote state reconciliation. */
 bool sc_audio_service_is_synchronized(void);
+
+/** Development-image source controls. They require the matching Audio image. */
+bool sc_audio_service_has_debug_source(void);
+sc_audio_source_t sc_audio_service_get_source(void);
+sc_audio_tone_note_t sc_audio_service_get_tone_note(void);
+esp_err_t sc_audio_service_set_source(sc_audio_source_t source);
+esp_err_t sc_audio_service_set_tone_note(sc_audio_tone_note_t note);
+/** Restore music/C5 now, or after the matched Audio image reconnects. */
+void sc_audio_service_restore_debug_defaults(void);
