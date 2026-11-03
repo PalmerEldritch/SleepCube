@@ -226,11 +226,16 @@ static void remote_audio_task(void *argument)
             sc_audio_link_control_has_capability(SC_AUDIO_CAP_DEBUG_SOURCE)) {
             const esp_err_t note_error =
                 sc_audio_link_control_set_tone_note(SC_AUDIO_TONE_C5);
+            const esp_err_t packing_error =
+                sc_audio_link_control_set_i2s_packing(
+                    SC_AUDIO_I2S_PACKING_NATIVE);
             const esp_err_t source_error =
                 sc_audio_link_control_set_source(SC_AUDIO_SOURCE_MUSIC);
-            if (note_error == ESP_OK && source_error == ESP_OK) {
+            if (note_error == ESP_OK && packing_error == ESP_OK &&
+                source_error == ESP_OK) {
                 s_restore_debug_defaults_pending = false;
-                ESP_LOGI(TAG, "debug audio defaults queued: music/C5");
+                ESP_LOGI(TAG,
+                         "debug audio defaults queued: music/C5/native slots");
             }
         }
         vTaskDelay(pdMS_TO_TICKS(SC_REMOTE_POLL_MS));
@@ -417,15 +422,17 @@ bool sc_audio_service_has_debug_source(void)
 }
 
 static void remote_get_debug_config(sc_audio_source_t *source,
-                                    sc_audio_tone_note_t *note)
+                                    sc_audio_tone_note_t *note,
+                                    sc_audio_i2s_packing_t *packing)
 {
     sc_audio_status_t status;
     portENTER_CRITICAL(&s_remote_lock);
     status = s_remote.status;
     portEXIT_CRITICAL(&s_remote_lock);
-    if (!sc_audio_debug_config_from_status(&status, source, note)) {
+    if (!sc_audio_debug_config_from_status(&status, source, note, packing)) {
         *source = SC_AUDIO_SOURCE_MUSIC;
         *note = SC_AUDIO_TONE_C5;
+        *packing = SC_AUDIO_I2S_PACKING_NATIVE;
     }
 }
 
@@ -433,7 +440,8 @@ sc_audio_source_t sc_audio_service_get_source(void)
 {
     sc_audio_source_t source;
     sc_audio_tone_note_t note;
-    remote_get_debug_config(&source, &note);
+    sc_audio_i2s_packing_t packing;
+    remote_get_debug_config(&source, &note, &packing);
     return source;
 }
 
@@ -441,8 +449,18 @@ sc_audio_tone_note_t sc_audio_service_get_tone_note(void)
 {
     sc_audio_source_t source;
     sc_audio_tone_note_t note;
-    remote_get_debug_config(&source, &note);
+    sc_audio_i2s_packing_t packing;
+    remote_get_debug_config(&source, &note, &packing);
     return note;
+}
+
+sc_audio_i2s_packing_t sc_audio_service_get_i2s_packing(void)
+{
+    sc_audio_source_t source;
+    sc_audio_tone_note_t note;
+    sc_audio_i2s_packing_t packing;
+    remote_get_debug_config(&source, &note, &packing);
+    return packing;
 }
 
 esp_err_t sc_audio_service_set_source(sc_audio_source_t source)
@@ -453,6 +471,11 @@ esp_err_t sc_audio_service_set_source(sc_audio_source_t source)
 esp_err_t sc_audio_service_set_tone_note(sc_audio_tone_note_t note)
 {
     return sc_audio_link_control_set_tone_note(note);
+}
+
+esp_err_t sc_audio_service_set_i2s_packing(sc_audio_i2s_packing_t packing)
+{
+    return sc_audio_link_control_set_i2s_packing(packing);
 }
 
 void sc_audio_service_restore_debug_defaults(void)

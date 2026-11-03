@@ -195,7 +195,8 @@ static bool handle_hello(sc_audio_server_t *server,
                             SC_AUDIO_CAP_VOLUME |
                             SC_AUDIO_CAP_STATUS;
     if (server->backend.set_source != NULL &&
-        server->backend.set_tone_note != NULL) {
+        server->backend.set_tone_note != NULL &&
+        server->backend.set_i2s_packing != NULL) {
         capabilities |= SC_AUDIO_CAP_DEBUG_SOURCE;
     }
     put_u16(&response->payload[9], capabilities);
@@ -229,7 +230,8 @@ static bool handle_command(sc_audio_server_t *server,
                                     ? 16U
                                     : (request->type == SC_AUDIO_MSG_SET_VOLUME ||
                                        request->type == SC_AUDIO_MSG_SET_SOURCE ||
-                                       request->type == SC_AUDIO_MSG_SET_TONE_NOTE)
+                                       request->type == SC_AUDIO_MSG_SET_TONE_NOTE ||
+                                       request->type == SC_AUDIO_MSG_SET_I2S_PACKING)
                                           ? 13U
                                           : SC_AUDIO_COMMAND_HEADER_SIZE;
     if (request->payload_len != expected_len) {
@@ -289,7 +291,7 @@ static bool handle_command(sc_audio_server_t *server,
         }
     } else if (request->type == SC_AUDIO_MSG_SET_SOURCE) {
         const uint8_t source = request->payload[12];
-        if (source > SC_AUDIO_SOURCE_TONE) {
+        if (source >= SC_AUDIO_SOURCE_COUNT) {
             result = SC_AUDIO_RESULT_INVALID_ARGUMENT;
         } else if (server->backend.set_source != NULL) {
             result = server->backend.set_source(server->backend.context,
@@ -297,13 +299,23 @@ static bool handle_command(sc_audio_server_t *server,
         } else {
             result = SC_AUDIO_RESULT_UNSUPPORTED;
         }
-    } else {
+    } else if (request->type == SC_AUDIO_MSG_SET_TONE_NOTE) {
         const uint8_t note = request->payload[12];
         if (note >= SC_AUDIO_TONE_COUNT) {
             result = SC_AUDIO_RESULT_INVALID_ARGUMENT;
         } else if (server->backend.set_tone_note != NULL) {
             result = server->backend.set_tone_note(server->backend.context,
                                                    (sc_audio_tone_note_t)note);
+        } else {
+            result = SC_AUDIO_RESULT_UNSUPPORTED;
+        }
+    } else {
+        const uint8_t packing = request->payload[12];
+        if (packing >= SC_AUDIO_I2S_PACKING_COUNT) {
+            result = SC_AUDIO_RESULT_INVALID_ARGUMENT;
+        } else if (server->backend.set_i2s_packing != NULL) {
+            result = server->backend.set_i2s_packing(
+                server->backend.context, (sc_audio_i2s_packing_t)packing);
         } else {
             result = SC_AUDIO_RESULT_UNSUPPORTED;
         }
@@ -330,6 +342,7 @@ bool sc_audio_server_handle(sc_audio_server_t *server,
     case SC_AUDIO_MSG_SET_VOLUME:
     case SC_AUDIO_MSG_SET_SOURCE:
     case SC_AUDIO_MSG_SET_TONE_NOTE:
+    case SC_AUDIO_MSG_SET_I2S_PACKING:
         return handle_command(server, request, response);
     default:
         make_error(server, request, SC_AUDIO_RESULT_UNSUPPORTED, response);
@@ -434,7 +447,7 @@ bool sc_audio_make_set_source(sc_frame_t *frame,
                               uint32_t command_id,
                               sc_audio_source_t source)
 {
-    if (frame == NULL || source > SC_AUDIO_SOURCE_TONE) {
+    if (frame == NULL || source >= SC_AUDIO_SOURCE_COUNT) {
         return false;
     }
     make_command(frame, SC_AUDIO_MSG_SET_SOURCE, sequence, control_session_id,
@@ -461,35 +474,61 @@ bool sc_audio_make_set_tone_note(sc_frame_t *frame,
     return true;
 }
 
-uint8_t sc_audio_debug_status_flags(sc_audio_source_t source,
-                                    sc_audio_tone_note_t note)
+bool sc_audio_make_set_i2s_packing(sc_frame_t *frame,
+                                   uint16_t sequence,
+                                   uint32_t control_session_id,
+                                   uint32_t audio_session_id,
+                                   uint32_t command_id,
+                                   sc_audio_i2s_packing_t packing)
 {
-    if (source > SC_AUDIO_SOURCE_TONE || note >= SC_AUDIO_TONE_COUNT) {
+    if (frame == NULL || packing >= SC_AUDIO_I2S_PACKING_COUNT) {
+        return false;
+    }
+    make_command(frame, SC_AUDIO_MSG_SET_I2S_PACKING, sequence,
+                 control_session_id, audio_session_id, command_id);
+    frame->payload_len = 13U;
+    frame->payload[12] = (uint8_t)packing;
+    return true;
+}
+
+uint8_t sc_audio_debug_status_flags(sc_audio_source_t source,
+                                    sc_audio_tone_note_t note,
+                                    sc_audio_i2s_packing_t packing)
+{
+    if (source >= SC_AUDIO_SOURCE_COUNT || note >= SC_AUDIO_TONE_COUNT ||
+        packing >= SC_AUDIO_I2S_PACKING_COUNT) {
         return 0U;
     }
     return SC_AUDIO_STATUS_FLAG_DEBUG_CONFIG_VALID |
-           (source == SC_AUDIO_SOURCE_TONE
-                ? SC_AUDIO_STATUS_FLAG_SOURCE_TONE : 0U) |
+           ((uint8_t)source & SC_AUDIO_STATUS_FLAG_SOURCE_MASK) |
+           (packing == SC_AUDIO_I2S_PACKING_PADDED_32
+                ? SC_AUDIO_STATUS_FLAG_SLOT_32 : 0U) |
            ((uint8_t)note << SC_AUDIO_STATUS_FLAG_NOTE_SHIFT);
 }
 
 bool sc_audio_debug_config_from_status(const sc_audio_status_t *status,
                                        sc_audio_source_t *source,
-                                       sc_audio_tone_note_t *note)
+                                       sc_audio_tone_note_t *note,
+                                       sc_audio_i2s_packing_t *packing)
 {
-    if (status == NULL || source == NULL || note == NULL ||
+    if (status == NULL || source == NULL || note == NULL || packing == NULL ||
         (status->flags & SC_AUDIO_STATUS_FLAG_DEBUG_CONFIG_VALID) == 0U) {
         return false;
     }
+    const uint8_t encoded_source =
+        status->flags & SC_AUDIO_STATUS_FLAG_SOURCE_MASK;
     const uint8_t encoded_note =
         (status->flags & SC_AUDIO_STATUS_FLAG_NOTE_MASK) >>
         SC_AUDIO_STATUS_FLAG_NOTE_SHIFT;
-    if (encoded_note >= SC_AUDIO_TONE_COUNT) {
+    if (encoded_source >= SC_AUDIO_SOURCE_COUNT ||
+        encoded_note >= SC_AUDIO_TONE_COUNT) {
         return false;
     }
-    *source = (status->flags & SC_AUDIO_STATUS_FLAG_SOURCE_TONE) != 0U
-                  ? SC_AUDIO_SOURCE_TONE : SC_AUDIO_SOURCE_MUSIC;
+    *source = (sc_audio_source_t)encoded_source;
     *note = (sc_audio_tone_note_t)encoded_note;
+    *packing = (status->flags & SC_AUDIO_STATUS_FLAG_SLOT_32) != 0U
+                   ? SC_AUDIO_I2S_PACKING_PADDED_32
+                   : SC_AUDIO_I2S_PACKING_NATIVE;
     return true;
 }
 
@@ -612,6 +651,7 @@ const char *sc_audio_message_name(uint8_t type)
     case SC_AUDIO_MSG_SET_VOLUME: return "SET_VOLUME";
     case SC_AUDIO_MSG_SET_SOURCE: return "SET_SOURCE";
     case SC_AUDIO_MSG_SET_TONE_NOTE: return "SET_TONE_NOTE";
+    case SC_AUDIO_MSG_SET_I2S_PACKING: return "SET_I2S_PACKING";
     case SC_AUDIO_MSG_INFO: return "INFO";
     case SC_AUDIO_MSG_RESULT: return "RESULT";
     case SC_AUDIO_MSG_READY: return "READY";

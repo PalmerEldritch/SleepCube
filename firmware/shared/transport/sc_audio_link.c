@@ -31,6 +31,7 @@ typedef enum {
     CONTROL_REQUEST_SET_VOLUME,
     CONTROL_REQUEST_SET_SOURCE,
     CONTROL_REQUEST_SET_TONE_NOTE,
+    CONTROL_REQUEST_SET_I2S_PACKING,
     CONTROL_REQUEST_REPLAY_LAST,
 } control_request_type_t;
 
@@ -309,6 +310,14 @@ static bool build_control_request(const control_request_t *request,
                                          s_control.audio_session_id,
                                          s_control.next_command_id++,
                                          (sc_audio_tone_note_t)request->value)) {
+            return false;
+        }
+        break;
+    case CONTROL_REQUEST_SET_I2S_PACKING:
+        if (!sc_audio_make_set_i2s_packing(
+                frame, sequence, s_control.control_session_id,
+                s_control.audio_session_id, s_control.next_command_id++,
+                (sc_audio_i2s_packing_t)request->value)) {
             return false;
         }
         break;
@@ -680,11 +689,21 @@ esp_err_t sc_audio_link_control_set_volume(uint8_t volume_percent)
 
 esp_err_t sc_audio_link_control_set_source(sc_audio_source_t source)
 {
-    if (source > SC_AUDIO_SOURCE_TONE ||
+    if (source >= SC_AUDIO_SOURCE_COUNT ||
         !sc_audio_link_control_has_capability(SC_AUDIO_CAP_DEBUG_SOURCE)) {
         return ESP_ERR_NOT_SUPPORTED;
     }
     return queue_control_request(CONTROL_REQUEST_SET_SOURCE, source);
+}
+
+esp_err_t sc_audio_link_control_set_i2s_packing(
+    sc_audio_i2s_packing_t packing)
+{
+    if (packing >= SC_AUDIO_I2S_PACKING_COUNT ||
+        !sc_audio_link_control_has_capability(SC_AUDIO_CAP_DEBUG_SOURCE)) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return queue_control_request(CONTROL_REQUEST_SET_I2S_PACKING, packing);
 }
 
 esp_err_t sc_audio_link_control_set_tone_note(sc_audio_tone_note_t note)

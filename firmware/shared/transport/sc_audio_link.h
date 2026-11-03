@@ -17,12 +17,14 @@ esp_err_t sc_audio_link_start_audio(int tx_gpio,
 /** Start the Control client, which immediately performs HELLO/GET_STATUS. */
 esp_err_t sc_audio_link_start_control(int tx_gpio, int rx_gpio);
 
-/** Non-blocking Control-side semantic requests. */
+/** Non-blocking Control-side semantic requests; debug selectors are optional. */
 esp_err_t sc_audio_link_control_play(uint32_t duration_seconds);
 esp_err_t sc_audio_link_control_stop(void);
 esp_err_t sc_audio_link_control_set_volume(uint8_t volume_percent);
 esp_err_t sc_audio_link_control_set_source(sc_audio_source_t source);
 esp_err_t sc_audio_link_control_set_tone_note(sc_audio_tone_note_t note);
+esp_err_t sc_audio_link_control_set_i2s_packing(
+    sc_audio_i2s_packing_t packing);
 esp_err_t sc_audio_link_control_request_status(void);
 
 /** M4 diagnostic hook: resend the last state-changing request without reissuing it. */

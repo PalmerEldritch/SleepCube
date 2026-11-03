@@ -84,8 +84,13 @@ Flash it together with the Audio `R01-touch-debug-audio` image. Five rapid taps
 on the ambient screen enter the 2-by-4 grid. B2 changes exact physical PWM duty
 in wrapping 10% steps, not persisted logical brightness. B1 remains an
 independent output-enable latch. Debug frequency and duty are volatile; B4
-restores 3 kHz, product effects, light enabled and the normal UI. This profile
-does not enable either USB stdin console.
+restores 3 kHz, product effects, light enabled and the normal UI. A3 cycles
+Music, the six SD-card I2S profiles (44.1/16, 44.1/24, 48/16, 48/24, 32/16 and
+96/16), generated C5, then Music again. A rejected test asset does not trap the
+cycle on the prior confirmed source. A4 toggles native slots (`16/16` or
+`24/24`) and 32-bit-padded slots (`16/32` or `24/32`). B4 also restores
+canonical music/C5/native slots. This profile does not enable either USB stdin
+console.
 
 ## R01 COB PWM development console
 

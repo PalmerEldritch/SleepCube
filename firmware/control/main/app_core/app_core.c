@@ -17,6 +17,30 @@ static const char *TAG = "sc_app_core";
 static QueueHandle_t s_event_queue;
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_MODE
 static bool s_debug_mode;
+static sc_audio_source_t s_debug_source_cursor = SC_AUDIO_SOURCE_MUSIC;
+
+static sc_audio_source_t sc_debug_next_source(sc_audio_source_t current)
+{
+    switch (current) {
+    case SC_AUDIO_SOURCE_MUSIC:
+        return SC_AUDIO_SOURCE_TEST_44100_16;
+    case SC_AUDIO_SOURCE_TEST_44100_16:
+        return SC_AUDIO_SOURCE_TEST_44100_24;
+    case SC_AUDIO_SOURCE_TEST_44100_24:
+        return SC_AUDIO_SOURCE_TEST_48000_16;
+    case SC_AUDIO_SOURCE_TEST_48000_16:
+        return SC_AUDIO_SOURCE_TEST_48000_24;
+    case SC_AUDIO_SOURCE_TEST_48000_24:
+        return SC_AUDIO_SOURCE_TEST_32000_16;
+    case SC_AUDIO_SOURCE_TEST_32000_16:
+        return SC_AUDIO_SOURCE_TEST_96000_16;
+    case SC_AUDIO_SOURCE_TEST_96000_16:
+        return SC_AUDIO_SOURCE_TONE;
+    case SC_AUDIO_SOURCE_TONE:
+    default:
+        return SC_AUDIO_SOURCE_MUSIC;
+    }
+}
 #endif
 
 esp_err_t sc_app_core_post_event(const sc_app_event_t *event)
@@ -109,12 +133,14 @@ static void sc_app_core_task(void *arg)
                 if (!s_debug_mode &&
                     sc_light_service_debug_enter_touch_mode() == ESP_OK) {
                     s_debug_mode = true;
+                    s_debug_source_cursor = sc_audio_service_get_source();
                     sc_ui_service_debug_enter();
                 }
                 break;
             case SC_APP_EVT_UI_DEBUG_EXIT:
                 if (s_debug_mode) {
                     s_debug_mode = false;
+                    s_debug_source_cursor = SC_AUDIO_SOURCE_MUSIC;
                     sc_audio_service_restore_debug_defaults();
                     ESP_ERROR_CHECK_WITHOUT_ABORT(
                         sc_light_service_debug_exit_touch_mode());
@@ -147,9 +173,12 @@ static void sc_app_core_task(void *arg)
             }
             case SC_APP_EVT_UI_DEBUG_SOURCE_TOGGLE: {
                 const sc_audio_source_t next =
-                    sc_audio_service_get_source() == SC_AUDIO_SOURCE_TONE
-                        ? SC_AUDIO_SOURCE_MUSIC : SC_AUDIO_SOURCE_TONE;
-                (void)sc_audio_service_set_source(next);
+                    sc_debug_next_source(s_debug_source_cursor);
+                if (sc_audio_service_set_source(next) == ESP_OK) {
+                    s_debug_source_cursor = next;
+                } else {
+                    ESP_LOGW(TAG, "debug source request could not be queued");
+                }
                 break;
             }
             case SC_APP_EVT_UI_DEBUG_FREQUENCY_NEXT: {
@@ -164,11 +193,13 @@ static void sc_app_core_task(void *arg)
                 sc_ui_service_debug_refresh();
                 break;
             }
-            case SC_APP_EVT_UI_DEBUG_NOTE_NEXT: {
-                const sc_audio_tone_note_t current = sc_audio_service_get_tone_note();
-                const sc_audio_tone_note_t next =
-                    (sc_audio_tone_note_t)((current + 1U) % SC_AUDIO_TONE_COUNT);
-                (void)sc_audio_service_set_tone_note(next);
+            case SC_APP_EVT_UI_DEBUG_I2S_PACKING_TOGGLE: {
+                const sc_audio_i2s_packing_t next =
+                    sc_audio_service_get_i2s_packing() ==
+                            SC_AUDIO_I2S_PACKING_NATIVE
+                        ? SC_AUDIO_I2S_PACKING_PADDED_32
+                        : SC_AUDIO_I2S_PACKING_NATIVE;
+                (void)sc_audio_service_set_i2s_packing(next);
                 break;
             }
 #endif

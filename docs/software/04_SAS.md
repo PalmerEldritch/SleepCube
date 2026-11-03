@@ -109,11 +109,19 @@ It shall not own:
 - overall visual product state;
 - track-selection UX.
 
-The matched Audio debug profile adds one generated-sine source inside the
-playback owner. Source/note requests never expose decoder, storage or I2S
-operations. Switching source while active uses the existing gain path and
-retains the current absolute session deadline. Normal Audio profiles do not
-advertise this optional capability and compile out the generator.
+The matched Audio debug profile adds six fixed-format mono WAV profiles, one
+generated C5 source and native/32-bit-padded I2S slot selection inside the
+playback owner. The Audio Controller validates the selected file, owns runtime
+I2S reconfiguration and duplicates each mono sample into both Philips-I2S
+channels. Its Q31 gain path retains 24-bit precision until final output
+packing. The debug WAV reader accepts both classic PCM and
+WAVE_FORMAT_EXTENSIBLE integer-PCM headers while retaining exact rate, channel,
+container-depth, valid-depth and alignment checks. Control sends only bounded semantic profile/packing selectors; it
+never receives paths or exposes storage/decoder operations. Switching a
+profile while active uses the existing gain path and retains the current
+absolute session deadline. A failed validation or reconfiguration retains the
+prior applied profile. Normal Audio profiles do not advertise this optional
+capability and compile out the generator and profile catalog.
 
 ## 4. Control-side layering
 

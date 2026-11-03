@@ -3,12 +3,17 @@ set(SC_AUDIO_SRCS
         "audio_output.c"
         "audio_settings.c"
         "content_storage.c"
+        "pcm_format.c"
         "playback_controller.c"
+        "wav_format.c"
         "wav_reader.c"
 )
 
 if(CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO)
-    list(APPEND SC_AUDIO_SRCS "tone_generator.c")
+    list(APPEND SC_AUDIO_SRCS
+        "audio_test_profiles.c"
+        "tone_generator.c"
+    )
 endif()
 
 idf_component_register(

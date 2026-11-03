@@ -12,9 +12,11 @@ typedef struct {
     unsigned volume_calls;
     unsigned source_calls;
     unsigned note_calls;
+    unsigned packing_calls;
     uint32_t last_duration;
     sc_audio_source_t source;
     sc_audio_tone_note_t note;
+    sc_audio_i2s_packing_t packing;
 } fake_backend_t;
 
 static sc_audio_result_t get_status(void *context, sc_audio_status_t *status)
@@ -61,7 +63,8 @@ static sc_audio_result_t set_source(void *context, sc_audio_source_t source)
     fake_backend_t *fake = context;
     ++fake->source_calls;
     fake->source = source;
-    fake->status.flags = sc_audio_debug_status_flags(fake->source, fake->note);
+    fake->status.flags = sc_audio_debug_status_flags(fake->source, fake->note,
+                                                     fake->packing);
     return SC_AUDIO_RESULT_ACCEPTED;
 }
 
@@ -70,7 +73,19 @@ static sc_audio_result_t set_tone_note(void *context, sc_audio_tone_note_t note)
     fake_backend_t *fake = context;
     ++fake->note_calls;
     fake->note = note;
-    fake->status.flags = sc_audio_debug_status_flags(fake->source, fake->note);
+    fake->status.flags = sc_audio_debug_status_flags(fake->source, fake->note,
+                                                     fake->packing);
+    return SC_AUDIO_RESULT_ACCEPTED;
+}
+
+static sc_audio_result_t set_i2s_packing(void *context,
+                                         sc_audio_i2s_packing_t packing)
+{
+    fake_backend_t *fake = context;
+    ++fake->packing_calls;
+    fake->packing = packing;
+    fake->status.flags = sc_audio_debug_status_flags(fake->source, fake->note,
+                                                     fake->packing);
     return SC_AUDIO_RESULT_ACCEPTED;
 }
 
@@ -277,7 +292,7 @@ static void malformed_and_unsupported_fail_safe(void)
     assert(response.payload[1] == SC_AUDIO_RESULT_UNSUPPORTED);
 }
 
-static void debug_source_and_note_commands(void)
+static void debug_source_note_and_packing_commands(void)
 {
     fake_backend_t fake = {
         .status = {
@@ -288,8 +303,10 @@ static void debug_source_and_note_commands(void)
         },
         .source = SC_AUDIO_SOURCE_MUSIC,
         .note = SC_AUDIO_TONE_C5,
+        .packing = SC_AUDIO_I2S_PACKING_NATIVE,
     };
-    fake.status.flags = sc_audio_debug_status_flags(fake.source, fake.note);
+    fake.status.flags = sc_audio_debug_status_flags(fake.source, fake.note,
+                                                    fake.packing);
     const sc_audio_backend_t backend = {
         .context = &fake,
         .get_status = get_status,
@@ -298,6 +315,7 @@ static void debug_source_and_note_commands(void)
         .set_volume = set_volume,
         .set_source = set_source,
         .set_tone_note = set_tone_note,
+        .set_i2s_packing = set_i2s_packing,
     };
     sc_audio_server_t server;
     sc_audio_server_init(&server, 0x3141U, 1U, 3600U, &backend);
@@ -323,17 +341,41 @@ static void debug_source_and_note_commands(void)
                   SC_AUDIO_RESULT_ACCEPTED, 2U);
     assert(fake.note_calls == 1U && fake.note == SC_AUDIO_TONE_C8);
 
+    assert(sc_audio_make_set_i2s_packing(
+        &request, 4U, 0x2718U, 0x3141U, 3U,
+        SC_AUDIO_I2S_PACKING_PADDED_32));
+    assert(sc_audio_server_handle(&server, &request, &response));
+    expect_result(&response, SC_AUDIO_MSG_SET_I2S_PACKING,
+                  SC_AUDIO_RESULT_ACCEPTED, 3U);
+    assert(fake.packing_calls == 1U &&
+           fake.packing == SC_AUDIO_I2S_PACKING_PADDED_32);
+
     sc_audio_status_t status = fake.status;
     sc_audio_source_t parsed_source = SC_AUDIO_SOURCE_MUSIC;
     sc_audio_tone_note_t parsed_note = SC_AUDIO_TONE_C3;
+    sc_audio_i2s_packing_t parsed_packing = SC_AUDIO_I2S_PACKING_NATIVE;
     assert(sc_audio_debug_config_from_status(&status, &parsed_source,
-                                             &parsed_note));
+                                             &parsed_note, &parsed_packing));
     assert(parsed_source == SC_AUDIO_SOURCE_TONE);
     assert(parsed_note == SC_AUDIO_TONE_C8);
-    assert(!sc_audio_make_set_source(&request, 4U, 0x2718U, 0x3141U,
-                                     3U, (sc_audio_source_t)2));
+    assert(parsed_packing == SC_AUDIO_I2S_PACKING_PADDED_32);
+    assert(!sc_audio_make_set_source(&request, 5U, 0x2718U, 0x3141U,
+                                     4U, SC_AUDIO_SOURCE_COUNT));
+    status.flags = sc_audio_debug_status_flags(
+        SC_AUDIO_SOURCE_TEST_96000_16, SC_AUDIO_TONE_C5,
+        SC_AUDIO_I2S_PACKING_NATIVE);
+    assert(sc_audio_debug_config_from_status(&status, &parsed_source,
+                                             &parsed_note, &parsed_packing));
+    assert(parsed_source == SC_AUDIO_SOURCE_TEST_96000_16);
+    assert(parsed_note == SC_AUDIO_TONE_C5);
+    assert(parsed_packing == SC_AUDIO_I2S_PACKING_NATIVE);
+    assert(sc_audio_make_set_source(&request, 6U, 0x2718U, 0x3141U,
+                                    4U, SC_AUDIO_SOURCE_TEST_96000_16));
     assert(!sc_audio_make_set_tone_note(&request, 5U, 0x2718U, 0x3141U,
                                         3U, SC_AUDIO_TONE_COUNT));
+    assert(!sc_audio_make_set_i2s_packing(
+        &request, 7U, 0x2718U, 0x3141U, 5U,
+        SC_AUDIO_I2S_PACKING_COUNT));
 }
 
 int main(void)
@@ -342,7 +384,7 @@ int main(void)
     commands_are_bounded_and_idempotent();
     reset_reconciliation_and_events();
     malformed_and_unsupported_fail_safe();
-    debug_source_and_note_commands();
+    debug_source_note_and_packing_commands();
     puts("sc_audio_protocol tests passed");
     return 0;
 }

@@ -12,15 +12,29 @@
 #define SC_AUDIO_CAP_STATUS       (1U << 2)
 #define SC_AUDIO_CAP_DEBUG_SOURCE (1U << 3)
 
-#define SC_AUDIO_STATUS_FLAG_SOURCE_TONE        (1U << 0)
-#define SC_AUDIO_STATUS_FLAG_NOTE_SHIFT         1U
+#define SC_AUDIO_STATUS_FLAG_SOURCE_MASK        0x07U
+#define SC_AUDIO_STATUS_FLAG_SLOT_32            (1U << 3)
+#define SC_AUDIO_STATUS_FLAG_NOTE_SHIFT         4U
 #define SC_AUDIO_STATUS_FLAG_NOTE_MASK          (7U << SC_AUDIO_STATUS_FLAG_NOTE_SHIFT)
 #define SC_AUDIO_STATUS_FLAG_DEBUG_CONFIG_VALID (1U << 7)
 
 typedef enum {
     SC_AUDIO_SOURCE_MUSIC = 0,
     SC_AUDIO_SOURCE_TONE = 1,
+    SC_AUDIO_SOURCE_TEST_44100_16 = 2,
+    SC_AUDIO_SOURCE_TEST_44100_24 = 3,
+    SC_AUDIO_SOURCE_TEST_48000_16 = 4,
+    SC_AUDIO_SOURCE_TEST_48000_24 = 5,
+    SC_AUDIO_SOURCE_TEST_32000_16 = 6,
+    SC_AUDIO_SOURCE_TEST_96000_16 = 7,
+    SC_AUDIO_SOURCE_COUNT,
 } sc_audio_source_t;
+
+typedef enum {
+    SC_AUDIO_I2S_PACKING_NATIVE = 0,
+    SC_AUDIO_I2S_PACKING_PADDED_32 = 1,
+    SC_AUDIO_I2S_PACKING_COUNT,
+} sc_audio_i2s_packing_t;
 
 typedef enum {
     SC_AUDIO_TONE_C3 = 0,
@@ -40,6 +54,7 @@ typedef enum {
     SC_AUDIO_MSG_SET_VOLUME = 0x05,
     SC_AUDIO_MSG_SET_SOURCE = 0x06,
     SC_AUDIO_MSG_SET_TONE_NOTE = 0x07,
+    SC_AUDIO_MSG_SET_I2S_PACKING = 0x08,
 
     SC_AUDIO_MSG_INFO = 0x81,
     SC_AUDIO_MSG_RESULT = 0x82,
@@ -112,6 +127,8 @@ typedef sc_audio_result_t (*sc_audio_set_source_fn)(void *context,
                                                     sc_audio_source_t source);
 typedef sc_audio_result_t (*sc_audio_set_tone_note_fn)(void *context,
                                                        sc_audio_tone_note_t note);
+typedef sc_audio_result_t (*sc_audio_set_i2s_packing_fn)(
+    void *context, sc_audio_i2s_packing_t packing);
 
 typedef struct {
     void *context;
@@ -121,6 +138,7 @@ typedef struct {
     sc_audio_set_volume_fn set_volume;
     sc_audio_set_source_fn set_source;
     sc_audio_set_tone_note_fn set_tone_note;
+    sc_audio_set_i2s_packing_fn set_i2s_packing;
 } sc_audio_backend_t;
 
 typedef struct {
@@ -182,12 +200,20 @@ bool sc_audio_make_set_tone_note(sc_frame_t *frame,
                                  uint32_t audio_session_id,
                                  uint32_t command_id,
                                  sc_audio_tone_note_t note);
+bool sc_audio_make_set_i2s_packing(sc_frame_t *frame,
+                                   uint16_t sequence,
+                                   uint32_t control_session_id,
+                                   uint32_t audio_session_id,
+                                   uint32_t command_id,
+                                   sc_audio_i2s_packing_t packing);
 
 uint8_t sc_audio_debug_status_flags(sc_audio_source_t source,
-                                    sc_audio_tone_note_t note);
+                                    sc_audio_tone_note_t note,
+                                    sc_audio_i2s_packing_t packing);
 bool sc_audio_debug_config_from_status(const sc_audio_status_t *status,
                                        sc_audio_source_t *source,
-                                       sc_audio_tone_note_t *note);
+                                       sc_audio_tone_note_t *note,
+                                       sc_audio_i2s_packing_t *packing);
 
 bool sc_audio_parse_info(const sc_frame_t *frame, sc_audio_info_t *info);
 bool sc_audio_parse_status(const sc_frame_t *frame, sc_audio_status_t *status);

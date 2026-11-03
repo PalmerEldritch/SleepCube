@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+#include "audio_test_profiles.h"
 #include "tone_generator.h"
 #endif
 
@@ -35,6 +36,12 @@ typedef struct {
     bool source_switch_fading_in;
     sc_audio_source_t active_source;
     sc_audio_tone_note_t active_tone_note;
+    sc_audio_i2s_packing_t active_i2s_packing;
+    sc_audio_source_t requested_source;
+    sc_audio_tone_note_t requested_tone_note;
+    sc_audio_i2s_packing_t requested_i2s_packing;
+    uint32_t active_sample_rate_hz;
+    uint8_t active_data_bits;
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
     sc_tone_generator_t tone_generator;
 #endif
@@ -67,20 +74,26 @@ static void update_shared_volume(sc_playback_controller_t *controller,
     }
 }
 
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
 static void update_shared_debug_config(sc_playback_controller_t *controller,
                                        sc_audio_source_t source,
-                                       sc_audio_tone_note_t note)
+                                       sc_audio_tone_note_t note,
+                                       sc_audio_i2s_packing_t packing)
 {
     if (xSemaphoreTake(controller->status_mutex, portMAX_DELAY) == pdTRUE) {
         controller->source = source;
         controller->tone_note = note;
+        controller->i2s_packing = packing;
         xSemaphoreGive(controller->status_mutex);
     }
 }
+#endif
 
-static uint32_t frames_for_ms(uint32_t milliseconds)
+static uint32_t frames_for_ms(const playback_runtime_t *runtime,
+                              uint32_t milliseconds)
 {
-    return (uint32_t)(((uint64_t)SC_AUDIO_SAMPLE_RATE_HZ * milliseconds) / 1000U);
+    return (uint32_t)(((uint64_t)runtime->active_sample_rate_hz * milliseconds) /
+                      1000U);
 }
 
 static int32_t volume_to_gain_q15(uint8_t volume_percent)
@@ -148,23 +161,28 @@ static void enter_fault(playback_runtime_t *runtime,
 }
 
 static esp_err_t fill_mono_block(playback_runtime_t *runtime,
-                                 int16_t *mono,
+                                 int32_t *mono,
                                  size_t requested_frames)
 {
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
     if (runtime->active_source == SC_AUDIO_SOURCE_TONE) {
-        sc_tone_generator_fill(&runtime->tone_generator, mono,
+        int16_t generated[SC_PLAYBACK_BLOCK_FRAMES];
+        sc_tone_generator_fill(&runtime->tone_generator, generated,
                                requested_frames);
+        for (size_t i = 0; i < requested_frames; ++i) {
+            mono[i] = (int32_t)generated[i] * 65536;
+        }
         return ESP_OK;
     }
 #endif
     size_t filled_frames = 0;
     while (filled_frames < requested_frames) {
         size_t frames_read = 0;
-        esp_err_t result = sc_wav_reader_read(runtime->controller->reader,
-                                              &mono[filled_frames],
-                                              requested_frames - filled_frames,
-                                              &frames_read);
+        esp_err_t result = sc_wav_reader_read_q31(
+            runtime->controller->reader,
+            &mono[filled_frames],
+            requested_frames - filled_frames,
+            &frames_read);
         if (result != ESP_OK) {
             return result;
         }
@@ -183,11 +201,88 @@ static esp_err_t fill_mono_block(playback_runtime_t *runtime,
     return ESP_OK;
 }
 
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+static uint8_t slot_bits_for(uint8_t data_bits,
+                             sc_audio_i2s_packing_t packing)
+{
+    return packing == SC_AUDIO_I2S_PACKING_PADDED_32 ? 32U : data_bits;
+}
+
+static esp_err_t apply_debug_profile(playback_runtime_t *runtime,
+                                     sc_audio_source_t source,
+                                     sc_audio_tone_note_t note,
+                                     sc_audio_i2s_packing_t packing)
+{
+    sc_audio_test_profile_t profile;
+    if (!sc_audio_test_profile_get(source, &profile) ||
+        note >= SC_AUDIO_TONE_COUNT ||
+        packing >= SC_AUDIO_I2S_PACKING_COUNT) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    sc_wav_reader_t candidate = {0};
+    if (profile.path != NULL) {
+        esp_err_t result = sc_wav_reader_open_expected(&candidate,
+                                                       profile.path,
+                                                       profile.sample_rate_hz,
+                                                       profile.data_bits);
+        if (result != ESP_OK) {
+            ESP_LOGE(TAG, "profile file rejected: source=%u path=%s error=%s",
+                     (unsigned)source, profile.path, esp_err_to_name(result));
+            return result;
+        }
+    }
+
+    const uint8_t requested_slot_bits =
+        slot_bits_for(profile.data_bits, packing);
+    const uint32_t previous_rate = runtime->active_sample_rate_hz;
+    const uint8_t previous_data_bits = runtime->active_data_bits;
+    const uint8_t previous_slot_bits =
+        slot_bits_for(previous_data_bits, runtime->active_i2s_packing);
+    esp_err_t result = sc_audio_output_reconfigure(runtime->controller->output,
+                                                   profile.sample_rate_hz,
+                                                   profile.data_bits,
+                                                   requested_slot_bits);
+    if (result != ESP_OK) {
+        sc_wav_reader_close(&candidate);
+        const esp_err_t restore_result = sc_audio_output_reconfigure(
+            runtime->controller->output,
+            previous_rate,
+            previous_data_bits,
+            previous_slot_bits);
+        if (restore_result != ESP_OK) {
+            ESP_LOGE(TAG, "previous I2S format restore failed: %s",
+                     esp_err_to_name(restore_result));
+        }
+        return result;
+    }
+
+    if (profile.path != NULL) {
+        sc_wav_reader_close(runtime->controller->reader);
+        *runtime->controller->reader = candidate;
+    }
+    if (source == SC_AUDIO_SOURCE_TONE) {
+        sc_tone_generator_set_note(&runtime->tone_generator, note);
+    }
+
+    runtime->active_source = source;
+    runtime->active_tone_note = note;
+    runtime->active_i2s_packing = packing;
+    runtime->active_sample_rate_hz = profile.sample_rate_hz;
+    runtime->active_data_bits = profile.data_bits;
+    update_shared_debug_config(runtime->controller, source, note, packing);
+    ESP_LOGI(TAG,
+             "debug profile active: source=%u rate=%" PRIu32
+             "Hz data=%ubit slot=%ubit",
+             (unsigned)source, profile.sample_rate_hz, profile.data_bits,
+             requested_slot_bits);
+    return ESP_OK;
+}
+#endif
+
 static void begin_playback(playback_runtime_t *runtime,
                            uint32_t duration_seconds)
 {
-    runtime->active_source = runtime->controller->source;
-    runtime->active_tone_note = runtime->controller->tone_note;
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
     if (runtime->active_source == SC_AUDIO_SOURCE_TONE) {
         sc_tone_generator_set_note(&runtime->tone_generator,
@@ -208,11 +303,14 @@ static void begin_playback(playback_runtime_t *runtime,
     runtime->timeout_fade_started = false;
     runtime->source_switch_pending = false;
     runtime->source_switch_fading_in = false;
+    runtime->requested_source = runtime->active_source;
+    runtime->requested_tone_note = runtime->active_tone_note;
+    runtime->requested_i2s_packing = runtime->active_i2s_packing;
     runtime->playback_gain_q15 = 0;
     runtime->volume_gain_q15 =
         volume_to_gain_q15(runtime->controller->volume_percent);
     ramp_begin(&runtime->playback_ramp, 0, INT16_MAX,
-               frames_for_ms(SC_PLAYBACK_START_FADE_MS));
+               frames_for_ms(runtime, SC_PLAYBACK_START_FADE_MS));
     ramp_begin(&runtime->volume_ramp,
                runtime->volume_gain_q15,
                runtime->volume_gain_q15,
@@ -245,9 +343,12 @@ static void begin_stop(playback_runtime_t *runtime,
     ramp_begin(&runtime->playback_ramp,
                runtime->playback_gain_q15,
                0,
-               frames_for_ms(fade_ms));
+               frames_for_ms(runtime, fade_ms));
     runtime->source_switch_pending = false;
     runtime->source_switch_fading_in = false;
+    runtime->requested_source = runtime->active_source;
+    runtime->requested_tone_note = runtime->active_tone_note;
+    runtime->requested_i2s_packing = runtime->active_i2s_packing;
     runtime->stop_reason = stop_reason;
     update_shared_status(runtime->controller, SC_PLAYBACK_STOPPING,
                          stop_reason, runtime->session_deadline_us, 0U);
@@ -273,36 +374,63 @@ static void set_volume(playback_runtime_t *runtime, uint8_t next_volume)
     ramp_begin(&runtime->volume_ramp,
                runtime->volume_gain_q15,
                target_gain,
-               frames_for_ms(SC_PLAYBACK_VOLUME_RAMP_MS));
+               frames_for_ms(runtime, SC_PLAYBACK_VOLUME_RAMP_MS));
     ESP_LOGI(TAG, "volume=%u%% target_gain_q15=%" PRId32 " ramp=%ums persisted=yes",
              next_volume, target_gain, SC_PLAYBACK_VOLUME_RAMP_MS);
 }
 
 static void update_debug_selection(playback_runtime_t *runtime,
                                    sc_audio_source_t source,
-                                   sc_audio_tone_note_t note)
+                                   sc_audio_tone_note_t note,
+                                   sc_audio_i2s_packing_t packing)
 {
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
     const bool audible_change =
         source != runtime->active_source ||
+        packing != runtime->active_i2s_packing ||
         (source == SC_AUDIO_SOURCE_TONE &&
          runtime->active_source == SC_AUDIO_SOURCE_TONE &&
          note != runtime->active_tone_note);
 
-    update_shared_debug_config(runtime->controller, source, note);
+    runtime->requested_source = source;
+    runtime->requested_tone_note = note;
+    runtime->requested_i2s_packing = packing;
+    if (!audible_change) {
+        if (note != runtime->active_tone_note) {
+            runtime->active_tone_note = note;
+            update_shared_debug_config(runtime->controller,
+                                       runtime->active_source,
+                                       note,
+                                       runtime->active_i2s_packing);
+        }
+        return;
+    }
+    if (runtime->controller->state == SC_PLAYBACK_STOPPED) {
+        const esp_err_t result = apply_debug_profile(runtime, source, note, packing);
+        if (result != ESP_OK) {
+            runtime->requested_source = runtime->active_source;
+            runtime->requested_tone_note = runtime->active_tone_note;
+            runtime->requested_i2s_packing = runtime->active_i2s_packing;
+            ESP_LOGE(TAG, "debug selection unchanged: %s",
+                     esp_err_to_name(result));
+        }
+        return;
+    }
     if (audible_change &&
         (runtime->controller->state == SC_PLAYBACK_STARTING ||
          runtime->controller->state == SC_PLAYBACK_PLAYING)) {
         runtime->source_switch_pending = true;
         ramp_begin(&runtime->playback_ramp,
                    runtime->playback_gain_q15, 0,
-                   frames_for_ms(SC_PLAYBACK_SOURCE_SWITCH_FADE_MS));
+                   frames_for_ms(runtime,
+                                 SC_PLAYBACK_SOURCE_SWITCH_FADE_MS));
         runtime->source_switch_fading_in = false;
     }
 #else
     (void)runtime;
     (void)source;
     (void)note;
+    (void)packing;
 #endif
 }
 
@@ -364,11 +492,18 @@ static void handle_command(playback_runtime_t *runtime,
         break;
     case SC_PLAYBACK_COMMAND_SET_SOURCE:
         update_debug_selection(runtime, command->source,
-                               runtime->controller->tone_note);
+                               runtime->requested_tone_note,
+                               runtime->requested_i2s_packing);
         break;
     case SC_PLAYBACK_COMMAND_SET_TONE_NOTE:
-        update_debug_selection(runtime, runtime->controller->source,
-                               command->tone_note);
+        update_debug_selection(runtime, runtime->requested_source,
+                               command->tone_note,
+                               runtime->requested_i2s_packing);
+        break;
+    case SC_PLAYBACK_COMMAND_SET_I2S_PACKING:
+        update_debug_selection(runtime, runtime->requested_source,
+                               runtime->requested_tone_note,
+                               command->i2s_packing);
         break;
     default:
         ESP_LOGW(TAG, "unknown standalone command=%d", (int)command->type);
@@ -386,8 +521,7 @@ static void drain_commands(playback_runtime_t *runtime)
 
 static esp_err_t write_playback_block(playback_runtime_t *runtime)
 {
-    int16_t mono[SC_PLAYBACK_BLOCK_FRAMES];
-    int16_t stereo[SC_PLAYBACK_BLOCK_FRAMES * SC_AUDIO_CHANNEL_COUNT];
+    int32_t mono[SC_PLAYBACK_BLOCK_FRAMES];
 
     esp_err_t result = fill_mono_block(runtime, mono, SC_PLAYBACK_BLOCK_FRAMES);
     if (result != ESP_OK) {
@@ -400,14 +534,12 @@ static esp_err_t write_playback_block(playback_runtime_t *runtime)
         const int64_t scaled =
             ((int64_t)mono[i] * runtime->playback_gain_q15 *
              runtime->volume_gain_q15) >> 30;
-        const int16_t sample = (int16_t)scaled;
-        stereo[i * SC_AUDIO_CHANNEL_COUNT] = sample;
-        stereo[(i * SC_AUDIO_CHANNEL_COUNT) + 1U] = sample;
+        mono[i] = (int32_t)scaled;
     }
 
-    result = sc_audio_output_write_frames(runtime->controller->output,
-                                          stereo,
-                                          SC_PLAYBACK_BLOCK_FRAMES);
+    result = sc_audio_output_write_mono_q31(runtime->controller->output,
+                                            mono,
+                                            SC_PLAYBACK_BLOCK_FRAMES);
     if (result == ESP_OK) {
         runtime->session_frames += SC_PLAYBACK_BLOCK_FRAMES;
     }
@@ -416,10 +548,10 @@ static esp_err_t write_playback_block(playback_runtime_t *runtime)
 
 static esp_err_t write_trailing_silence(playback_runtime_t *runtime)
 {
-    const int16_t silence[SC_PLAYBACK_BLOCK_FRAMES * SC_AUDIO_CHANNEL_COUNT] = {0};
-    return sc_audio_output_write_frames(runtime->controller->output,
-                                        silence,
-                                        SC_PLAYBACK_BLOCK_FRAMES);
+    const int32_t silence[SC_PLAYBACK_BLOCK_FRAMES] = {0};
+    return sc_audio_output_write_mono_q31(runtime->controller->output,
+                                          silence,
+                                          SC_PLAYBACK_BLOCK_FRAMES);
 }
 
 static void update_timing_and_state(playback_runtime_t *runtime)
@@ -442,22 +574,22 @@ static void update_timing_and_state(playback_runtime_t *runtime)
         ramp_complete(&runtime->playback_ramp) &&
         (runtime->controller->state == SC_PLAYBACK_STARTING ||
          runtime->controller->state == SC_PLAYBACK_PLAYING)) {
-        runtime->active_source = runtime->controller->source;
-        runtime->active_tone_note = runtime->controller->tone_note;
-        if (runtime->active_source == SC_AUDIO_SOURCE_TONE) {
-            sc_tone_generator_set_note(&runtime->tone_generator,
-                                       runtime->active_tone_note);
-        } else {
-            const esp_err_t result =
-                sc_wav_reader_rewind(runtime->controller->reader);
-            if (result != ESP_OK) {
-                enter_fault(runtime, "source-switch rewind", result);
-                return;
-            }
+        const esp_err_t result = apply_debug_profile(
+            runtime,
+            runtime->requested_source,
+            runtime->requested_tone_note,
+            runtime->requested_i2s_packing);
+        if (result != ESP_OK) {
+            runtime->requested_source = runtime->active_source;
+            runtime->requested_tone_note = runtime->active_tone_note;
+            runtime->requested_i2s_packing = runtime->active_i2s_packing;
+            ESP_LOGE(TAG, "source switch rejected; restoring prior profile: %s",
+                     esp_err_to_name(result));
         }
         runtime->source_switch_fading_in = true;
         ramp_begin(&runtime->playback_ramp, 0, INT16_MAX,
-                   frames_for_ms(SC_PLAYBACK_SOURCE_SWITCH_FADE_MS));
+                   frames_for_ms(runtime,
+                                 SC_PLAYBACK_SOURCE_SWITCH_FADE_MS));
     } else if (runtime->source_switch_pending &&
                runtime->source_switch_fading_in &&
                ramp_complete(&runtime->playback_ramp)) {
@@ -489,7 +621,8 @@ static void update_timing_and_state(playback_runtime_t *runtime)
                  runtime->stop_reason == SC_PLAYBACK_STOP_REASON_TIMER_EXPIRED
                      ? "session-timeout" : "manual",
                  runtime->session_frames,
-                 runtime->session_frames * SC_AUDIO_BYTES_PER_FRAME,
+                 runtime->session_frames *
+                     sc_audio_output_bytes_per_frame(runtime->controller->output),
                  runtime->loop_count);
         return;
     }
@@ -506,7 +639,8 @@ static void update_timing_and_state(playback_runtime_t *runtime)
                  " loops=%" PRIu32 " remaining=%" PRId64 "s",
                  sc_playback_state_name(runtime->controller->state),
                  runtime->session_frames,
-                 runtime->session_frames * SC_AUDIO_BYTES_PER_FRAME,
+                 runtime->session_frames *
+                     sc_audio_output_bytes_per_frame(runtime->controller->output),
                  runtime->loop_count,
                  remaining_seconds);
         runtime->next_heartbeat_us +=
@@ -522,6 +656,12 @@ static void playback_task(void *argument)
         .volume_gain_q15 = 0,
         .active_source = SC_AUDIO_SOURCE_MUSIC,
         .active_tone_note = SC_AUDIO_TONE_C5,
+        .active_i2s_packing = SC_AUDIO_I2S_PACKING_NATIVE,
+        .requested_source = SC_AUDIO_SOURCE_MUSIC,
+        .requested_tone_note = SC_AUDIO_TONE_C5,
+        .requested_i2s_packing = SC_AUDIO_I2S_PACKING_NATIVE,
+        .active_sample_rate_hz = SC_AUDIO_SAMPLE_RATE_HZ,
+        .active_data_bits = SC_AUDIO_BITS_PER_SAMPLE,
     };
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
     sc_tone_generator_init(&runtime.tone_generator, SC_AUDIO_TONE_C5);
@@ -572,6 +712,7 @@ esp_err_t sc_playback_controller_init(sc_playback_controller_t *controller,
     controller->volume_percent = initial_volume_percent;
     controller->source = SC_AUDIO_SOURCE_MUSIC;
     controller->tone_note = SC_AUDIO_TONE_C5;
+    controller->i2s_packing = SC_AUDIO_I2S_PACKING_NATIVE;
     controller->stop_reason = SC_PLAYBACK_STOP_REASON_BOOT;
     controller->status_mutex = xSemaphoreCreateMutex();
     if (controller->status_mutex == NULL) {
@@ -586,7 +727,7 @@ esp_err_t sc_playback_controller_init(sc_playback_controller_t *controller,
 
     const BaseType_t created = xTaskCreate(playback_task,
                                            "audio_playback",
-                                           6144,
+                                           8192,
                                            controller,
                                            8,
                                            &controller->task);
@@ -672,7 +813,7 @@ esp_err_t sc_playback_controller_set_source(sc_playback_controller_t *controller
                                             sc_audio_source_t source)
 {
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
-    ESP_RETURN_ON_FALSE(source <= SC_AUDIO_SOURCE_TONE,
+    ESP_RETURN_ON_FALSE(source < SC_AUDIO_SOURCE_COUNT,
                         ESP_ERR_INVALID_ARG, TAG, "invalid audio source");
     const sc_playback_command_t message = {
         .type = SC_PLAYBACK_COMMAND_SET_SOURCE,
@@ -682,6 +823,25 @@ esp_err_t sc_playback_controller_set_source(sc_playback_controller_t *controller
 #else
     (void)controller;
     (void)source;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t sc_playback_controller_set_i2s_packing(
+    sc_playback_controller_t *controller,
+    sc_audio_i2s_packing_t packing)
+{
+#if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
+    ESP_RETURN_ON_FALSE(packing < SC_AUDIO_I2S_PACKING_COUNT,
+                        ESP_ERR_INVALID_ARG, TAG, "invalid I2S packing");
+    const sc_playback_command_t message = {
+        .type = SC_PLAYBACK_COMMAND_SET_I2S_PACKING,
+        .i2s_packing = packing,
+    };
+    return send_message(controller, &message);
+#else
+    (void)controller;
+    (void)packing;
     return ESP_ERR_NOT_SUPPORTED;
 #endif
 }
@@ -718,6 +878,7 @@ esp_err_t sc_playback_controller_get_snapshot(sc_playback_controller_t *controll
     snapshot->volume_percent = controller->volume_percent;
     snapshot->source = controller->source;
     snapshot->tone_note = controller->tone_note;
+    snapshot->i2s_packing = controller->i2s_packing;
     snapshot->stop_reason = controller->stop_reason;
     snapshot->fault_code = controller->fault_code;
     const int64_t deadline_us = controller->session_deadline_us;

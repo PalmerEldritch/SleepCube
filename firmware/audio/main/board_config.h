@@ -28,6 +28,7 @@
     (SC_AUDIO_CHANNEL_COUNT * (SC_AUDIO_BITS_PER_SAMPLE / 8U))
 #define SC_AUDIO_DMA_DESC_NUM         6U
 #define SC_AUDIO_DMA_FRAME_NUM        256U
+#define SC_AUDIO_DMA_FRAME_NUM_24BIT  255U
 #define SC_AUDIO_WRITE_TIMEOUT_MS     1000U
 #define SC_AUDIO_FORMAT_NAME          "Philips-I2S stereo signed-16, duplicated mono"
 

@@ -19,11 +19,21 @@ typedef struct {
 /** Open and validate the canonical M2 PCM WAV content file. */
 esp_err_t sc_wav_reader_open(sc_wav_reader_t *reader, const char *path);
 
-/** Read mono signed-16 frames. A zero frame count denotes end of content. */
-esp_err_t sc_wav_reader_read(sc_wav_reader_t *reader,
-                             int16_t *frames,
-                             size_t capacity_frames,
-                             size_t *frames_read);
+/** Open a mono integer-PCM WAV and require the supplied debug profile. */
+esp_err_t sc_wav_reader_open_expected(sc_wav_reader_t *reader,
+                                      const char *path,
+                                      uint32_t sample_rate_hz,
+                                      uint16_t bits_per_sample);
+
+/**
+ * Read mono samples left-aligned in signed Q31 form. A zero frame count denotes
+ * end of content. Both packed little-endian signed-16 and signed-24 PCM are
+ * supported without discarding source bits.
+ */
+esp_err_t sc_wav_reader_read_q31(sc_wav_reader_t *reader,
+                                 int32_t *frames,
+                                 size_t capacity_frames,
+                                 size_t *frames_read);
 
 /** Seek back to the first content frame for continuous presentation. */
 esp_err_t sc_wav_reader_rewind(sc_wav_reader_t *reader);

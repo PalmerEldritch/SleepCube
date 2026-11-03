@@ -66,7 +66,8 @@ static sc_audio_result_t link_get_status(void *context,
     status->volume_percent = snapshot.volume_percent;
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
     status->flags = sc_audio_debug_status_flags(snapshot.source,
-                                                snapshot.tone_note);
+                                                snapshot.tone_note,
+                                                snapshot.i2s_packing);
 #endif
     status->stop_reason = (sc_audio_stop_reason_t)snapshot.stop_reason;
     status->remaining_seconds = snapshot.remaining_seconds;
@@ -167,6 +168,26 @@ static sc_audio_result_t link_set_tone_note(void *context,
                ? SC_AUDIO_RESULT_ACCEPTED
                : SC_AUDIO_RESULT_INTERNAL_ERROR;
 }
+
+static sc_audio_result_t link_set_i2s_packing(
+    void *context,
+    sc_audio_i2s_packing_t packing)
+{
+    (void)context;
+    if (!s_controller_ready) {
+        return SC_AUDIO_RESULT_NOT_READY;
+    }
+    sc_playback_snapshot_t snapshot;
+    if (sc_playback_controller_get_snapshot(&s_controller, &snapshot) != ESP_OK) {
+        return SC_AUDIO_RESULT_INTERNAL_ERROR;
+    }
+    if (snapshot.i2s_packing == packing) {
+        return SC_AUDIO_RESULT_NO_CHANGE;
+    }
+    return sc_playback_controller_set_i2s_packing(&s_controller, packing) == ESP_OK
+               ? SC_AUDIO_RESULT_ACCEPTED
+               : SC_AUDIO_RESULT_INTERNAL_ERROR;
+}
 #endif
 
 static esp_err_t configure_button(void)
@@ -241,6 +262,7 @@ void app_main(void)
 #if CONFIG_SC_ENABLE_TOUCH_DEBUG_AUDIO
         .set_source = link_set_source,
         .set_tone_note = link_set_tone_note,
+        .set_i2s_packing = link_set_i2s_packing,
 #endif
     };
     uint32_t audio_session_id = esp_random();

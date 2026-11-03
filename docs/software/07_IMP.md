@@ -10,8 +10,9 @@ The released R00 Waveshare GUI and application-facing lighting behavior are
 retained. M10 replaces only the physical RGB backend and RGB-specific rendering
 with fixed-color COB PWM. The normal R01 Audio firmware and UART feature set
 remain unchanged. ADR-0011 separately permits a matched development-only image
-with capability-negotiated source/note commands and a generated sine source;
-those features are compiled out of the normal profiles.
+with capability-negotiated source/profile/slot-packing commands, controlled WAV
+profiles and a generated sine source; those features are compiled out of the
+normal profiles.
 
 ## 2. Milestones
 
@@ -376,8 +377,9 @@ Deliverables:
 hardware while preserving the GUI, persistence, audio behavior and controller
 ownership boundaries.
 
-**Status (2026-10-31): COB MIGRATION SOFTWARE COMPLETE; TOUCH-DEBUG SOFTWARE
-IMPLEMENTED AND BUILD-VERIFIED; TARGET TOUCH/AUDIO VERIFICATION PENDING.** The
+**Status (2026-11-03): COB MIGRATION SOFTWARE COMPLETE; TOUCH-DEBUG I2S PROFILE
+EXTENSION IMPLEMENTED AND BUILD-VERIFIED; UPDATED TARGET VERIFICATION
+PENDING.** The
 COB baseline was developed on `feat/r01-cob-pwm-lighting`; the separate
 `feat/r01-touch-debug-ui` branch now carries the matched development image. The
 Control firmware now uses an active-high GPIO8 LEDC driver at 3 kHz/13-bit on
@@ -387,9 +389,10 @@ duty, and fails off for invalid limits or output errors. ADR-0010 retains the
 existing nonzero GUI minimum; no user-accessible off state is added. RGB
 buffers, per-pixel rendering, RMT sources/configuration and RGB-only settings
 are removed from the active Control implementation. Normal GUI behavior remains
-unchanged. The matched debug profiles add the ADR-0011 touch grid, local sine
-source and optional capability-negotiated UART source/note controls; normal
-profiles compile out the grid/generator.
+unchanged. The matched debug profiles add the ADR-0011 touch grid, controlled
+mono WAV profiles, local C5 source and optional capability-negotiated UART
+source/profile/slot controls; normal profiles compile out the grid, generator
+and profile catalog.
 
 Strict mapping/policy tests, retained host regressions and a clean ESP-IDF v6.0
 R01 Control build pass. The image embeds `R01-dev`; exact software evidence is
@@ -412,17 +415,30 @@ and target checks confirmed all three line endings execute exactly once and the
 periodic status stream remains suppressed.
 
 The touch-debug image enters on five rapid rest-view taps and offers PLAY/STOP,
-volume, exact 0–100% duty, light enable, 1–25 kHz frequency, music/generated-
-sine source, C3–C8 note and exit controls. Exact duty and frequency are volatile;
-effects are disabled in debug mode; exit restores product lighting, music and
-C5. Strict protocol and generated-tone host tests pass. Clean ESP-IDF v6.0
-matched builds pass at 593,680 bytes (Control) and 343,488 bytes (Audio).
-Clean normal-profile regression builds also pass with the touch UI and tone
-generator disabled (Control 597,680 bytes; Audio 342,160 bytes).
-The exact matched images subsequently passed flash/write verification, booted
-with the intended identities, advertised capability `0x000f`, reconciled to
-silent `STOPPED` and validated the canonical Audio content. Touch-grid,
-generated-tone and powered PWM interaction checks have not yet been performed.
+volume, exact 0–100% duty, light enable and 1–25 kHz frequency. Its audio side
+now cycles canonical Music, six mono PCM test profiles (32/44.1/48/96 kHz and
+16/24-bit), generated C5, then Music again, and independently toggles
+native-width or 32-bit-padded I2S
+slots. Audio retains 24-bit precision through a Q31 gain path, validates each
+selected asset before application, duplicates mono into both Philips-I2S
+channels and owns all clock/slot changes. Active changes retain the existing
+one-second down/up fade and absolute finite deadline. Exact duty, frequency,
+profile and packing are volatile; effects are disabled in debug mode; exit
+restores product lighting, canonical music, C5 and native slots.
+
+Strict protocol, WAV-format, PCM conversion/packing and generated-tone host tests pass.
+Updated clean ESP-IDF v6.0 matched and normal-profile builds pass; exact sizes
+and hashes are recorded in
+`verification/2026-11-03_M10_i2s_debug_profiles.md`. The updated matched images
+now pass flash/write verification and boot smoke. A corrected WAV reader accepts
+classic and extensible integer PCM; all six actual SD-card assets validate and
+configure, and A3 wraps through generated C5 and Music without becoming trapped
+by a rejected profile. User listening across the source and native/32-bit-
+padded modes found no audible difference: the constant high-pitched noise
+remained at the same perceived level, while playback was clean without stutter
+or pops. Further logical format sweeping is therefore not planned without new
+evidence. `AUD-ISS-001` retains the sole audio-quality investigation. Failure
+retention, stack margin and powered PWM interaction checks remain open.
 
 Deliverables:
 
@@ -434,6 +450,8 @@ Deliverables:
 - final PD-trigger/DC-DC integrated power-cycle smoke.
 - development-only runtime PWM frequency/duty console for hardware evaluation.
 - matched development-only touch grid and generated-tone Audio image.
+- controlled mono WAV rate/depth profiles and native/32-bit-padded I2S slot
+  comparison in the matched development image.
 
 Exit criteria:
 
@@ -469,8 +487,9 @@ changes only the Control-side lighting implementation within it.
 
 ## 5. Suggested immediate next engineering task
 
-Verify all eight grid controls with 12 V initially off, then repeat exact
-frequency/duty, effect-suppression, generated-tone/source-fade and
-exit-restoration checks on the powered prototype. The matched flash, boot
-identity and capability synchronization gates already pass; do not infer the
-remaining behavior from that smoke evidence.
+Compare all A3 rate/depth profiles under both A4 slot-packing choices at fixed
+volume and lighting conditions. Record per-file acceptance, rate/data/slot
+logs, listening observations, failure retention, deadline behavior and Audio
+stack margin before resuming exact PWM/effect-suppression and exit-restoration
+checks. The updated matched flash/boot gate now passes but does not verify the
+lazy-loaded test assets or audible output.

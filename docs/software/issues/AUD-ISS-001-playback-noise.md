@@ -4,7 +4,7 @@
 
 **First observed:** 2026-09-18
 
-**Updated:** 2026-09-26
+**Updated:** 2026-11-03
 
 **Priority:** Non-blocking after M8 reference audition; physical root cause
 remains undetermined
@@ -52,6 +52,7 @@ temporary files must not be relied on as permanent repository evidence.
 | Firmware 50% versus 100% | Noise-to-music ratio changed little | Low-level digital-gain quantization is not supported as the dominant cause |
 | Three speaker loads: TEBM 10 W/4 ohm, supplied 1 W/8 ohm, small 3 W/4 ohm | Noise heard on all three | TEBM-specific defect/wiring is unlikely to be the sole cause |
 | 3.5 mm jack with headphones | Very high-pitched noise; music almost obscured | Invalid reference test; do not repeat |
+| R01 debug profiles: 32/44.1/48/96 kHz, 16-/24-bit source, native/32-bit-padded slots | Clean playback without stutter/pops, but the same constant high-pitched noise level and no audible playback-character difference across modes | Tested logical sample rate, source depth and slot packing are not supported as useful mitigations; this does not prove the I2S electrical path fault-free |
 
 The ATOMIC Speaker Base schematic connects the 3.5 mm jack directly to the
 NS4168 differential `VOP/VON` speaker outputs, not to an independent headphone
@@ -93,16 +94,19 @@ prohibited.
 
 ## Future diagnostic path
 
-1. If further improvement is prioritized, investigate the source
-   recording and downmix/export chain; compare original stereo channels and a
-   fresh conversion before changing embedded firmware.
-2. Use a suitable isolated,
+1. Do not continue sweeping logical I2S sample rate, source depth or slot width
+   without new evidence; the controlled R01 listening comparison found no
+   audible difference across those variables.
+2. If further improvement is prioritized, investigate the source recording and
+   downmix/export chain; compare original stereo channels and a fresh conversion
+   before changing embedded firmware.
+3. Use a suitable isolated,
    differential Class-D measurement method or a known-safe post-filtered test
    load to compare the Speaker Base output. Do not attach a ground-referenced
    laptop line input or ordinary grounded oscilloscope probe directly across
    `VOP/VON`. Check supply behavior and the firmware sample/gain path only with
    evidence that separates them.
-3. Recheck any mitigation using the same track, firmware, power source,
+4. Recheck any mitigation using the same track, firmware, power source,
    speaker, listening distance and volume. Record a before/after comparison.
 
 This acceptance must remain visible in release documentation. Clean tones,
@@ -113,4 +117,5 @@ the decision evidence.
 ## Related evidence
 
 - `docs/software/verification/2026-09-18_TEBM_music_followup.md`
+- `docs/software/verification/2026-11-03_M10_i2s_debug_profiles.md`
 - `docs/software/06_VVM.md`: `M2-FUP-001` and open issue `AUD-ISS-001`

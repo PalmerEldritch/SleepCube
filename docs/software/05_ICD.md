@@ -94,8 +94,9 @@ echoes its request sequence.
 | `PLAY` | `0x03` | Control → Audio | common command header + `duration_seconds:u32` | Request finite playback |
 | `STOP` | `0x04` | Control → Audio | common command header | Request controlled stop |
 | `SET_VOLUME` | `0x05` | Control → Audio | common command header + `volume_percent:u8` | Request authoritative persisted volume |
-| `SET_SOURCE` | `0x06` | Control → Audio | common command header + `source:u8` | Optional debug capability: select sleep music (`0`) or generated sine (`1`) |
+| `SET_SOURCE` | `0x06` | Control → Audio | common command header + `source:u8` | Optional debug capability: select a bounded source/test profile |
 | `SET_TONE_NOTE` | `0x07` | Control → Audio | common command header + `note:u8` | Optional debug capability: select C3..C8 (`0`..`5`) |
+| `SET_I2S_PACKING` | `0x08` | Control → Audio | common command header + `packing:u8` | Optional debug capability: select native-width (`0`) or 32-bit-padded (`1`) I2S slots |
 | `INFO` | `0x81` | Audio → Control | information payload | Correlated `HELLO` response |
 | `RESULT` | `0x82` | Audio → Control | result payload | Correlated state-changing-command acknowledgement/result |
 | `READY` | `0x83` | Audio → Control | status payload | Audio services became command-ready; also an unsolicited event |
@@ -105,7 +106,10 @@ echoes its request sequence.
 | `TIMER_EXPIRED` | `0x87` | Audio → Control | status payload | Independent Audio deadline caused the stop transition |
 | `ERROR` | `0x8f` | Audio → Control | error response or fault status payload | Malformed/unsupported request response or unsolicited subsystem fault |
 
-No command shall expose remote decoder setup, I2S clocking or remote filesystem manipulation to normal Control Controller application code.
+No normal command shall expose remote decoder setup, I2S clocking or remote
+filesystem manipulation to Control application code. The optional development
+capability exposes only the fixed profile and two-value slot-packing selectors
+listed below; it does not accept paths, arbitrary rates or peripheral setup.
 
 ### 4.1 Common command header
 
@@ -129,7 +133,7 @@ session. It shall not wrap; a new Control session shall be established first.
 | 0 | 4 | echoed `control_session_id` |
 | 4 | 4 | current `audio_session_id` |
 | 8 | 1 | semantic version (`1`) |
-| 9 | 2 | capabilities bit mask: bit 0 finite PLAY, bit 1 volume, bit 2 status, optional bit 3 debug source/note |
+| 9 | 2 | capabilities bit mask: bit 0 finite PLAY, bit 1 volume, bit 2 status, optional bit 3 debug source/profile/packing |
 | 11 | 4 | minimum accepted duration in seconds |
 | 15 | 4 | maximum accepted duration in seconds |
 
@@ -157,17 +161,39 @@ State codes are `0 NOT_READY`, `1 STOPPED`, `2 STARTING`, `3 PLAYING`,
 semantics; semantic version 1 has no separate volume-event type.
 
 When capability bit 3 is advertised, status flag bit 7 marks the debug
-configuration valid, bit 0 selects generated sine when set, and bits 1 through
-3 encode C3..C8 as `0`..`5`. Other flag bits remain reserved. A normal Audio
-image does not advertise bit 3 and shall reject the optional commands as
-unsupported. Source/note values outside the declared ranges shall return
-`INVALID_ARGUMENT`.
+configuration valid, bits 0 through 2 encode source/profile `0`..`7`, bit 3 is
+set for 32-bit-padded I2S slots, and bits 4 through 6 encode C3..C8 as `0`..`5`.
+A normal Audio image does not advertise bit 3 and shall reject all three
+optional commands as unsupported. Source, note or packing values outside the
+declared ranges shall return `INVALID_ARGUMENT`.
 
-The optional controls do not alter the PLAY contract. Switching source or note
-while active shall preserve the existing absolute playback deadline; the
-current development implementation uses a one-second fade out and one-second
-fade in. Generated samples remain local to Audio and are never transported over
-UART. Control shall disable these UI controls when bit 3 is absent.
+The debug source/profile values are:
+
+| Value | Source | Sample rate | PCM data depth | Development asset |
+| ---: | --- | ---: | ---: | --- |
+| 0 | Canonical sleep music | 44,100 Hz | 16 bit | `/sdcard/sleepcube/audio.wav` |
+| 1 | Generated C-note (touch grid fixes C5) | 44,100 Hz | 16 bit | Generated in code |
+| 2 | Controlled WAV | 44,100 Hz | 16 bit | `/sdcard/sleepcube/i2s-test/ambient_44100_16bit_mono_12s.wav` |
+| 3 | Controlled WAV | 44,100 Hz | 24 bit | `/sdcard/sleepcube/i2s-test/ambient_44100_24bit_mono_12s.wav` |
+| 4 | Controlled WAV | 48,000 Hz | 16 bit | `/sdcard/sleepcube/i2s-test/ambient_48000_16bit_mono_12s.wav` |
+| 5 | Controlled WAV | 48,000 Hz | 24 bit | `/sdcard/sleepcube/i2s-test/ambient_48000_24bit_mono_12s.wav` |
+| 6 | Controlled WAV | 32,000 Hz | 16 bit | `/sdcard/sleepcube/i2s-test/ambient_32000_16bit_mono_12s.wav` |
+| 7 | Controlled WAV | 96,000 Hz | 16 bit | `/sdcard/sleepcube/i2s-test/ambient_96000_16bit_mono_12s.wav` |
+
+Packing value `0` selects a slot width equal to the PCM data width (16/16 or
+24/24). Packing value `1` selects 32-bit slots (16/32 or 24/32). Every WAV is
+mono signed little-endian PCM; Audio duplicates samples to both Philips-I2S
+channels and owns all validation and clock reconfiguration. A failed file
+validation or output reconfiguration leaves the previously applied debug
+configuration authoritative.
+
+The optional controls do not alter the PLAY contract. Switching source, note or
+packing while active shall preserve the existing absolute playback deadline;
+the current development implementation uses a one-second fade out and
+one-second fade in. Generated and decoded samples remain local to Audio and are
+never transported over UART. Control shall disable these UI controls when bit
+3 is absent. Exiting touch debug requests source `0`, note C5 (`2`) and packing
+`0`; these values are volatile and normal/release images do not expose them.
 
 ### 4.4 Result and error payloads
 

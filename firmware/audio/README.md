@@ -75,7 +75,7 @@ idf.py -B /tmp/sleepcube-m2-endurance-build \
 ## Matched touch-debug build
 
 For the separate ADR-0011 Control touch grid, build the Audio endpoint with its
-optional generated-tone capability:
+optional controlled-profile and generated-tone capability:
 
 ```sh
 idf.py -B /tmp/sleepcube-audio-touch-debug-build \
@@ -84,13 +84,35 @@ idf.py -B /tmp/sleepcube-audio-touch-debug-build \
   set-target esp32s3 build
 ```
 
-This development image generates C3 through C8 directly at 44.1 kHz and
-advertises optional semantic source/note controls. The raw tone and retained
-gain cap combine for a maximum -24 dBFS output at 100% volume. Source/note
-changes during playback fade down/up over one second each while preserving the
-existing absolute session deadline. Source and note are volatile and return to
-music/C5 when the Control debug mode exits; volume remains persistent. The
-normal profile compiles out the generator and does not advertise the capability.
+This development image advertises optional semantic profile, tone and I2S-slot
+controls. Copy these exact mono PCM files to `/sleepcube/i2s-test/` on the FAT
+card (mounted by firmware as `/sdcard/sleepcube/i2s-test/`):
+
+| File | Required format |
+| --- | --- |
+| `ambient_32000_16bit_mono_12s.wav` | 32,000 Hz, signed 16-bit LE, mono |
+| `ambient_44100_16bit_mono_12s.wav` | 44,100 Hz, signed 16-bit LE, mono |
+| `ambient_44100_24bit_mono_12s.wav` | 44,100 Hz, signed 24-bit LE, mono |
+| `ambient_48000_16bit_mono_12s.wav` | 48,000 Hz, signed 16-bit LE, mono |
+| `ambient_48000_24bit_mono_12s.wav` | 48,000 Hz, signed 24-bit LE, mono |
+| `ambient_96000_16bit_mono_12s.wav` | 96,000 Hz, signed 16-bit LE, mono |
+
+The touch grid cycles Music, then these profiles in the controlled order
+44.1/16, 44.1/24, 48/16, 48/24, 32/16 and 96/16, followed by a generated
+44.1 kHz C5 and then Music again.
+It independently toggles native data/slot widths (`16/16`, `24/24`) and
+32-bit-padded slots (`16/32`, `24/32`). Samples remain full precision in a Q31
+gain path and are duplicated to both Philips-I2S channels. Missing or
+mismatched files reject that selection without replacing the prior applied
+profile. Both classic PCM and WAVE_FORMAT_EXTENSIBLE integer-PCM headers are
+accepted when all declared format fields match the selected profile.
+
+The generated C5 raw tone and retained gain cap combine for a maximum -24 dBFS
+output at 100% volume. Profile/packing changes during playback fade down/up over
+one second each while preserving the existing absolute session deadline. The
+selection is volatile and returns to canonical music/C5/native slots when the
+Control debug mode exits; volume remains persistent. The normal profile compiles
+out the generator/profile catalog and does not advertise the capability.
 
 ## Flash and monitor
 

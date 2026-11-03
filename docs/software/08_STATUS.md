@@ -2,14 +2,14 @@
 
 **Baseline:** R01 development from released `software-r00`
 
-**Last updated:** 2026-10-31
+**Last updated:** 2026-11-03
 
 **Purpose:** Authoritative session-to-session handoff snapshot.
 
 ## 1. Current milestone
 
-**M10 R01 COB PWM migration: matched touch-debug images flashed and boot-
-verified; target touch/PWM/audio interaction verification pending**
+**M10 R01 COB PWM migration: I2S listening matrix complete with no audible
+format-dependent change; high-pitched-noise isolation remains open**
 
 Status: **The COB baseline branch was created from clean annotated tag
 `software-r00`; current branch `feat/r01-touch-debug-ui` is a separate
@@ -26,17 +26,26 @@ rails, functioning controllers/audio/COB output and smooth brightness. A newer
 development image adds runtime USB-console frequency and fixed-duty controls.
 The exact clean-built image is flashed and serial runtime checks pass across
 the 1–25 kHz range and both resolution boundaries. Independent scope checks at
-the selected frequencies remain open. The new touch-debug Control/Audio pair
+the selected frequencies remain open. The touch-debug Control/Audio pair now
 adds a five-tap 2-by-4 hardware-test grid, exact 0–100% duty, 1–25 kHz
-frequency, generated C3–C8 sine source and source switching. Strict protocol/
-tone host tests and clean ESP-IDF v6.0 matched builds pass. The exact matched
-pair has now passed target write/hash verification and boot smoke testing.
-Control booted `R01-touch-debug`, initialized GPIO8 at requested
-3 kHz/actual 3001 Hz and synchronized with capability mask `0x000f`. Audio
-booted `R01-touch-debug-audio`, mounted the SD card, validated the canonical WAV
-and reached silent `STOPPED` at persisted 50% volume. Interactive touch-grid,
-generated-tone and powered PWM checks remain open. M10 and R01 release are not
-complete. No R01 release tag exists or should be created yet.**
+frequency, six controlled mono WAV profiles spanning 32/44.1/48/96 kHz and
+16/24-bit depth, generated C5, and independent native/32-bit-padded I2S slot
+selection. Strict protocol, profile-catalog, WAV-format, Q31 PCM and tone host
+tests pass. Updated matched and normal ESP-IDF v6.0 builds pass. The initial
+target pass exposed rejection of WAVE_FORMAT_EXTENSIBLE 24-bit assets and a
+confirmed-state source cursor that retried the rejected profile indefinitely.
+The reader now accepts classic and extensible integer PCM, and A3 uses an
+independent volatile cycle cursor with Music included in its wrap. The exact
+corrected pair passes target write/hash verification. All six copied assets now
+validate and configure; continuing A3 selects generated C5, returns to
+canonical Music and advances again. The user then exercised all source and
+native/32-bit-padded modes. All played as expected, but none changed the
+perceived playback character or constant high-pitched noise level. Playback was
+clean without stutter or pops in every tested mode. Logical I2S rate, depth and
+slot selection are therefore not supported as mitigations. `AUD-ISS-001`
+retains the sole audio-quality investigation. Failure-retention, stack-margin
+and powered PWM/noise-correlation checks remain open. M10 and R01 release are
+not complete. No R01 release tag exists or should be created yet.**
 
 The Control backend now drives an active-high logic-level MOSFET on GPIO8 using
 LEDC timer 1/channel 1 at 3 kHz and 13-bit resolution, distinct from display
@@ -69,7 +78,8 @@ runtime COB selection through 25 kHz cannot conflict with the display timer.
 
 The normal GUI, persistence API and controller ownership remain unchanged.
 ADR-0011 records the separate touch-debug profiles and their optional semantic
-source/note extension; normal profiles compile out the grid and generator.
+source/profile/packing extension; normal profiles compile out the grid,
+generator and test catalog.
 ADR-0009 records the COB PWM architecture and the
 separate development/final power arrangements; ADR-0010 records the retained
 nonzero GUI minimum. Historical R00 target evidence remains valid only for R00
@@ -209,10 +219,14 @@ The separate ADR-0011 touch-debug pair uses
 `sdkconfig.touch-debug.defaults` on Audio. Five rapid rest-view taps enter a
 high-contrast grid. Lighting debug mode disables effects, holds exact physical
 duty independent of the normal 5–80% mapping, and preserves a separate enable
-latch. The Audio image generates C3–C8 directly in code and advertises optional
-source/note commands. Exit restores 3 kHz, normal effects, enabled light,
-music/C5 and the normal rest view. Duty/frequency/source/note are volatile;
-volume remains Audio-owned and persistent.
+latch. A3 cycles canonical Music; exact 44.1/16, 44.1/24, 48/16, 48/24,
+32/16 and 96/16 mono WAV profiles; generated C5; then Music again. A4 toggles native-width and 32-bit-
+padded I2S slots. Audio validates and applies the files/configuration, uses a
+Q31 gain path to retain 24-bit precision, accepts classic or extensible
+integer-PCM WAV headers, and duplicates mono to stereo. Exit
+restores 3 kHz, normal effects, enabled light, canonical music/C5/native slots
+and the normal rest view. Duty/frequency/profile/packing are volatile; volume
+remains Audio-owned and persistent.
 
 Implemented migration seam:
 
@@ -788,19 +802,115 @@ powered other board.
 
 ## 6. Next recommended task
 
-**Verify the touch-debug controls and generated/PWM outputs.**
+**Check whether COB PWM or the shared power topology changes the high-pitched
+noise.**
 
 The exact next task is:
 
-1. With external 12 V initially off, confirm five-tap entry, the eight controls,
-   GPIO8 low/reset safety, exact-duty/light-latch independence and 1–25 kHz
-   selection.
-2. Apply the already proven prototype power topology and measure selected PWM
-   frequencies/duties while checking flicker, MOSFET temperature and noise.
-3. Verify C3–C8 generated tones, music/tone fades, unchanged finite deadline,
-   effect suppression and B4 restoration to normal UI/music/C5/3 kHz/effects.
+1. Hold source, volume, duty and speaker position fixed. Compare the noise with
+   the COB output off, then at the same nonzero duty while stepping PWM through
+   representative 1, 3, 10, 20 and 25 kHz values.
+2. If no correlation is audible, repeat one fixed audio/PWM case under the
+   USB-powered controller topology and the final common DC-DC topology, fully
+   powering down before changing supply connections.
+3. Record the result against `AUD-ISS-001`, then verify failure retention,
+   silent STOP, unchanged deadline, stack margin and B4 restoration.
 
 ## 7. Session closeout record
+
+### 2026-11-03 — I2S listening matrix completed; noise unchanged
+
+- The user exercised every debug source/configuration mode on the corrected
+  matched pair. All source modes selected and played as expected; no source
+  menu or file-format failure recurred.
+- No audible difference was detected between 32/44.1/48/96 kHz, 16-/24-bit
+  sources or native/32-bit-padded slots. Every mode retained the same perceived
+  playback character and constant high-pitched background-noise level as the
+  earlier baseline. The tested logical I2S formats are not useful mitigations.
+- The user clarified that playback was clean without stutter or pops; the
+  earlier contrary wording was a typo. The only observed audio-quality symptom
+  is the constant high-pitched component tracked by `AUD-ISS-001`. Listening
+  alone does not establish whether it originates in electrical I2S, power or
+  the amplifier/output stage.
+- Updated the I2S verification report, VVM, implementation plan and
+  `AUD-ISS-001` record with the corrected observation. No code or firmware image
+  changed in this closeout. Section 6 records the next isolation test.
+
+### 2026-11-03 — I2S source-cycle defect corrected and verified on target
+
+- Reproduced the reported behavior: A3 selected 44.1/16, then Audio rejected
+  the 44.1/24 asset as unsupported; every later tap retried the same selection,
+  and the original cycle had no path back to Music.
+- Identified two causes. The 24-bit card assets use WAVE_FORMAT_EXTENSIBLE
+  integer PCM, while the initial reader accepted only classic PCM. Control also
+  derived the next A3 selection from Audio's last confirmed source, so an
+  asynchronous rejection trapped the cycle.
+- Added a strict reusable WAV-format parser for classic PCM and extensible
+  integer PCM. Exact mono/rate/container-depth/valid-depth/byte-rate/alignment
+  validation remains enforced. Added C11/UBSan host coverage for PCM16,
+  extensible PCM24, float rejection and malformed/truncated extension handling.
+- Added an app-core-owned volatile source cursor. The full sequence is now
+  Music, 44.1/16, 44.1/24, 48/16, 48/24, 32/16, 96/16, generated C5, Music.
+  A queued request advances the cursor even if Audio later rejects that asset.
+- Built and flashed corrected `R01-touch-debug` Control at 594,400 bytes
+  (SHA-256 `1e73f82f9b4533ff0c0299568fc5f969d42421d6317324f9563f4328d4823973`)
+  and `R01-touch-debug-audio` Audio at 346,880 bytes (SHA-256
+  `f5f3b64e397d3626c1f800b9aa7a89cf1ca8cea7d0c3c3473373e931856703e5`).
+  Every bootloader, partition and application write passed hash verification.
+- With playback stopped, target logs confirmed all six actual 12-second assets:
+  44.1/16 and 44.1/24 at 529,200 frames; 48/16 and 48/24 at 576,000;
+  32/16 at 384,000; and 96/16 at 1,152,000. Native I2S configuration matched
+  each selected data depth. Further taps selected generated C5, returned to
+  canonical Music and then selected 44.1/16 again.
+- All five host suites pass. Normal non-debug ESP-IDF v6.0 regression builds
+  pass at 597,920 bytes for Control and 343,840 bytes for Audio. Audible
+  playback/noise comparisons, padded slots, fades, deadline, failure retention
+  and stack margin remain unverified; section 6 is the exact next task.
+
+### 2026-11-03 — Initial I2S-profile pair flashed and boot-verified (superseded)
+
+- Identified Waveshare ESP32-C6 `AC:EB:E6:1E:67:C4` on `/dev/ttyACM0` and Atom
+  ESP32-S3 `44:1B:F6:F4:FE:C8` on `/dev/ttyACM1` before flashing.
+- Flashed the exact `R01-touch-debug` 594,256-byte Control image (SHA-256
+  `8180d76a96a2cdece20526966bede75e6505fab45fa2ac1a077511addff1d442`)
+  and `R01-touch-debug-audio` 346,464-byte Audio image (SHA-256
+  `3352bbfe65ba07d672d770aca63da8a301ffc1b23c0f8727db0e3fe3d83a4418`).
+  All bootloader, partition and application writes passed hash verification.
+- Reset/monitor smoke confirmed Audio mounted the card, validated canonical
+  44.1 kHz/16-bit mono content, enabled silent 16/16 Philips-I2S and reached
+  `STOPPED` at persisted 50% volume.
+- Control initialized GPIO8 at requested 3,000 Hz / actual 3,001 Hz, completed
+  display initialization, negotiated capability mask `0x000f` and reconciled
+  authoritative `STOPPED`, 50% volume, zero fault. Neither reset started audio.
+- The six `/i2s-test/` assets were loaded lazily and had not yet been selected
+  in this initial smoke. The corrected pair and subsequent stopped-state
+  validation are recorded in the newer closeout above.
+
+### 2026-11-03 — Controlled I2S profile test grid implemented
+
+- Replaced the debug grid's sine/music toggle and C-note step with an initial
+  seven-position A3 sequence: six exact mono WAV profiles at 32/44.1/48/96 kHz
+  and 16/24-bit depth, followed by generated 44.1 kHz C5. The later correction
+  above adds Music to the wrap. A4 now toggles native
+  data-width slots and 32-bit-padded slots.
+- Extended the optional semantic protocol with source values `0` through `7`,
+  `SET_I2S_PACKING` and compact authoritative source/slot/note status. Normal
+  images reject/compile out the extension as before.
+- Added Audio-owned exact WAV validation, runtime I2S reconfiguration and Q31
+  decode/gain/final-pack handling. Mono remains duplicated into both Philips-
+  I2S channels. Native 24-bit uses a 384× internal MCLK multiple and a DMA frame
+  count divisible by three; no external MCLK pin is used.
+- A failed selection retains the prior working profile. Active changes retain
+  the one-second down/up transition and finite deadline. Exit restores
+  canonical music/C5/native slots. The playback task stack is now 8,192 bytes
+  to cover the larger Q31 and 24-bit packing buffers.
+- Strict C11/UBSan semantic protocol, profile-catalog, PCM-format and generated-
+  tone tests pass. ESP-IDF v6.0 debug builds pass at 594,256 bytes (Control) and
+  346,464 bytes (Audio); normal regression builds pass at 597,920 and 343,424
+  bytes with the debug options unset. Exact hashes and commands/results are in
+  `verification/2026-11-03_M10_i2s_debug_profiles.md`.
+- No updated image was flashed and no target listening/timing result is claimed.
+  The exact next task is the three-step target gate in section 6.
 
 ### 2026-10-31 — Matched touch-debug pair flashed and boot-verified
 

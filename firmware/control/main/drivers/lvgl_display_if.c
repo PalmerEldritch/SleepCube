@@ -477,17 +477,42 @@ static void sc_debug_refresh_locked(void)
                           ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY);
     lv_label_set_text_fmt(s_debug_labels[2], "VOL\n%u%%",
                           (unsigned)sc_audio_service_get_volume_percent());
-    lv_label_set_text(s_debug_labels[4],
-                      sc_audio_service_get_source() == SC_AUDIO_SOURCE_TONE
-                          ? "~\nTONE" : LV_SYMBOL_AUDIO "\nMUSIC");
-    static const char *const note_names[SC_AUDIO_TONE_COUNT] = {
-        "C3", "C4", "C5", "C6", "C7", "C8",
-    };
-    sc_audio_tone_note_t note = sc_audio_service_get_tone_note();
-    if (note >= SC_AUDIO_TONE_COUNT) {
-        note = SC_AUDIO_TONE_C5;
+    const sc_audio_source_t source = sc_audio_service_get_source();
+    uint8_t data_bits = 16U;
+    switch (source) {
+    case SC_AUDIO_SOURCE_TEST_44100_16:
+        lv_label_set_text(s_debug_labels[4], "SRC\n44.1k\n16b");
+        break;
+    case SC_AUDIO_SOURCE_TEST_44100_24:
+        data_bits = 24U;
+        lv_label_set_text(s_debug_labels[4], "SRC\n44.1k\n24b");
+        break;
+    case SC_AUDIO_SOURCE_TEST_48000_16:
+        lv_label_set_text(s_debug_labels[4], "SRC\n48k\n16b");
+        break;
+    case SC_AUDIO_SOURCE_TEST_48000_24:
+        data_bits = 24U;
+        lv_label_set_text(s_debug_labels[4], "SRC\n48k\n24b");
+        break;
+    case SC_AUDIO_SOURCE_TEST_32000_16:
+        lv_label_set_text(s_debug_labels[4], "SRC\n32k\n16b");
+        break;
+    case SC_AUDIO_SOURCE_TEST_96000_16:
+        lv_label_set_text(s_debug_labels[4], "SRC\n96k\n16b");
+        break;
+    case SC_AUDIO_SOURCE_TONE:
+        lv_label_set_text(s_debug_labels[4], "~\nC5");
+        break;
+    case SC_AUDIO_SOURCE_MUSIC:
+    default:
+        lv_label_set_text(s_debug_labels[4], LV_SYMBOL_AUDIO "\nMUSIC");
+        break;
     }
-    lv_label_set_text_fmt(s_debug_labels[6], "TONE\n%s", note_names[note]);
+    const uint8_t slot_bits =
+        sc_audio_service_get_i2s_packing() == SC_AUDIO_I2S_PACKING_PADDED_32
+            ? 32U : data_bits;
+    lv_label_set_text_fmt(s_debug_labels[6], "I2S\n%u/%u",
+                          (unsigned)data_bits, (unsigned)slot_bits);
 
     lv_label_set_text(s_debug_labels[1],
                       sc_light_service_get_enabled()
@@ -527,7 +552,7 @@ static void sc_create_debug_overlay(void)
     (void)sc_create_debug_button(s_debug_overlay, 5, 1, 2, light_green,
                                  SC_APP_EVT_UI_DEBUG_FREQUENCY_NEXT);
     (void)sc_create_debug_button(s_debug_overlay, 6, 0, 3, audio_blue,
-                                 SC_APP_EVT_UI_DEBUG_NOTE_NEXT);
+                                 SC_APP_EVT_UI_DEBUG_I2S_PACKING_TOGGLE);
     (void)sc_create_debug_button(s_debug_overlay, 7, 1, 3,
                                  lv_color_hex(0xC62828),
                                  SC_APP_EVT_UI_DEBUG_EXIT);

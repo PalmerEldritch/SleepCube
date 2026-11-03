@@ -28,6 +28,7 @@ typedef enum {
     SC_PLAYBACK_COMMAND_SET_VOLUME,
     SC_PLAYBACK_COMMAND_SET_SOURCE,
     SC_PLAYBACK_COMMAND_SET_TONE_NOTE,
+    SC_PLAYBACK_COMMAND_SET_I2S_PACKING,
 } sc_playback_command_type_t;
 
 typedef struct {
@@ -36,6 +37,7 @@ typedef struct {
     uint8_t volume_percent;
     sc_audio_source_t source;
     sc_audio_tone_note_t tone_note;
+    sc_audio_i2s_packing_t i2s_packing;
 } sc_playback_command_t;
 
 typedef enum {
@@ -50,6 +52,7 @@ typedef struct {
     uint8_t volume_percent;
     sc_audio_source_t source;
     sc_audio_tone_note_t tone_note;
+    sc_audio_i2s_packing_t i2s_packing;
     sc_playback_stop_reason_t stop_reason;
     uint32_t remaining_seconds;
     uint16_t fault_code;
@@ -65,6 +68,7 @@ typedef struct {
     uint8_t volume_percent;
     sc_audio_source_t source;
     sc_audio_tone_note_t tone_note;
+    sc_audio_i2s_packing_t i2s_packing;
     sc_playback_stop_reason_t stop_reason;
     int64_t session_deadline_us;
     uint16_t fault_code;
@@ -91,11 +95,14 @@ esp_err_t sc_playback_controller_stop(sc_playback_controller_t *controller);
 esp_err_t sc_playback_controller_set_volume(sc_playback_controller_t *controller,
                                             uint8_t volume_percent);
 
-/** Queue development-only volatile audio-source controls. */
+/** Queue development-only volatile profile, tone and slot-packing controls. */
 esp_err_t sc_playback_controller_set_source(sc_playback_controller_t *controller,
                                             sc_audio_source_t source);
 esp_err_t sc_playback_controller_set_tone_note(sc_playback_controller_t *controller,
                                                sc_audio_tone_note_t note);
+esp_err_t sc_playback_controller_set_i2s_packing(
+    sc_playback_controller_t *controller,
+    sc_audio_i2s_packing_t packing);
 
 /** Read a synchronized authoritative state snapshot without touching audio I/O. */
 esp_err_t sc_playback_controller_get_snapshot(sc_playback_controller_t *controller,
